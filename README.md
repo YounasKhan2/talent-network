@@ -1,20 +1,30 @@
 # Talent Network
 
-> Documentation-first foundation for a scalable, reusable, AI-assisted hiring network and employment operating system.
+> **An intelligent hiring network connecting companies with verified, relevant talent.**
 
-## Status
+Talent Network is a documentation-led, production-oriented employment operating system designed around structured hiring signal, explainable matching, reusable candidate data, and high-quality recruiter workflows.
 
-**Phase:** Architecture & UX Specification Complete  
-**Implementation:** Ready for monorepo bootstrap  
-**Repository role:** Single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
+## Project Status
+
+| Area | Status |
+|---|---|
+| Product blueprint | ✅ Complete |
+| Architecture baseline | ✅ Complete |
+| Security / scale / data specifications | ✅ Complete |
+| UX / information architecture | ✅ Complete |
+| Monorepo bootstrap | ✅ Started |
+| Engineering foundation | 🟡 In progress |
+| Product implementation | ⏳ Next |
+
+**Current implementation phase:** Phase 0 — Repository & Engineering Foundation.
+
+The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
 
 ---
 
 ## Product Thesis
 
-Talent Network is not intended to be another generic job board.
-
-It is being designed as a multi-sided employment platform combining:
+Talent Network is not intended to be another generic job board. It is designed as a multi-sided employment platform combining:
 
 - Talent marketplace
 - Applicant Tracking System (ATS)
@@ -25,49 +35,47 @@ It is being designed as a multi-sided employment platform combining:
 - Candidate career intelligence
 - Trust, verification, and hiring analytics
 
-The initial market focus is Pakistan, with architecture designed to evolve toward Gulf, remote international, and enterprise hiring use cases.
+Initial market focus is Pakistan, while the architecture remains capable of evolving toward Gulf, international remote, and enterprise hiring use cases.
 
-## Core Product Promise
+### Product promises
 
-**For candidates:** Apply where you genuinely have a strong chance.
-
-**For employers:** Spend time reviewing relevant people instead of manually screening hundreds of resumes.
-
-**For the platform:** Convert fragmented and unstructured employment data into reusable, explainable, structured hiring signal.
+**Candidate:** Apply where you genuinely have a strong chance.  
+**Employer:** Review relevant people instead of manually screening hundreds of resumes.  
+**Platform:** Convert fragmented employment data into reusable, explainable, structured hiring signal.
 
 ---
 
 ## Engineering North Star
 
-Every implementation decision must optimize for:
+Every implementation decision must preserve or improve:
 
-1. **Scalability** — components should handle growth without unnecessary rewrites.
-2. **Reusability** — shared domain capabilities must be reusable across products and surfaces.
-3. **Maintainability** — clear boundaries, contracts, ownership, observability, and documentation.
-4. **Modularity** — domains remain separable even when deployed together initially.
-5. **Evolvability** — infrastructure complexity is introduced only when real scale justifies it.
-6. **Security by design** — tenant isolation, authorization, auditability, and data privacy are foundational.
-7. **Human-controlled AI** — AI assists, explains, summarizes, and prioritizes; humans retain consequential hiring decisions.
-8. **Documentation as code** — architectural and product changes are incomplete until their documentation is updated.
+1. **Scalability** — scale without unnecessary rewrites.
+2. **Reusability** — shared domain capabilities are composed, not copied.
+3. **Maintainability** — explicit boundaries, contracts, ownership, and documentation.
+4. **Modularity** — domains remain separable even while initially deployed together.
+5. **Evolvability** — complexity is introduced only when measured need justifies it.
+6. **Security by design** — tenant isolation, authorization, auditability, and privacy are foundational.
+7. **Human-controlled AI** — AI assists and explains; people retain consequential hiring decisions.
+8. **Documentation as code** — architectural changes are incomplete until documentation agrees.
 
-See [`AGENTS.md`](./AGENTS.md) for mandatory contributor/agent rules.
+See [`AGENTS.md`](./AGENTS.md) for mandatory contributor and coding-agent rules.
 
 ---
 
-## Target Architecture
+## Runtime Architecture
 
-We start with a **modular monolith plus independently scalable workers**, not premature microservices.
+We begin with a **modular monolith plus independently scalable workers** rather than premature microservices.
 
 ```mermaid
 flowchart TD
     U[Candidate / Recruiter / Admin] --> CDN[CDN / WAF]
-    CDN --> WEB[Web Application]
-    WEB --> API[API Gateway / Application API]
+    CDN --> WEB[Next.js Web]
+    WEB --> API[NestJS API]
 
     API --> PG[(PostgreSQL)]
     API --> REDIS[(Redis)]
     API --> OBJ[(Object Storage)]
-    API --> Q[Job Queue]
+    API --> Q[Async Queue]
 
     Q --> RW[Resume Workers]
     Q --> MW[Matching Workers]
@@ -78,190 +86,203 @@ flowchart TD
     PG --> SEARCH[Search Projection]
 ```
 
-Interactive traffic and computational traffic are deliberately separated. Expensive operations such as resume parsing, malware scanning, matching, AI analysis, notifications, exports, and analytics run asynchronously.
+Interactive traffic and heavy computational traffic are intentionally separated. Resume processing, malware scanning, matching, AI inference, notifications, exports, and analytics should not block normal HTTP requests.
 
 ---
 
-## Product Domains
+## Monorepo
 
 ```text
-Identity & Access
-Organizations / Workspaces
-Candidates / Career Passport
-Resumes
-Jobs
-Applications
-Hiring Pipelines
-Talent CRM
-Matching
-Screening
-Assessments
-Interviews
-Scorecards
-Offers
-Messaging
-Notifications
-Search
-Automations
-Analytics
-Billing
-Verification / Trust
-Audit / Compliance
-AI Platform
-Administration
+apps/
+├── web/            Next.js product application
+├── api/            NestJS API
+├── worker/         asynchronous/background processing
+└── scheduler/      recurring and maintenance workflows
+
+packages/
+├── config/         runtime-specific validated configuration
+├── contracts/      shared transport/API contracts
+├── database/       Prisma/PostgreSQL ownership
+└── observability/  structured logging foundation
 ```
+
+Additional domain packages are created only when implementation genuinely needs them. Empty future-domain packages are intentionally avoided.
+
+### Current infrastructure
+
+```text
+PostgreSQL  → transactional source of truth
+Redis       → cache, coordination and queue infrastructure
+MinIO       → local S3-compatible object storage
+Prisma      → migrations and database client
+pnpm        → workspace/package management
+Turborepo   → repository task orchestration
+```
+
+---
+
+## Local Development
+
+### Requirements
+
+- Node.js 24.x
+- pnpm 10.x
+- Docker with Docker Compose
+
+### Bootstrap
+
+```bash
+cp .env.example .env
+docker compose up -d
+pnpm install
+pnpm dev
+```
+
+Web defaults to `http://localhost:3000` and API defaults to `http://localhost:4000`.
+
+### API health contract
+
+```text
+GET /api/v1/health/live
+GET /api/v1/health/ready
+```
+
+`live` proves that the process is alive. `ready` verifies dependencies required to serve traffic, currently PostgreSQL and Redis.
+
+---
+
+## Quality Gate — No Paid CI Required
+
+The project does **not** require GitHub Actions or a paid CI provider.
+
+The authoritative quality gate lives inside the repository:
+
+```bash
+pnpm check
+```
+
+It runs:
+
+```text
+format check
+→ lint
+→ typecheck
+→ tests
+→ build
+```
+
+A hosted CI provider may be added later, but it should only execute these repository-owned commands. Quality logic must never depend on a specific CI vendor.
+
+See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/local-quality-gates.md).
+
+> Never report a check as passing unless it was actually executed.
 
 ---
 
 ## Documentation Index
 
 ### Product
-
-- [`docs/02-product/master-blueprint.md`](./docs/02-product/master-blueprint.md) — master product scope, workflows, product surfaces, AI/UX direction, MVP evolution
+- [`docs/02-product/master-blueprint.md`](./docs/02-product/master-blueprint.md)
 
 ### Architecture
-
-- [`docs/03-architecture/engineering-principles.md`](./docs/03-architecture/engineering-principles.md) — mandatory architecture quality principles
-- [`docs/03-architecture/system-overview.md`](./docs/03-architecture/system-overview.md) — runtime topology, scaling stages, caching, workers, failure isolation
-- [`docs/03-architecture/domain-architecture.md`](./docs/03-architecture/domain-architecture.md) — bounded domains, ownership, contracts, extraction readiness
-- [`docs/03-architecture/data-architecture.md`](./docs/03-architecture/data-architecture.md) — transactional truth, versioning, projections, storage and migration strategy
-- [`docs/03-architecture/event-architecture.md`](./docs/03-architecture/event-architecture.md) — outbox, queues, events, idempotency, retries and backpressure
-- [`docs/03-architecture/multi-tenancy-and-authorization.md`](./docs/03-architecture/multi-tenancy-and-authorization.md) — tenant isolation, permissions, candidate privacy and entitlement boundaries
+- [`docs/03-architecture/engineering-principles.md`](./docs/03-architecture/engineering-principles.md)
+- [`docs/03-architecture/system-overview.md`](./docs/03-architecture/system-overview.md)
+- [`docs/03-architecture/domain-architecture.md`](./docs/03-architecture/domain-architecture.md)
+- [`docs/03-architecture/data-architecture.md`](./docs/03-architecture/data-architecture.md)
+- [`docs/03-architecture/event-architecture.md`](./docs/03-architecture/event-architecture.md)
+- [`docs/03-architecture/multi-tenancy-and-authorization.md`](./docs/03-architecture/multi-tenancy-and-authorization.md)
 
 ### API
-
-- [`docs/08-api/api-architecture.md`](./docs/08-api/api-architecture.md) — REST/versioning conventions, read models, cursor pagination, error contracts, idempotency, rate limits and async operations
+- [`docs/08-api/api-architecture.md`](./docs/08-api/api-architecture.md)
 
 ### AI & Intelligent Processing
-
-- [`docs/04-ai/resume-processing-architecture.md`](./docs/04-ai/resume-processing-architecture.md) — secure upload, scan/extract/OCR/parse pipeline, review flow, retries, evidence and versioning
-- [`docs/04-ai/matching-screening-architecture.md`](./docs/04-ai/matching-screening-architecture.md) — staged deterministic/semantic/evidence matching, screening, explainability and human decision ownership
-- [`docs/04-ai/ai-gateway-and-cost-controls.md`](./docs/04-ai/ai-gateway-and-cost-controls.md) — provider-neutral AI gateway, structured output, cost budgets, privacy, routing and graceful degradation
+- [`docs/04-ai/resume-processing-architecture.md`](./docs/04-ai/resume-processing-architecture.md)
+- [`docs/04-ai/matching-screening-architecture.md`](./docs/04-ai/matching-screening-architecture.md)
+- [`docs/04-ai/ai-gateway-and-cost-controls.md`](./docs/04-ai/ai-gateway-and-cost-controls.md)
 
 ### Infrastructure
-
-- [`docs/05-infrastructure/load-capacity-model.md`](./docs/05-infrastructure/load-capacity-model.md) — traffic tiers, burst scenarios, API/database/queue/search scaling gates and load-test strategy
-- [`docs/05-infrastructure/deployment-observability.md`](./docs/05-infrastructure/deployment-observability.md) — deployable units, environments, migration safety, telemetry, SLO evolution, alerts, runbooks and recovery
+- [`docs/05-infrastructure/load-capacity-model.md`](./docs/05-infrastructure/load-capacity-model.md)
+- [`docs/05-infrastructure/deployment-observability.md`](./docs/05-infrastructure/deployment-observability.md)
 
 ### Security
-
-- [`docs/06-security/threat-model.md`](./docs/06-security/threat-model.md) — tenant, privacy, upload, AI, scraping, fraud, webhook, queue and incident threat controls
+- [`docs/06-security/threat-model.md`](./docs/06-security/threat-model.md)
 
 ### Design & UX
-
-- [`docs/07-design/design-system.md`](./docs/07-design/design-system.md) — visual language, tokens, primitives, tables, split-view, command palette, accessibility and component governance
-- [`docs/07-design/information-architecture.md`](./docs/07-design/information-architecture.md) — public/candidate/employer/admin route map and navigation rules
-- [`docs/07-design/employer-workspace-ux.md`](./docs/07-design/employer-workspace-ux.md) — recruiter shell, jobs, applicants, tables, candidate split-pane, talent search, pipelines and collaboration
-- [`docs/07-design/candidate-experience-ux.md`](./docs/07-design/candidate-experience-ux.md) — Career Passport, resume review, discovery, matching, applications, privacy and mobile experience
-- [`docs/07-design/admin-trust-ux.md`](./docs/07-design/admin-trust-ux.md) — moderation, verification, risk, support, AI operations and audited privileged workflows
+- [`docs/07-design/design-system.md`](./docs/07-design/design-system.md)
+- [`docs/07-design/information-architecture.md`](./docs/07-design/information-architecture.md)
+- [`docs/07-design/employer-workspace-ux.md`](./docs/07-design/employer-workspace-ux.md)
+- [`docs/07-design/candidate-experience-ux.md`](./docs/07-design/candidate-experience-ux.md)
+- [`docs/07-design/admin-trust-ux.md`](./docs/07-design/admin-trust-ux.md)
 
 ### Data
+- [`docs/09-data/erd-and-entity-contracts.md`](./docs/09-data/erd-and-entity-contracts.md)
 
-- [`docs/09-data/erd-and-entity-contracts.md`](./docs/09-data/erd-and-entity-contracts.md) — logical ERD, entity ownership, versioning, applications, matching, assessments, audit/outbox and indexing baseline
-
-### Decisions
-
-- [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md) — accepted initial deployment architecture
+### Architecture Decisions
+- [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md)
 
 ### Implementation
-
-- [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md) — monorepo structure, implementation phases, quality gates, CI/CD, migration policy and MVP release criteria
-
-### Contribution Rules
-
-- [`AGENTS.md`](./AGENTS.md) — mandatory rules for humans and coding agents
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution process and quality expectations
-
-This index must grow as the repository evolves.
+- [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md)
+- [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/local-quality-gates.md)
 
 ---
 
-## Initial Architecture Decisions
+## Core Architecture Decisions
 
-- Modular monolith first; service extraction only where load or ownership justifies it.
-- PostgreSQL is the transactional source of truth.
-- Redis is ephemeral infrastructure, not permanent business storage.
-- Files belong in object storage, not relational database blobs.
-- Heavy computation runs asynchronously.
-- Reliable domain-event publication uses a transactional outbox pattern.
-- Retryable consumers/jobs are idempotent and assume at-least-once delivery.
-- Public/product APIs are versioned, contract-driven, tenant-safe, rate-limited, observable and use cursor pagination for large mutable datasets.
-- Resume ingestion is a secure asynchronous pipeline; AI parsing creates a review proposal, never silent authoritative profile mutation.
-- Candidate/job matching uses hard constraints + structured features + semantic retrieval + evidence before expensive LLM reasoning.
-- Match results are versioned, explainable and preserve strengths, uncertainties and conflicts rather than only a score.
-- AI access is centralized behind a provider-neutral gateway with schema validation, prompt/model versioning, privacy controls, cost tracking and graceful degradation.
-- Security uses deny-by-default authorization, server-enforced tenant isolation, private file access, auditable privileged actions and explicit candidate privacy controls.
-- Scale is handled by query/index/read-model optimization, horizontal stateless scaling and queue backpressure before distributed infrastructure is introduced.
-- Production deploys use reversible migrations, bounded worker concurrency, structured telemetry, feature/AI kill switches, backups and recovery procedures.
-- Important hiring inputs are versioned so historical application and matching outcomes remain explainable.
-- Search, caches, analytics, embeddings and read projections are rebuildable derivatives rather than authoritative business state.
-- High-volume recruiter interfaces use purpose-built read models, cursor pagination, virtualization, saved views, and split-pane workflows.
-- UX follows editorial precision × operational density: dense employer operations, calmer candidate guidance, evidence-first admin workflows.
+- Modular monolith first; extraction only when scaling, ownership, reliability, or compliance justifies it.
+- PostgreSQL is transactional truth.
+- Redis is ephemeral infrastructure, never permanent business truth.
+- Files belong in private object storage rather than relational blobs.
+- Heavy processing is asynchronous and retry-safe.
+- Reliable business-event publication uses transactional outbox semantics.
+- Matching uses hard constraints + structured features + semantic relevance + evidence before expensive LLM reasoning.
+- Match results preserve strengths, gaps, uncertainty, conflicts, versions, and evidence—not only a score.
+- AI access is centralized behind a provider-neutral gateway.
+- Tenant isolation and authorization are enforced on the backend.
+- Candidate privacy is distinct from employer permissions.
+- Important hiring inputs are versioned so historical decisions remain explainable.
+- Search, caches, analytics, embeddings, and read projections remain rebuildable derivatives.
+- Employer workflows are table-first, high-density, saved-view capable, and split-pane oriented.
+- Candidate UX is calmer, document-like, and guidance-first.
 
 ---
 
-## Completed Specification Baseline
+## Implementation Sequence
 
 ```text
-Product Blueprint
-Engineering Principles
-System Overview
-Domain Architecture
-Data Architecture
-Event / Async Architecture
-Multi-tenancy & Authorization
-API Architecture & Error Contracts
-Resume Processing Architecture
-Matching & Screening Architecture
-AI Gateway & Cost Controls
-Security Threat Model
-Load / Capacity Model
-Deployment & Observability Architecture
-Database ERD & Entity Contracts
-Design System
-Information Architecture & Route Map
-Employer Workspace UX
-Candidate Experience UX
-Admin / Trust & Safety UX
-MVP Implementation Plan
-ADR-0001 Modular Monolith First
+0 Engineering Foundation        ← current
+        ↓
+1 Identity + Organizations + Permissions
+        ↓
+2 Candidate Career Passport
+        ↓
+3 Resume Intelligence
+        ↓
+4 Employer + Jobs
+        ↓
+5 Job Discovery
+        ↓
+6 Applications
+        ↓
+7 Matching / Screening
+        ↓
+8 Recruiter Applicant Workspace
+        ↓
+9 Interviews + Notifications
+        ↓
+10 Admin / Verification / Moderation
+        ↓
+11 Billing Foundation
+        ↓
+Production Hardening / MVP Launch
 ```
 
-## Next Phase
-
-```text
-Repository / Monorepo Bootstrap
-        ↓
-Engineering Foundation
-        ↓
-Identity + Organizations + Permissions
-        ↓
-Candidate Career Passport
-        ↓
-Resume Intelligence
-        ↓
-Employer Jobs
-        ↓
-Discovery + Applications
-        ↓
-Matching / Screening
-        ↓
-Recruiter Workspace
-        ↓
-Interviews / Notifications
-        ↓
-Admin / Verification / Billing
-        ↓
-Production hardening and deployment
-```
-
-Implementation must follow [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md). Any significant deviation requires documentation updates and, where consequential, an ADR.
+Implementation must follow [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md). Significant deviations require documentation updates and, when consequential, an ADR.
 
 ---
 
-## Development Rule
+## Definition of Done
 
-> A feature is not complete when the code works. It is complete when the code, tests, observability, security implications, architecture documentation, API contracts, and user workflow documentation all agree.
+> A feature is not complete when the code works. It is complete when code, tests, observability, security implications, architecture documentation, API contracts, and user workflow documentation agree.
 
 ---
 
