@@ -169,6 +169,19 @@ Git does not preserve empty directories, so documentation folders are added as r
 - [`docs/04-ai/matching-screening-architecture.md`](./docs/04-ai/matching-screening-architecture.md) — staged deterministic/semantic/evidence matching, screening, explainability and human decision ownership
 - [`docs/04-ai/ai-gateway-and-cost-controls.md`](./docs/04-ai/ai-gateway-and-cost-controls.md) — provider-neutral AI gateway, structured output, cost budgets, privacy, routing and graceful degradation
 
+### Infrastructure
+
+- [`docs/05-infrastructure/load-capacity-model.md`](./docs/05-infrastructure/load-capacity-model.md) — traffic tiers, burst scenarios, API/database/queue/search scaling gates and load-test strategy
+- [`docs/05-infrastructure/deployment-observability.md`](./docs/05-infrastructure/deployment-observability.md) — deployable units, environments, migration safety, telemetry, SLO evolution, alerts, runbooks and recovery
+
+### Security
+
+- [`docs/06-security/threat-model.md`](./docs/06-security/threat-model.md) — tenant, privacy, upload, AI, scraping, fraud, webhook, queue and incident threat controls
+
+### Data
+
+- [`docs/09-data/erd-and-entity-contracts.md`](./docs/09-data/erd-and-entity-contracts.md) — logical ERD, entity ownership, versioning, applications, matching, assessments, audit/outbox and indexing baseline
+
 ### Decisions
 
 - [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md) — accepted initial deployment architecture
@@ -196,9 +209,11 @@ This index must grow as the repository evolves.
 - Candidate/job matching uses hard constraints + structured features + semantic retrieval + evidence before expensive LLM reasoning.
 - Match results are versioned, explainable and preserve strengths, uncertainties and conflicts rather than only a score.
 - AI access is centralized behind a provider-neutral gateway with schema validation, prompt/model versioning, privacy controls, cost tracking and graceful degradation.
-- AI output is versioned, validated, auditable, and never treated as unquestionable truth.
-- Multi-tenancy and authorization are backend-enforced from the beginning.
-- Candidate-data access requires privacy/access basis in addition to employer permissions.
+- Security uses deny-by-default authorization, server-enforced tenant isolation, private file access, auditable privileged actions and explicit candidate privacy controls.
+- Scale is handled by query/index/read-model optimization, horizontal stateless scaling and queue backpressure before distributed infrastructure is introduced.
+- Production deploys use reversible migrations, bounded worker concurrency, structured telemetry, feature/AI kill switches, backups and recovery procedures.
+- Important hiring inputs are versioned so historical application and matching outcomes remain explainable.
+- Search, caches, analytics, embeddings and read projections are rebuildable derivatives rather than authoritative business state.
 - High-volume recruiter interfaces use purpose-built read models, cursor pagination, virtualization, saved views, and split-pane workflows.
 
 ---
@@ -219,21 +234,26 @@ API Architecture & Error Contracts
 Resume Processing Architecture
 Matching & Screening Architecture
 AI Gateway & Cost Controls
+Security Threat Model
+Load / Capacity Model
+Deployment & Observability Architecture
+Database ERD & Entity Contracts
 ADR-0001 Modular Monolith First
 ```
 
 Next planned specifications:
 
 ```text
-Security Threat Model
-Load / Capacity Model
-Infrastructure / Deployment / Observability
-Design System & Information Architecture
-Database ERD & Entity Contracts
+Design System & UX Principles
+Information Architecture & Route Map
+Employer Workspace UX Specification
+Candidate Experience UX Specification
+Admin / Trust & Safety UX Specification
 MVP Implementation Plan
+Repository / Monorepo Bootstrap
 ```
 
-Production implementation should begin only after the architecture boundaries necessary for the MVP are coherent enough to prevent avoidable rewrites.
+Production implementation should begin only after the MVP architecture and core UX workflows are coherent enough to prevent avoidable rewrites.
 
 ---
 
