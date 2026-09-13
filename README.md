@@ -146,14 +146,29 @@ Git does not preserve empty directories, so documentation folders are added as r
 
 ## Documentation Index
 
-| Area | Entry point |
-|---|---|
-| Product blueprint | [`docs/02-product/master-blueprint.md`](./docs/02-product/master-blueprint.md) |
-| Engineering principles | [`docs/03-architecture/engineering-principles.md`](./docs/03-architecture/engineering-principles.md) |
-| Architecture decisions | [`docs/10-decisions/`](./docs/10-decisions/) |
-| Agent/contributor rules | [`AGENTS.md`](./AGENTS.md) |
+### Product
 
-This index will grow with the repository.
+- [`docs/02-product/master-blueprint.md`](./docs/02-product/master-blueprint.md) — master product scope, workflows, product surfaces, AI/UX direction, MVP evolution
+
+### Architecture
+
+- [`docs/03-architecture/engineering-principles.md`](./docs/03-architecture/engineering-principles.md) — mandatory architecture quality principles
+- [`docs/03-architecture/system-overview.md`](./docs/03-architecture/system-overview.md) — runtime topology, scaling stages, caching, workers, failure isolation
+- [`docs/03-architecture/domain-architecture.md`](./docs/03-architecture/domain-architecture.md) — bounded domains, ownership, contracts, extraction readiness
+- [`docs/03-architecture/data-architecture.md`](./docs/03-architecture/data-architecture.md) — transactional truth, versioning, projections, storage and migration strategy
+- [`docs/03-architecture/event-architecture.md`](./docs/03-architecture/event-architecture.md) — outbox, queues, events, idempotency, retries and backpressure
+- [`docs/03-architecture/multi-tenancy-and-authorization.md`](./docs/03-architecture/multi-tenancy-and-authorization.md) — tenant isolation, permissions, candidate privacy and entitlement boundaries
+
+### Decisions
+
+- [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md) — accepted initial deployment architecture
+
+### Contribution Rules
+
+- [`AGENTS.md`](./AGENTS.md) — mandatory rules for humans and coding agents
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution process and quality expectations
+
+This index must grow as the repository evolves.
 
 ---
 
@@ -164,10 +179,46 @@ This index will grow with the repository.
 - Redis is ephemeral infrastructure, not permanent business storage.
 - Files belong in object storage, not relational database blobs.
 - Heavy computation runs asynchronously.
+- Reliable domain-event publication uses a transactional outbox pattern.
+- Retryable consumers/jobs are idempotent and assume at-least-once delivery.
 - Candidate/job matching uses structured rules + evidence + semantic retrieval before expensive LLM reasoning.
 - AI output is versioned, validated, auditable, and never treated as unquestionable truth.
 - Multi-tenancy and authorization are backend-enforced from the beginning.
+- Candidate-data access requires privacy/access basis in addition to employer permissions.
 - High-volume recruiter interfaces use purpose-built read models, cursor pagination, virtualization, saved views, and split-pane workflows.
+
+---
+
+## Current Architecture Phase
+
+Completed foundation documents:
+
+```text
+Product Blueprint
+Engineering Principles
+System Overview
+Domain Architecture
+Data Architecture
+Event / Async Architecture
+Multi-tenancy & Authorization
+ADR-0001 Modular Monolith First
+```
+
+Next planned specifications:
+
+```text
+API Architecture & Error Contracts
+Resume Processing Architecture
+Matching & Screening Architecture
+AI Gateway / Cost Controls
+Security Threat Model
+Load / Capacity Model
+Infrastructure / Deployment / Observability
+Design System & Information Architecture
+MVP Implementation Plan
+```
+
+Production implementation should begin only after the architecture boundaries necessary for the MVP are coherent enough to prevent avoidable rewrites.
 
 ---
 
