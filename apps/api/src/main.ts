@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { parseEnv } from '@talent-network/config';
+import { parseApiEnv } from '@talent-network/config';
 import { createLogger } from '@talent-network/observability';
 import { AppModule } from './app.module.js';
 
 async function bootstrap(): Promise<void> {
-  const env = parseEnv();
+  const env = parseApiEnv();
   const logger = createLogger({
     service: 'api',
     level: env.LOG_LEVEL,
