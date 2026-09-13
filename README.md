@@ -130,8 +130,10 @@ See [`docs/05-infrastructure/object-storage.md`](./docs/05-infrastructure/object
 ### Requirements
 
 - Node.js 24.x
-- pnpm 10.x
+- pnpm 11.x
 - Docker with Docker Compose
+
+The repository currently standardizes on pnpm `11.18.0` through the root `packageManager` field while accepting compatible pnpm 11 releases via the engine range.
 
 ### Bootstrap
 
