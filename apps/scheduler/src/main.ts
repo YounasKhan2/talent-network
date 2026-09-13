@@ -1,6 +1,6 @@
 import { parseSchedulerEnv } from '@talent-network/config';
 import { createLogger } from '@talent-network/observability';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 async function main(): Promise<void> {
   const env = parseSchedulerEnv();
