@@ -1,9 +1,9 @@
-import { parseEnv } from '@talent-network/config';
+import { parseWorkerEnv } from '@talent-network/config';
 import { createLogger } from '@talent-network/observability';
 import Redis from 'ioredis';
 
 async function main(): Promise<void> {
-  const env = parseEnv();
+  const env = parseWorkerEnv();
   const logger = createLogger({ service: 'worker', level: env.LOG_LEVEL, environment: env.NODE_ENV });
   const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 
