@@ -1,12 +1,12 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
-import { parseEnv } from '@talent-network/config';
+import { parseApiEnv } from '@talent-network/config';
 import type { ReadinessDependency, ReadinessResponse } from '@talent-network/contracts';
 import { createDatabaseClient, type DatabaseClient } from '@talent-network/database';
 import Redis from 'ioredis';
 
 @Injectable()
 export class HealthService implements OnApplicationShutdown {
-  private readonly env = parseEnv();
+  private readonly env = parseApiEnv();
   private readonly database: DatabaseClient = createDatabaseClient(this.env.DATABASE_URL);
   private readonly redis = new Redis(this.env.REDIS_URL, {
     lazyConnect: true,
