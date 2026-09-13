@@ -8,7 +8,7 @@
   "scripts": {
     "build": "prisma generate && tsc -p tsconfig.json",
     "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src prisma.config.ts --max-warnings=0",
+    "lint": "prisma generate && eslint src prisma.config.ts --max-warnings=0",
     "test": "node --test",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
