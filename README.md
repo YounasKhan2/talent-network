@@ -4,9 +4,9 @@
 
 ## Status
 
-**Phase:** Product & Architecture Definition  
-**Implementation:** Not started  
-**Repository role:** Single source of truth for product, design, engineering, architecture, infrastructure, security, AI, and deployment decisions.
+**Phase:** Architecture & UX Specification Complete  
+**Implementation:** Ready for monorepo bootstrap  
+**Repository role:** Single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
 
 ---
 
@@ -113,37 +113,6 @@ Administration
 
 ---
 
-## Repository Roadmap
-
-```text
-.
-├── README.md
-├── AGENTS.md
-├── CONTRIBUTING.md
-├── docs/
-│   ├── 00-vision/
-│   ├── 01-research/
-│   ├── 02-product/
-│   ├── 03-architecture/
-│   ├── 04-ai/
-│   ├── 05-infrastructure/
-│   ├── 06-security/
-│   ├── 07-design/
-│   ├── 08-api/
-│   ├── 09-data/
-│   ├── 10-decisions/
-│   └── 11-implementation/
-└── apps/                      # introduced when implementation begins
-    ├── web/
-    ├── api/
-    ├── worker/
-    └── scheduler/
-```
-
-Git does not preserve empty directories, so documentation folders are added as real documents are authored.
-
----
-
 ## Documentation Index
 
 ### Product
@@ -178,6 +147,14 @@ Git does not preserve empty directories, so documentation folders are added as r
 
 - [`docs/06-security/threat-model.md`](./docs/06-security/threat-model.md) — tenant, privacy, upload, AI, scraping, fraud, webhook, queue and incident threat controls
 
+### Design & UX
+
+- [`docs/07-design/design-system.md`](./docs/07-design/design-system.md) — visual language, tokens, primitives, tables, split-view, command palette, accessibility and component governance
+- [`docs/07-design/information-architecture.md`](./docs/07-design/information-architecture.md) — public/candidate/employer/admin route map and navigation rules
+- [`docs/07-design/employer-workspace-ux.md`](./docs/07-design/employer-workspace-ux.md) — recruiter shell, jobs, applicants, tables, candidate split-pane, talent search, pipelines and collaboration
+- [`docs/07-design/candidate-experience-ux.md`](./docs/07-design/candidate-experience-ux.md) — Career Passport, resume review, discovery, matching, applications, privacy and mobile experience
+- [`docs/07-design/admin-trust-ux.md`](./docs/07-design/admin-trust-ux.md) — moderation, verification, risk, support, AI operations and audited privileged workflows
+
 ### Data
 
 - [`docs/09-data/erd-and-entity-contracts.md`](./docs/09-data/erd-and-entity-contracts.md) — logical ERD, entity ownership, versioning, applications, matching, assessments, audit/outbox and indexing baseline
@@ -185,6 +162,10 @@ Git does not preserve empty directories, so documentation folders are added as r
 ### Decisions
 
 - [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md) — accepted initial deployment architecture
+
+### Implementation
+
+- [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md) — monorepo structure, implementation phases, quality gates, CI/CD, migration policy and MVP release criteria
 
 ### Contribution Rules
 
@@ -215,12 +196,11 @@ This index must grow as the repository evolves.
 - Important hiring inputs are versioned so historical application and matching outcomes remain explainable.
 - Search, caches, analytics, embeddings and read projections are rebuildable derivatives rather than authoritative business state.
 - High-volume recruiter interfaces use purpose-built read models, cursor pagination, virtualization, saved views, and split-pane workflows.
+- UX follows editorial precision × operational density: dense employer operations, calmer candidate guidance, evidence-first admin workflows.
 
 ---
 
-## Current Architecture Phase
-
-Completed foundation documents:
+## Completed Specification Baseline
 
 ```text
 Product Blueprint
@@ -238,22 +218,44 @@ Security Threat Model
 Load / Capacity Model
 Deployment & Observability Architecture
 Database ERD & Entity Contracts
+Design System
+Information Architecture & Route Map
+Employer Workspace UX
+Candidate Experience UX
+Admin / Trust & Safety UX
+MVP Implementation Plan
 ADR-0001 Modular Monolith First
 ```
 
-Next planned specifications:
+## Next Phase
 
 ```text
-Design System & UX Principles
-Information Architecture & Route Map
-Employer Workspace UX Specification
-Candidate Experience UX Specification
-Admin / Trust & Safety UX Specification
-MVP Implementation Plan
 Repository / Monorepo Bootstrap
+        ↓
+Engineering Foundation
+        ↓
+Identity + Organizations + Permissions
+        ↓
+Candidate Career Passport
+        ↓
+Resume Intelligence
+        ↓
+Employer Jobs
+        ↓
+Discovery + Applications
+        ↓
+Matching / Screening
+        ↓
+Recruiter Workspace
+        ↓
+Interviews / Notifications
+        ↓
+Admin / Verification / Billing
+        ↓
+Production hardening and deployment
 ```
 
-Production implementation should begin only after the MVP architecture and core UX workflows are coherent enough to prevent avoidable rewrites.
+Implementation must follow [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md). Any significant deviation requires documentation updates and, where consequential, an ADR.
 
 ---
 
