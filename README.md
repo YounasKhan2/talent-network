@@ -159,6 +159,16 @@ Git does not preserve empty directories, so documentation folders are added as r
 - [`docs/03-architecture/event-architecture.md`](./docs/03-architecture/event-architecture.md) — outbox, queues, events, idempotency, retries and backpressure
 - [`docs/03-architecture/multi-tenancy-and-authorization.md`](./docs/03-architecture/multi-tenancy-and-authorization.md) — tenant isolation, permissions, candidate privacy and entitlement boundaries
 
+### API
+
+- [`docs/08-api/api-architecture.md`](./docs/08-api/api-architecture.md) — REST/versioning conventions, read models, cursor pagination, error contracts, idempotency, rate limits and async operations
+
+### AI & Intelligent Processing
+
+- [`docs/04-ai/resume-processing-architecture.md`](./docs/04-ai/resume-processing-architecture.md) — secure upload, scan/extract/OCR/parse pipeline, review flow, retries, evidence and versioning
+- [`docs/04-ai/matching-screening-architecture.md`](./docs/04-ai/matching-screening-architecture.md) — staged deterministic/semantic/evidence matching, screening, explainability and human decision ownership
+- [`docs/04-ai/ai-gateway-and-cost-controls.md`](./docs/04-ai/ai-gateway-and-cost-controls.md) — provider-neutral AI gateway, structured output, cost budgets, privacy, routing and graceful degradation
+
 ### Decisions
 
 - [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md) — accepted initial deployment architecture
@@ -181,7 +191,11 @@ This index must grow as the repository evolves.
 - Heavy computation runs asynchronously.
 - Reliable domain-event publication uses a transactional outbox pattern.
 - Retryable consumers/jobs are idempotent and assume at-least-once delivery.
-- Candidate/job matching uses structured rules + evidence + semantic retrieval before expensive LLM reasoning.
+- Public/product APIs are versioned, contract-driven, tenant-safe, rate-limited, observable and use cursor pagination for large mutable datasets.
+- Resume ingestion is a secure asynchronous pipeline; AI parsing creates a review proposal, never silent authoritative profile mutation.
+- Candidate/job matching uses hard constraints + structured features + semantic retrieval + evidence before expensive LLM reasoning.
+- Match results are versioned, explainable and preserve strengths, uncertainties and conflicts rather than only a score.
+- AI access is centralized behind a provider-neutral gateway with schema validation, prompt/model versioning, privacy controls, cost tracking and graceful degradation.
 - AI output is versioned, validated, auditable, and never treated as unquestionable truth.
 - Multi-tenancy and authorization are backend-enforced from the beginning.
 - Candidate-data access requires privacy/access basis in addition to employer permissions.
@@ -201,20 +215,21 @@ Domain Architecture
 Data Architecture
 Event / Async Architecture
 Multi-tenancy & Authorization
+API Architecture & Error Contracts
+Resume Processing Architecture
+Matching & Screening Architecture
+AI Gateway & Cost Controls
 ADR-0001 Modular Monolith First
 ```
 
 Next planned specifications:
 
 ```text
-API Architecture & Error Contracts
-Resume Processing Architecture
-Matching & Screening Architecture
-AI Gateway / Cost Controls
 Security Threat Model
 Load / Capacity Model
 Infrastructure / Deployment / Observability
 Design System & Information Architecture
+Database ERD & Entity Contracts
 MVP Implementation Plan
 ```
 
