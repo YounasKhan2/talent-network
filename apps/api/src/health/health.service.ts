@@ -2,7 +2,7 @@ import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { parseApiEnv } from '@talent-network/config';
 import type { ReadinessDependency, ReadinessResponse } from '@talent-network/contracts';
 import { createDatabaseClient, type DatabaseClient } from '@talent-network/database';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 @Injectable()
 export class HealthService implements OnApplicationShutdown {
