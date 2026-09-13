@@ -74,7 +74,7 @@ flowchart TD
 
     API --> PG[(PostgreSQL)]
     API --> REDIS[(Redis)]
-    API --> OBJ[(Object Storage)]
+    API --> OBJ[(S3-compatible Object Storage)]
     API --> Q[Async Queue]
 
     Q --> RW[Resume Workers]
@@ -113,11 +113,15 @@ Additional domain packages are created only when implementation genuinely needs 
 ```text
 PostgreSQL  → transactional source of truth
 Redis       → cache, coordination and queue infrastructure
-MinIO       → local S3-compatible object storage
+RustFS      → local S3-compatible object storage
 Prisma      → migrations and database client
 pnpm        → workspace/package management
 Turborepo   → repository task orchestration
 ```
+
+RustFS is a **local infrastructure choice**, not an application dependency. Application code must use the generic S3-compatible storage contract so production storage can later move to RustFS, AWS S3, Cloudflare R2, or another validated S3-compatible provider without rewriting business logic.
+
+See [`docs/05-infrastructure/object-storage.md`](./docs/05-infrastructure/object-storage.md).
 
 ---
 
@@ -138,7 +142,26 @@ pnpm install
 pnpm dev
 ```
 
-Web defaults to `http://localhost:3000` and API defaults to `http://localhost:4000`.
+Local services:
+
+```text
+Web               http://localhost:3000
+API               http://localhost:4000
+PostgreSQL        localhost:5432
+Redis             localhost:6379
+RustFS S3 API     http://localhost:9000
+RustFS Console    http://localhost:9001
+```
+
+The local RustFS container uses the same generic `S3_*` credentials consumed by the application. The Compose stack initializes its named data volume permissions before RustFS starts because RustFS runs as a non-root user.
+
+The intended development bucket is:
+
+```text
+talent-network-local
+```
+
+Bucket provisioning will be automated alongside the storage adapter/resume-upload implementation. Production bucket creation belongs to infrastructure provisioning rather than normal API startup.
 
 ### API health contract
 
@@ -203,6 +226,7 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 ### Infrastructure
 - [`docs/05-infrastructure/load-capacity-model.md`](./docs/05-infrastructure/load-capacity-model.md)
 - [`docs/05-infrastructure/deployment-observability.md`](./docs/05-infrastructure/deployment-observability.md)
+- [`docs/05-infrastructure/object-storage.md`](./docs/05-infrastructure/object-storage.md)
 
 ### Security
 - [`docs/06-security/threat-model.md`](./docs/06-security/threat-model.md)
@@ -232,6 +256,7 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 - PostgreSQL is transactional truth.
 - Redis is ephemeral infrastructure, never permanent business truth.
 - Files belong in private object storage rather than relational blobs.
+- Object-storage application code targets a provider-neutral S3-compatible interface; RustFS is the local development provider.
 - Heavy processing is asynchronous and retry-safe.
 - Reliable business-event publication uses transactional outbox semantics.
 - Matching uses hard constraints + structured features + semantic relevance + evidence before expensive LLM reasoning.
