@@ -1,0 +1,11 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Phase 0 intentionally contains no product tables.
+// Domain models are introduced phase-by-phase against docs/09-data/erd-and-entity-contracts.md.
