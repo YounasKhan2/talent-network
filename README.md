@@ -6,17 +6,21 @@ Talent Network is a documentation-led, production-oriented employment operating 
 
 ## Project Status
 
-| Area                                   | Status         |
-| -------------------------------------- | -------------- |
-| Product blueprint                      | ✅ Complete    |
-| Architecture baseline                  | ✅ Complete    |
-| Security / scale / data specifications | ✅ Complete    |
-| UX / information architecture          | ✅ Complete    |
-| Monorepo bootstrap                     | ✅ Started     |
-| Engineering foundation                 | 🟡 In progress |
-| Product implementation                 | ⏳ Next        |
+| Area                                   | Status              |
+| -------------------------------------- | ------------------- |
+| Product blueprint                      | ✅ Complete         |
+| Architecture baseline                  | ✅ Complete         |
+| Security / scale / data specifications | ✅ Complete         |
+| UX / information architecture          | ✅ Complete         |
+| Monorepo bootstrap                     | ✅ Complete         |
+| Engineering foundation                 | ✅ Complete         |
+| Phase 1 backend foundation             | ✅ Verified         |
+| Phase 1 authenticated web experience   | 🟡 In progress      |
+| Candidate Career Passport              | ⏳ Next major phase |
 
-**Current implementation phase:** Phase 0 — Repository & Engineering Foundation.
+**Current implementation phase:** Phase 1 — Identity, Organizations, Permissions & Authenticated Web Experience.
+
+The Phase 1 backend is verified through repository quality gates, database-backed integration coverage, and browser-tested signup/login/organization onboarding. Remaining Phase 1 product work connects account recovery, email verification, invitation acceptance, workspace switching, and permission-aware navigation before Phase 2 begins.
 
 The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
 
@@ -192,9 +196,12 @@ It runs:
 format check
 → lint
 → typecheck
-→ tests
-→ build
+→ unit/security tests
+→ Phase 1 PostgreSQL integration tests
+→ production build
 ```
+
+The integration stage deploys committed Prisma migrations before running isolated Phase 1 database-backed tests. Local PostgreSQL therefore needs to be reachable for the complete gate.
 
 A hosted CI provider may be added later, but it should only execute these repository-owned commands. Quality logic must never depend on a specific CI vendor.
 
@@ -259,6 +266,7 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 
 - [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md)
 - [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/local-quality-gates.md)
+- [`docs/11-implementation/phase-1-closure.md`](./docs/11-implementation/phase-1-closure.md)
 
 ---
 
@@ -286,9 +294,9 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 ## Implementation Sequence
 
 ```text
-0 Engineering Foundation        ← current
+0 Engineering Foundation                       ✅ complete
         ↓
-1 Identity + Organizations + Permissions
+1 Identity + Organizations + Permissions       ← current
         ↓
 2 Candidate Career Passport
         ↓
