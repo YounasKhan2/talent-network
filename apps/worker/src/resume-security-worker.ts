@@ -1,9 +1,5 @@
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
-import type {
-  DatabaseClient,
-  PrismaInputJsonValue,
-  PrismaNullableJsonValueInput,
-} from '@talent-network/database';
+import type { DatabaseClient, PrismaInputJsonValue } from '@talent-network/database';
 import {
   type MalwareScanner,
   type ResumeSecurityJobData,
@@ -241,7 +237,7 @@ async function rejectResume(
       data: {
         processingState: 'REJECTED',
         failureCode,
-        failureMetadata: failureMetadata as PrismaNullableJsonValueInput,
+        failureMetadata,
       },
     });
     if (rejected.count === 0) return;
@@ -290,7 +286,7 @@ async function markProcessingFailure(
       data: {
         processingState: 'FAILED_RETRYABLE',
         failureCode,
-        failureMetadata: failureMetadata as PrismaNullableJsonValueInput,
+        failureMetadata,
       },
     });
     return;
@@ -305,7 +301,7 @@ async function markProcessingFailure(
       data: {
         processingState: 'FAILED_TERMINAL',
         failureCode,
-        failureMetadata: failureMetadata as PrismaNullableJsonValueInput,
+        failureMetadata,
       },
     });
     if (failed.count === 0) return;
