@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   ApiError,
@@ -76,6 +76,7 @@ export function EmailVerificationScreen() {
 
 export function InvitationAcceptanceScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const [state, setState] = useState<TokenState>('checking');
@@ -104,12 +105,14 @@ export function InvitationAcceptanceScreen() {
     };
   }, []);
 
-  const returnPath = token ? `/invite?token=${encodeURIComponent(token)}` : '/invite';
+  const returnPath = token ? `${pathname}?token=${encodeURIComponent(token)}` : pathname;
 
   async function accept() {
     if (!token) {
       setState('error');
-      setMessage('This invitation link is missing its token. Ask the organization to send a new invite.');
+      setMessage(
+        'This invitation link is missing its token. Ask the organization to send a new invite.',
+      );
       return;
     }
 
@@ -121,7 +124,9 @@ export function InvitationAcceptanceScreen() {
       setMessage('Invitation accepted. Your organization membership is now active.');
     } catch (caught) {
       setState('error');
-      setMessage(caught instanceof ApiError ? caught.message : 'Unable to accept this invitation.');
+      setMessage(
+        caught instanceof ApiError ? caught.message : 'Unable to accept this invitation.',
+      );
     }
   }
 
@@ -133,7 +138,9 @@ export function InvitationAcceptanceScreen() {
     >
       {state === 'auth-required' ? (
         <div className="token-action-stack">
-          <p className="token-action-note">Sign in or create an account with the invited email first.</p>
+          <p className="token-action-note">
+            Sign in or create an account with the invited email first.
+          </p>
           <Link
             className="primary-link"
             href={{ pathname: '/login', query: { next: returnPath } }}
