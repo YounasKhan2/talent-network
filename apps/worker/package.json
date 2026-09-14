@@ -12,8 +12,11 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.888.0",
     "@talent-network/config": "workspace:*",
+    "@talent-network/database": "workspace:*",
     "@talent-network/observability": "workspace:*",
+    "@talent-network/resume-security": "workspace:*",
     "bullmq": "^5.58.0",
     "ioredis": "^5.7.0"
   },
