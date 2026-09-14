@@ -16,7 +16,9 @@ import { DATABASE_CLIENT } from '../database/database.module.js';
 import { OrganizationInvitationDeliveryService } from './organization-invitation-delivery.service.js';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const INVITABLE_ROLE_KEYS = ORGANIZATION_ROLE_KEYS.filter((role) => role !== 'ORG_OWNER');
+const INVITABLE_ROLE_KEYS: readonly OrganizationRoleKey[] = ORGANIZATION_ROLE_KEYS.filter(
+  (role) => role !== 'ORG_OWNER',
+);
 
 export interface CreateOrganizationInvitationInput {
   email: string;
@@ -44,7 +46,6 @@ export class OrganizationInvitationsService {
     const existingUser = await this.database.user.findUnique({
       where: { primaryEmail: email },
       select: {
-        id: true,
         memberships: {
           where: { organizationId, status: 'ACTIVE' },
           select: { id: true },
@@ -120,10 +121,22 @@ export class OrganizationInvitationsService {
       await this.deliveryService.sendInvitation(email, rawToken);
       return invitation;
     } catch (error: unknown) {
-      await this.database.organizationInvitation.updateMany({
-        where: { id: invitation.id, status: 'PENDING' },
-        data: { status: 'REVOKED', revokedAt: new Date() },
-      });
+      await this.database.$transaction([
+        this.database.organizationInvitation.updateMany({
+          where: { id: invitation.id, status: 'PENDING' },
+          data: { status: 'REVOKED', revokedAt: new Date() },
+        }),
+        this.database.auditEvent.create({
+          data: {
+            organizationId,
+            actorType: 'USER',
+            actorId: invitedByUserId,
+            action: 'organization.invitation.delivery_failed',
+            resourceType: 'OrganizationInvitation',
+            resourceId: invitation.id,
+          },
+        }),
+      ]);
       throw error;
     }
   }
@@ -170,7 +183,7 @@ export class OrganizationInvitationsService {
         throw new ConflictException('This invitation has already been handled.');
       }
 
-      await transaction.organizationMember.upsert({
+      const membership = await transaction.organizationMember.upsert({
         where: {
           organizationId_userId: {
             organizationId: invitation.organizationId,
@@ -191,6 +204,7 @@ export class OrganizationInvitationsService {
           invitedAt: invitation.createdAt,
           joinedAt: now,
         },
+        select: { id: true },
       });
 
       await transaction.user.updateMany({
@@ -214,9 +228,10 @@ export class OrganizationInvitationsService {
         data: {
           organizationId: invitation.organizationId,
           aggregateType: 'OrganizationMember',
-          aggregateId: sessionUserId,
+          aggregateId: membership.id,
           eventType: 'organization.member.joined',
           payload: {
+            membershipId: membership.id,
             organizationId: invitation.organizationId,
             userId: sessionUserId,
             roleKey: invitation.roleKey,
