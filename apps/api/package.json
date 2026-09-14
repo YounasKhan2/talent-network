@@ -11,7 +11,8 @@
     "lint": "eslint src --max-warnings=0",
     "test": "tsx --test src/account/account-context.service.test.ts src/auth/auth.crypto.test.ts src/auth/auth.http.test.ts src/auth/auth-rate-limit.service.test.ts src/authorization/authorization.service.test.ts",
     "test:integration": "node --env-file=../../.env --import tsx --test src/integration/phase1.integration.test.ts",
-    "test:integration:phase2": "node --env-file=../../.env --import tsx --test src/integration/phase2.integration.test.ts"
+    "test:integration:phase2": "node --env-file=../../.env --import tsx --test src/integration/phase2.integration.test.ts",
+    "test:integration:phase2a": "node --env-file=../../.env --import tsx --test src/integration/phase2a-privacy-firewall.integration.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.0",
