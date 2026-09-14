@@ -40,6 +40,43 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum CandidateVisibility {
+  PRIVATE
+  NETWORK
+  VERIFIED_RECRUITERS
+}
+
+enum CandidateDiscoverability {
+  HIDDEN
+  SEARCHABLE
+}
+
+enum CandidateProfileVersionStatus {
+  DRAFT
+  APPROVED
+  SUPERSEDED
+}
+
+enum CandidateProfileSource {
+  MANUAL
+  RESUME_IMPORT
+  SYSTEM
+}
+
+enum CandidateAvailabilityStatus {
+  IMMEDIATE
+  NOTICE_PERIOD
+  OPEN_TO_OFFERS
+  NOT_LOOKING
+}
+
+enum CandidateWorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
+  FLEXIBLE
+}
+
 model User {
   id                  String                    @id @default(uuid()) @db.Uuid
   primaryEmail        String                    @unique
@@ -54,6 +91,7 @@ model User {
   memberships         OrganizationMember[]
   invitationsSent     OrganizationInvitation[]  @relation("InvitationInviter")
   auditEvents         AuditEvent[]               @relation("AuditActor")
+  candidate           Candidate?
 
   @@index([status, createdAt])
 }
@@ -76,13 +114,13 @@ model Session {
 }
 
 model EmailVerificationToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  tokenHash String    @unique
-  expiresAt DateTime
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime
   consumedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
@@ -137,22 +175,202 @@ model OrganizationMember {
 }
 
 model OrganizationInvitation {
-  id             String           @id @default(uuid()) @db.Uuid
-  organizationId String           @db.Uuid
-  email          String
-  roleKey        String
-  tokenHash      String           @unique
-  status         InvitationStatus @default(PENDING)
-  invitedByUserId String          @db.Uuid
-  expiresAt      DateTime
-  acceptedAt     DateTime?
-  revokedAt      DateTime?
-  createdAt      DateTime         @default(now())
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedBy      User             @relation("InvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+  id              String           @id @default(uuid()) @db.Uuid
+  organizationId  String           @db.Uuid
+  email           String
+  roleKey         String
+  tokenHash       String           @unique
+  status          InvitationStatus @default(PENDING)
+  invitedByUserId String           @db.Uuid
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy       User             @relation("InvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, status, createdAt])
   @@index([email, status])
+}
+
+model Candidate {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  userId                  String                    @unique @db.Uuid
+  visibility              CandidateVisibility       @default(PRIVATE)
+  discoverability         CandidateDiscoverability  @default(HIDDEN)
+  primaryLocale           String                    @default("en")
+  timezone                String                    @default("UTC")
+  currentProfileVersionId String?                   @unique @db.Uuid
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileVersions          CandidateProfileVersion[] @relation("CandidateProfileVersions")
+  currentProfileVersion   CandidateProfileVersion?  @relation("CandidateCurrentProfile", fields: [currentProfileVersionId], references: [id], onDelete: SetNull)
+
+  @@index([discoverability, visibility, updatedAt(sort: Desc)])
+}
+
+model CandidateProfileVersion {
+  id                       String                        @id @default(uuid()) @db.Uuid
+  candidateId              String                        @db.Uuid
+  versionNumber            Int
+  status                   CandidateProfileVersionStatus @default(DRAFT)
+  source                   CandidateProfileSource        @default(MANUAL)
+  headline                 String?
+  summary                  String?
+  availabilityStatus       CandidateAvailabilityStatus?
+  availableFrom            DateTime?
+  compensationCurrency     String?
+  compensationMinimum      Int?
+  compensationTarget       Int?
+  compensationPeriod       String?
+  preferredWorkModes       CandidateWorkMode[]
+  preferredEmploymentTypes String[]
+  approvedAt               DateTime?
+  createdAt                DateTime                      @default(now())
+  candidate                Candidate                     @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
+  currentForCandidate      Candidate?                    @relation("CandidateCurrentProfile")
+  employments              CandidateEmployment[]
+  education                CandidateEducation[]
+  skills                   CandidateSkill[]
+  projects                 CandidateProject[]
+  certifications           CandidateCertification[]
+  languages                CandidateLanguage[]
+  links                    CandidateLink[]
+  locationPreferences      CandidateLocationPreference[]
+
+  @@unique([candidateId, versionNumber])
+  @@index([candidateId, createdAt(sort: Desc)])
+  @@index([candidateId, status, createdAt(sort: Desc)])
+}
+
+model CandidateEmployment {
+  id              String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  companyName     String
+  title           String
+  employmentType  String?
+  location        String?
+  workMode        CandidateWorkMode?
+  startDate       DateTime?
+  endDate         DateTime?
+  isCurrent       Boolean                 @default(false)
+  summary         String?
+  sortOrder       Int                     @default(0)
+  createdAt       DateTime                @default(now())
+  profileVersion  CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateEducation {
+  id              String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  institutionName String
+  degree          String?
+  fieldOfStudy    String?
+  location        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  isCurrent       Boolean                 @default(false)
+  description     String?
+  sortOrder       Int                     @default(0)
+  createdAt       DateTime                @default(now())
+  profileVersion  CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateSkill {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  name             String
+  normalizedName   String
+  proficiency      String?
+  experienceMonths Int?
+  lastUsedAt       DateTime?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([profileVersionId, normalizedName])
+  @@index([normalizedName, profileVersionId])
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateProject {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  name             String
+  description      String?
+  role             String?
+  url              String?
+  repositoryUrl    String?
+  startDate        DateTime?
+  endDate          DateTime?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateCertification {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  name             String
+  issuer           String?
+  credentialId     String?
+  credentialUrl    String?
+  issuedAt         DateTime?
+  expiresAt        DateTime?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateLanguage {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  name             String
+  proficiency      String?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([profileVersionId, name])
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateLink {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  label            String
+  url              String
+  kind             String?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateLocationPreference {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  label            String
+  countryCode      String?
+  region           String?
+  city             String?
+  remoteOnly       Boolean                 @default(false)
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+  @@index([countryCode, city])
 }
 
 model AuditEvent {
