@@ -38,15 +38,26 @@ void test('Phase 2B Career Passport version history is candidate-owned and immut
       { name: 'React', proficiency: null, experienceMonths: 30, lastUsedAt: null },
     ]);
 
-    await t.test('lists versions newest first and marks exactly the current version', async () => {
-      const result = await versions.list(primary.session.user.id);
+    await t.test('lists versions newest first, paginates, and marks current version', async () => {
+      const firstPage = await versions.list(primary.session.user.id, { limit: 2 });
       assert.deepEqual(
-        result.versions.map((version) => version.versionNumber),
-        [3, 2, 1],
+        firstPage.versions.map((version) => version.versionNumber),
+        [3, 2],
       );
-      assert.equal(result.versions.filter((version) => version.isCurrent).length, 1);
-      assert.equal(result.versions[0]?.isCurrent, true);
-      assert.equal(result.currentProfileVersionId, result.versions[0]?.id);
+      assert.equal(firstPage.versions.filter((version) => version.isCurrent).length, 1);
+      assert.equal(firstPage.versions[0]?.isCurrent, true);
+      assert.equal(firstPage.currentProfileVersionId, firstPage.versions[0]?.id);
+      assert.equal(firstPage.nextCursor, 2);
+
+      const secondPage = await versions.list(primary.session.user.id, {
+        beforeVersionNumber: firstPage.nextCursor ?? undefined,
+        limit: 2,
+      });
+      assert.deepEqual(
+        secondPage.versions.map((version) => version.versionNumber),
+        [1],
+      );
+      assert.equal(secondPage.nextCursor, null);
     });
 
     await t.test('returns the exact read-only historical snapshot', async () => {
