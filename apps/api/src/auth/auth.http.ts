@@ -92,7 +92,10 @@ export function sessionContextFromRequest(request: RequestLike): { userAgent?: s
   const forwardedFor = Array.isArray(forwardedForValue) ? forwardedForValue[0] : forwardedForValue;
   const ip = forwardedFor?.split(',')[0]?.trim() || request.socket?.remoteAddress;
 
-  return { userAgent, ip };
+  return {
+    ...(userAgent ? { userAgent } : {}),
+    ...(ip ? { ip } : {}),
+  };
 }
 
 function readCookie(request: RequestLike, name: string): string | null {
