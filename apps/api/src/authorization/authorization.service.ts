@@ -1,10 +1,10 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import type { Permission, SessionResponse } from '@talent-network/contracts';
 import { AuthService } from '../auth/auth.service.js';
 
 @Injectable()
 export class AuthorizationService {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   async authorizeOrganization(
     sessionToken: string,
