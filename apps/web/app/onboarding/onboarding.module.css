@@ -1,0 +1,154 @@
+.shell {
+  min-height: 100vh;
+  background: #f4f1eb;
+  color: #151515;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.frame {
+  width: min(1080px, 100%);
+  display: grid;
+  gap: 32px;
+}
+
+.header {
+  max-width: 760px;
+}
+
+.kicker {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #68645d;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(36px, 6vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 650;
+}
+
+.header p {
+  margin: 20px 0 0;
+  max-width: 650px;
+  color: #5c5953;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid #d8d2c7;
+  background: #fbfaf7;
+  padding: 28px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cardTop {
+  display: grid;
+  gap: 14px;
+}
+
+.index {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #7a756d;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.025em;
+}
+
+.card p {
+  margin: 0;
+  color: #625f59;
+  line-height: 1.6;
+}
+
+.guide {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  color: #3e3c38;
+  font-size: 14px;
+}
+
+.guide li::before {
+  content: '— ';
+  color: #8a857d;
+}
+
+.action {
+  margin-top: 28px;
+  border: 0;
+  background: #171717;
+  color: #fff;
+  min-height: 48px;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+
+.action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.existing {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #716d66;
+}
+
+.note {
+  border-top: 1px solid #d8d2c7;
+  padding-top: 20px;
+  color: #5d5953;
+  line-height: 1.6;
+}
+
+.error {
+  border: 1px solid #cab5b0;
+  background: #fff8f6;
+  padding: 14px 16px;
+  color: #7a2920;
+}
+
+.loading {
+  color: #69655e;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 28px 16px;
+    place-items: start;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-height: 0;
+  }
+}
