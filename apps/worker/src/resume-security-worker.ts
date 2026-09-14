@@ -1,5 +1,9 @@
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
-import type { DatabaseClient } from '@talent-network/database';
+import type {
+  DatabaseClient,
+  PrismaInputJsonValue,
+  PrismaNullableJsonValueInput,
+} from '@talent-network/database';
 import {
   type MalwareScanner,
   type ResumeSecurityJobData,
@@ -45,7 +49,6 @@ export async function processResumeSecurityJob(
     data: {
       processingState: 'VALIDATING',
       failureCode: null,
-      failureMetadata: null,
     },
   });
 
@@ -58,7 +61,6 @@ export async function processResumeSecurityJob(
       data: {
         processingState: 'VALIDATING',
         failureCode: null,
-        failureMetadata: null,
       },
     });
   }
@@ -138,7 +140,6 @@ export async function processResumeSecurityJob(
       processingState: 'SCANNING',
       checksumSha256: validation.checksumSha256,
       failureCode: null,
-      failureMetadata: null,
     },
   });
   if (movedToScanning.count === 0) return;
@@ -177,7 +178,6 @@ export async function processResumeSecurityJob(
       data: {
         processingState: 'EXTRACTING',
         failureCode: null,
-        failureMetadata: null,
       },
     });
     if (advanced.count === 0) return;
@@ -230,7 +230,7 @@ async function rejectResume(
   database: DatabaseClient,
   version: { id: string; resumeId: string; processingPipelineVersion: string },
   failureCode: string,
-  failureMetadata: Record<string, unknown>,
+  failureMetadata: PrismaInputJsonValue,
 ): Promise<void> {
   await database.$transaction(async (transaction) => {
     const rejected = await transaction.resumeVersion.updateMany({
@@ -238,7 +238,11 @@ async function rejectResume(
         id: version.id,
         processingState: { in: ['VALIDATING', 'SCANNING'] },
       },
-      data: { processingState: 'REJECTED', failureCode, failureMetadata },
+      data: {
+        processingState: 'REJECTED',
+        failureCode,
+        failureMetadata: failureMetadata as PrismaNullableJsonValueInput,
+      },
     });
     if (rejected.count === 0) return;
 
@@ -274,7 +278,7 @@ async function markProcessingFailure(
   database: DatabaseClient,
   version: { id: string; resumeId: string; processingPipelineVersion: string },
   failureCode: string,
-  failureMetadata: Record<string, unknown>,
+  failureMetadata: PrismaInputJsonValue,
   finalAttempt: boolean,
 ): Promise<void> {
   if (!finalAttempt) {
@@ -283,7 +287,11 @@ async function markProcessingFailure(
         id: version.id,
         processingState: { in: ['VALIDATING', 'SCANNING'] },
       },
-      data: { processingState: 'FAILED_RETRYABLE', failureCode, failureMetadata },
+      data: {
+        processingState: 'FAILED_RETRYABLE',
+        failureCode,
+        failureMetadata: failureMetadata as PrismaNullableJsonValueInput,
+      },
     });
     return;
   }
@@ -294,7 +302,11 @@ async function markProcessingFailure(
         id: version.id,
         processingState: { in: ['VALIDATING', 'SCANNING'] },
       },
-      data: { processingState: 'FAILED_TERMINAL', failureCode, failureMetadata },
+      data: {
+        processingState: 'FAILED_TERMINAL',
+        failureCode,
+        failureMetadata: failureMetadata as PrismaNullableJsonValueInput,
+      },
     });
     if (failed.count === 0) return;
 
