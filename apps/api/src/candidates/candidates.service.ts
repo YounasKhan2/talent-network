@@ -53,6 +53,44 @@ export interface CandidateEducationInput {
   description: string | null;
 }
 
+export interface CandidateProjectInput {
+  name: string;
+  description: string | null;
+  role: string | null;
+  url: string | null;
+  repositoryUrl: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+export interface CandidateCertificationInput {
+  name: string;
+  issuer: string | null;
+  credentialId: string | null;
+  credentialUrl: string | null;
+  issuedAt: Date | null;
+  expiresAt: Date | null;
+}
+
+export interface CandidateLanguageInput {
+  name: string;
+  proficiency: string | null;
+}
+
+export interface CandidateLinkInput {
+  label: string;
+  url: string;
+  kind: string | null;
+}
+
+export interface CandidateLocationPreferenceInput {
+  label: string;
+  countryCode: string | null;
+  region: string | null;
+  city: string | null;
+  remoteOnly: boolean;
+}
+
 const profileInclude = {
   employments: { orderBy: { sortOrder: 'asc' as const } },
   education: { orderBy: { sortOrder: 'asc' as const } },
@@ -117,12 +155,7 @@ export class CandidatesService {
       where: { userId },
       include: { currentProfileVersion: { include: profileInclude } },
     });
-    if (!candidate) {
-      throw new NotFoundException({
-        code: 'CANDIDATE_PASSPORT_NOT_INITIALIZED',
-        message: 'Candidate Career Passport has not been initialized yet.',
-      });
-    }
+    if (!candidate) throw candidateNotInitialized();
     return candidate;
   }
 
@@ -167,14 +200,29 @@ export class CandidatesService {
     return this.createNextVersion(userId, { education });
   }
 
+  replaceProjects(userId: string, projects: CandidateProjectInput[]) {
+    return this.createNextVersion(userId, { projects });
+  }
+
+  replaceCertifications(userId: string, certifications: CandidateCertificationInput[]) {
+    return this.createNextVersion(userId, { certifications });
+  }
+
+  replaceLanguages(userId: string, languages: CandidateLanguageInput[]) {
+    return this.createNextVersion(userId, { languages });
+  }
+
+  replaceLinks(userId: string, links: CandidateLinkInput[]) {
+    return this.createNextVersion(userId, { links });
+  }
+
+  replaceLocationPreferences(userId: string, locationPreferences: CandidateLocationPreferenceInput[]) {
+    return this.createNextVersion(userId, { locationPreferences });
+  }
+
   private async requireCandidate(userId: string) {
     const candidate = await this.database.candidate.findUnique({ where: { userId } });
-    if (!candidate) {
-      throw new NotFoundException({
-        code: 'CANDIDATE_PASSPORT_NOT_INITIALIZED',
-        message: 'Candidate Career Passport has not been initialized yet.',
-      });
-    }
+    if (!candidate) throw candidateNotInitialized();
     return candidate;
   }
 
@@ -185,24 +233,29 @@ export class CandidatesService {
       skills?: CandidateSkillInput[];
       employments?: CandidateEmploymentInput[];
       education?: CandidateEducationInput[];
+      projects?: CandidateProjectInput[];
+      certifications?: CandidateCertificationInput[];
+      languages?: CandidateLanguageInput[];
+      links?: CandidateLinkInput[];
+      locationPreferences?: CandidateLocationPreferenceInput[];
     },
   ) {
     const candidate = await this.database.candidate.findUnique({
       where: { userId },
       include: { currentProfileVersion: { include: profileInclude } },
     });
-    if (!candidate?.currentProfileVersion) {
-      throw new NotFoundException({
-        code: 'CANDIDATE_PASSPORT_NOT_INITIALIZED',
-        message: 'Candidate Career Passport has not been initialized yet.',
-      });
-    }
+    if (!candidate?.currentProfileVersion) throw candidateNotInitialized();
 
     const current = candidate.currentProfileVersion;
     const overview = replacement.overview;
     const employments = replacement.employments ?? current.employments;
     const education = replacement.education ?? current.education;
     const skills = replacement.skills ?? current.skills;
+    const projects = replacement.projects ?? current.projects;
+    const certifications = replacement.certifications ?? current.certifications;
+    const languages = replacement.languages ?? current.languages;
+    const links = replacement.links ?? current.links;
+    const locationPreferences = replacement.locationPreferences ?? current.locationPreferences;
 
     return this.database.$transaction(async (transaction) => {
       const next = await transaction.candidateProfileVersion.create({
@@ -277,7 +330,7 @@ export class CandidatesService {
             })),
           },
           projects: {
-            create: current.projects.map((project) => ({
+            create: projects.map((project, index) => ({
               name: project.name,
               description: project.description,
               role: project.role,
@@ -285,43 +338,43 @@ export class CandidatesService {
               repositoryUrl: project.repositoryUrl,
               startDate: project.startDate,
               endDate: project.endDate,
-              sortOrder: project.sortOrder,
+              sortOrder: index,
             })),
           },
           certifications: {
-            create: current.certifications.map((certification) => ({
+            create: certifications.map((certification, index) => ({
               name: certification.name,
               issuer: certification.issuer,
               credentialId: certification.credentialId,
               credentialUrl: certification.credentialUrl,
               issuedAt: certification.issuedAt,
               expiresAt: certification.expiresAt,
-              sortOrder: certification.sortOrder,
+              sortOrder: index,
             })),
           },
           languages: {
-            create: current.languages.map((language) => ({
+            create: languages.map((language, index) => ({
               name: language.name,
               proficiency: language.proficiency,
-              sortOrder: language.sortOrder,
+              sortOrder: index,
             })),
           },
           links: {
-            create: current.links.map((link) => ({
+            create: links.map((link, index) => ({
               label: link.label,
               url: link.url,
               kind: link.kind,
-              sortOrder: link.sortOrder,
+              sortOrder: index,
             })),
           },
           locationPreferences: {
-            create: current.locationPreferences.map((location) => ({
+            create: locationPreferences.map((location, index) => ({
               label: location.label,
               countryCode: location.countryCode,
               region: location.region,
               city: location.city,
               remoteOnly: location.remoteOnly,
-              sortOrder: location.sortOrder,
+              sortOrder: index,
             })),
           },
         },
@@ -358,6 +411,13 @@ export class CandidatesService {
       });
     });
   }
+}
+
+function candidateNotInitialized(): NotFoundException {
+  return new NotFoundException({
+    code: 'CANDIDATE_PASSPORT_NOT_INITIALIZED',
+    message: 'Candidate Career Passport has not been initialized yet.',
+  });
 }
 
 function normalizeSkillName(value: string): string {
