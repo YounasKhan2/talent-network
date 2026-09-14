@@ -34,6 +34,7 @@ void test('Phase 2 Career Passport versions candidate-owned professional state',
         assert.equal(passport.discoverability, 'HIDDEN');
         assert.equal(passport.currentProfileVersion?.versionNumber, 1);
         assert.equal(passport.currentProfileVersion?.status, 'APPROVED');
+        assert.deepEqual(passport.currentProfileVersion?.customSections, []);
 
         const event = await database.outboxEvent.findFirst({
           where: {
@@ -199,6 +200,90 @@ void test('Phase 2 Career Passport versions candidate-owned professional state',
         assert.equal(withLocations.currentProfileVersion?.employments.length, 1);
         assert.equal(withLocations.currentProfileVersion?.education.length, 1);
         assert.equal(withLocations.currentProfileVersion?.skills.length, 2);
+      },
+    );
+
+    await t.test(
+      'custom sections and nested items are ordered versioned evidence and preserve canonical data',
+      async () => {
+        const withCustomSections = await candidates.replaceCustomSections(signup.session.user.id, [
+          {
+            title: 'Publications',
+            description: 'Selected technical writing.',
+            items: [
+              {
+                title: 'Explainable Hiring Systems',
+                subtitle: 'Engineering Notes',
+                description: 'A practical article about evidence-linked candidate matching.',
+                startDate: new Date('2026-03-01T00:00:00.000Z'),
+                endDate: null,
+                url: 'https://example.com/publication',
+              },
+            ],
+          },
+          {
+            title: 'Awards',
+            description: null,
+            items: [
+              {
+                title: 'Hackathon Finalist',
+                subtitle: null,
+                description: null,
+                startDate: new Date('2026-04-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+        ]);
+
+        assert.equal(withCustomSections.currentProfileVersion?.versionNumber, 11);
+        assert.deepEqual(
+          withCustomSections.currentProfileVersion?.customSections.map((section) => section.title),
+          ['Publications', 'Awards'],
+        );
+        assert.equal(withCustomSections.currentProfileVersion?.customSections[0]?.items.length, 1);
+        assert.equal(withCustomSections.currentProfileVersion?.skills.length, 2);
+        assert.equal(withCustomSections.currentProfileVersion?.projects.length, 1);
+
+        const reordered = await candidates.replaceCustomSections(signup.session.user.id, [
+          {
+            title: 'Awards',
+            description: 'Recognition and selected achievements.',
+            items: [
+              {
+                title: 'Hackathon Finalist',
+                subtitle: null,
+                description: 'Finalist entry.',
+                startDate: new Date('2026-04-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+          {
+            title: 'Publications',
+            description: 'Selected technical writing.',
+            items: [
+              {
+                title: 'Explainable Hiring Systems',
+                subtitle: 'Engineering Notes',
+                description: 'A practical article about evidence-linked candidate matching.',
+                startDate: new Date('2026-03-01T00:00:00.000Z'),
+                endDate: null,
+                url: 'https://example.com/publication',
+              },
+            ],
+          },
+        ]);
+
+        assert.equal(reordered.currentProfileVersion?.versionNumber, 12);
+        assert.deepEqual(
+          reordered.currentProfileVersion?.customSections.map((section) => section.title),
+          ['Awards', 'Publications'],
+        );
+        assert.equal(reordered.currentProfileVersion?.customSections[0]?.items[0]?.description, 'Finalist entry.');
+        assert.equal(reordered.currentProfileVersion?.employments.length, 1);
       },
     );
 
