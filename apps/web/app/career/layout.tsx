@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError, getAccountContexts, type MembershipResponse } from '../../lib/api';
+import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
+import { ApiError, getAccountContexts, type AccountContextResponse } from '../../lib/api';
 import styles from './context-bar.module.css';
 
 type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
@@ -10,7 +11,7 @@ type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
 export default function CareerWorkspaceLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<GuardState>('loading');
-  const [memberships, setMemberships] = useState<MembershipResponse[]>([]);
+  const [contexts, setContexts] = useState<AccountContextResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,16 +19,16 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 
     async function resolveCareerContext() {
       try {
-        const contexts = await getAccountContexts();
+        const nextContexts = await getAccountContexts();
         if (!active) return;
 
-        if (!contexts.career.available) {
+        if (!nextContexts.career.available) {
           setState('redirecting');
           router.replace('/onboarding?intent=career');
           return;
         }
 
-        setMemberships(contexts.organizations);
+        setContexts(nextContexts);
         setState('ready');
       } catch (caught) {
         if (!active) return;
@@ -57,7 +58,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
     );
   }
 
-  if (state === 'error') {
+  if (state === 'error' || !contexts) {
     return (
       <main className={styles.gate}>
         <p className="eyebrow">Talent Network</p>
@@ -70,25 +71,8 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
   return (
     <>
       <div className={styles.bar} aria-label="Workspace context">
-        <div className={styles.identity}>
-          <span className={styles.label}>Active context</span>
-          <strong>Personal · Career</strong>
-        </div>
-        <div className={styles.actions}>
-          {memberships.length > 0 ? (
-            <button className={styles.button} onClick={() => router.push('/app')} type="button">
-              Switch to hiring ({memberships.length})
-            </button>
-          ) : (
-            <button
-              className={styles.button}
-              onClick={() => router.push('/onboarding?intent=hire')}
-              type="button"
-            >
-              Add hiring workspace
-            </button>
-          )}
-        </div>
+        <span className={styles.contextHint}>Talent Network workspace</span>
+        <WorkspaceContextSwitcher activeContext={{ kind: 'career' }} contexts={contexts} />
       </div>
       {children}
     </>
