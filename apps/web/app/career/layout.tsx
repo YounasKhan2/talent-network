@@ -111,7 +111,22 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
         </div>
       </aside>
 
-      <div className={styles.stage}>{children}</div>
+      <div className={styles.stage}>
+        <header className={styles.workspaceTopbar}>
+          <div>
+            <p className={styles.topbarKicker}>Active workspace</p>
+            <h1>Career</h1>
+          </div>
+          <div className={styles.workspaceRole}>{activePageLabel(pathname)}</div>
+        </header>
+        <div className={styles.content}>{children}</div>
+      </div>
     </div>
   );
+}
+
+function activePageLabel(pathname: string): string {
+  if (pathname.startsWith('/career/evidence')) return 'Evidence';
+  if (pathname.startsWith('/career/history')) return 'Version history';
+  return 'Career Passport';
 }
