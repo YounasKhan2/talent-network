@@ -7,5 +7,186 @@ datasource db {
   provider = "postgresql"
 }
 
-// Phase 0 intentionally contains no product tables.
-// Domain models are introduced phase-by-phase against docs/09-data/erd-and-entity-contracts.md.
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+model User {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  primaryEmail        String                    @unique
+  emailVerifiedAt     DateTime?
+  passwordHash        String
+  status              UserStatus                @default(ACTIVE)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  sessions            Session[]
+  emailVerification   EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  memberships         OrganizationMember[]
+  invitationsSent     OrganizationInvitation[]  @relation("InvitationInviter")
+  auditEvents         AuditEvent[]               @relation("AuditActor")
+
+  @@index([status, createdAt])
+}
+
+model Session {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  tokenHash     String   @unique
+  expiresAt     DateTime
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  rotatedAt     DateTime?
+  revokedAt     DateTime?
+  userAgentHash String?
+  ipHash        String?
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Organization {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  displayName        String
+  legalName          String?
+  slug               String                   @unique
+  primaryDomain      String?
+  verificationStatus VerificationStatus       @default(UNVERIFIED)
+  status             OrganizationStatus       @default(ACTIVE)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  members            OrganizationMember[]
+  invitations        OrganizationInvitation[]
+  auditEvents        AuditEvent[]
+  outboxEvents       OutboxEvent[]
+
+  @@index([status, createdAt])
+  @@index([verificationStatus, createdAt])
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  roleKey        String
+  status         MembershipStatus @default(ACTIVE)
+  invitedAt      DateTime?
+  joinedAt       DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId, status])
+  @@index([organizationId, status, roleKey])
+}
+
+model OrganizationInvitation {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  email          String
+  roleKey        String
+  tokenHash      String           @unique
+  status         InvitationStatus @default(PENDING)
+  invitedByUserId String          @db.Uuid
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User             @relation("InvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, status, createdAt])
+  @@index([email, status])
+}
+
+model AuditEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @db.Uuid
+  actorType      String
+  actorId        String?       @db.Uuid
+  action         String
+  resourceType   String
+  resourceId     String
+  metadata       Json?
+  occurredAt     DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor          User?         @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, occurredAt(sort: Desc)])
+  @@index([actorId, occurredAt(sort: Desc)])
+  @@index([resourceType, resourceId, occurredAt(sort: Desc)])
+}
+
+model OutboxEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  aggregateType  String
+  aggregateId    String
+  organizationId String?       @db.Uuid
+  eventType      String
+  eventVersion   Int           @default(1)
+  payload        Json
+  occurredAt     DateTime      @default(now())
+  publishedAt    DateTime?
+  attemptCount   Int           @default(0)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([publishedAt, occurredAt])
+  @@index([organizationId, occurredAt(sort: Desc)])
+  @@index([aggregateType, aggregateId, occurredAt(sort: Desc)])
+}
