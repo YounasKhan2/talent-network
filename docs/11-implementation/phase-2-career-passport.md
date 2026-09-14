@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 2B in implementation — record-management + custom-section slice is code complete / local gate pending.**
+**Phase 2B in implementation — record management + custom sections are verified; version history is code complete / local gate and browser verification pending.**
 
 Phase 2 turns authentication identity into a candidate-owned, reusable professional identity that later resume parsing, matching, applications, assessments, and Career Copilot workflows can reference without mutating historical submissions.
 
@@ -32,8 +32,10 @@ The Career Passport currently includes:
 - authenticated Career Passport API endpoints
 - Candidate Career Passport web workspace for every active structured section
 - edit / remove / reorder behavior backed by ordered replacement semantics
+- candidate-owned read-only profile version history
+- bounded version-history pagination
 - profile completeness guidance without hiring-rank gamification
-- PostgreSQL integration coverage for version preservation
+- PostgreSQL integration coverage for version preservation and history ownership
 
 ## Canonical sections vs custom sections
 
@@ -96,6 +98,8 @@ Every supported Passport section participates in this copy-on-write rule. Replac
 
 The web interaction layer deliberately uses the same replacement endpoints for add, edit, remove, and reorder operations. There are no mutable per-row Career Passport writes. This keeps one versioning contract across every section.
 
+Historical versions are exposed through a candidate-only read model. The history UI is read-only and does not provide restore or mutation actions.
+
 ## Privacy invariant
 
 Candidate visibility is separate from organization authorization.
@@ -113,13 +117,17 @@ Canonical cross-context policy:
 
 - [`../06-security/candidate-organization-privacy-firewall.md`](../06-security/candidate-organization-privacy-firewall.md)
 
-Custom sections remain inside the same Candidate privacy boundary. Organization membership never grants access to them.
+Custom sections and version history remain inside the same Candidate privacy boundary. Organization membership never grants access to them.
+
+Version-history authorization always resolves from the authenticated `User` to that user's own `Candidate`, then scopes every version query by `candidateId`. The client never supplies a Candidate ID.
 
 ## API surface
 
 ```text
 POST  /api/v1/candidate/passport/initialize
 GET   /api/v1/candidate/passport
+GET   /api/v1/candidate/passport/versions?before=<versionNumber>&limit=<1..50>
+GET   /api/v1/candidate/passport/versions/:versionNumber
 PATCH /api/v1/candidate/passport/overview
 PUT   /api/v1/candidate/passport/skills
 PUT   /api/v1/candidate/passport/experience
@@ -137,6 +145,8 @@ All mutations use the existing session + CSRF boundary. Candidate ownership is d
 
 The replacement endpoints intentionally accept ordered arrays. Array order becomes persisted `sortOrder`, so add/edit/remove/reorder all share one consistent backend contract.
 
+Version-history list reads are bounded: default page size 30, maximum 50. Descending pagination uses candidate-local `versionNumber` as the stable cursor.
+
 ## Phase 2B validation boundaries
 
 Validation boundaries include:
@@ -151,12 +161,14 @@ Validation boundaries include:
 - at most 20 custom sections per Passport version
 - at most 50 entries per custom section
 - server-controlled Candidate ownership and version numbers
+- positive-integer history cursors and version numbers
+- history page size capped at 50
 
-The original Phase 2B structured sections required no migration because their tables were included in the initial Phase 2 schema. Custom sections add a dedicated Phase 2B migration because they introduce two new version-owned tables.
+The original Phase 2B structured sections required no migration because their tables were included in the initial Phase 2 schema. Custom sections add a dedicated Phase 2B migration because they introduce two new version-owned tables. Version history itself requires no schema migration because it reads the existing immutable profile-version model.
 
 ## Integration coverage
 
-The Phase 2 PostgreSQL suite now covers:
+The Phase 2 PostgreSQL suites now cover:
 
 1. Candidate initialization is private by default
 2. first approved profile version is created atomically
@@ -173,20 +185,26 @@ The Phase 2 PostgreSQL suite now covers:
 13. custom-section reorder/edit replacement preserves canonical profile sections
 14. privacy changes do not create a professional-profile version
 15. Candidate creation/update continues to emit durable events
+16. history lists versions newest-first
+17. history pagination produces a stable next cursor without overlap
+18. historical snapshots remain unchanged after later edits
+19. current snapshot exposes the latest ordered state
+20. one candidate cannot fetch another candidate's version by guessing a version number
 
-The repository quality gate must be run locally before this slice is marked verified.
+The repository quality gate must be run locally before the version-history slice is marked verified.
 
 ## Candidate web surface
 
-Current route:
+Current routes:
 
 ```text
 /career
+/career/history
 ```
 
 The visual model remains calm, editorial, section-based, and document-like rather than an employer dashboard.
 
-The UI surfaces:
+The Career editor surfaces:
 
 - professional overview
 - experience
@@ -200,7 +218,7 @@ The UI surfaces:
 - custom sections
 - privacy & discoverability
 
-Experience, education, skills, projects, certifications, languages, links, and location preferences now use explicit record controls for:
+Experience, education, skills, projects, certifications, languages, links, and location preferences use explicit record controls for:
 
 - edit
 - remove
@@ -220,6 +238,17 @@ Custom sections support:
 
 The same full-replacement API semantics are used for every operation, so each professional edit creates a new approved Passport version and supersedes the previous version.
 
+The Version History workspace provides:
+
+- newest-first timeline
+- current-version marker
+- manual/system/resume-import source label
+- complete read-only snapshot inspection
+- canonical + custom section rendering
+- external evidence links
+- bounded “load older versions” pagination
+- responsive/mobile layout
+
 As defense in depth, the Career page does not contain an implicit `initializeCandidatePassport()` fallback. If Candidate state is absent, it routes back to explicit Career onboarding. The Phase 2A layout guard remains the primary context boundary.
 
 Profile completeness remains guidance rather than a hiring score and must never be exposed as an employer ranking signal.
@@ -227,15 +256,13 @@ Profile completeness remains guidance rather than a hiring score and must never 
 ## Remaining Phase 2B sequence
 
 ```text
-Backend structured-section expansion             ✅ verified before this slice
-Detailed Experience / Education / Project forms  ✅ verified before this slice
-Edit / remove / reorder UX                       ✅ code complete / gate pending
-Custom sections + nested entries                 ✅ code complete / gate pending
-Database migration + integration coverage        ✅ code complete / gate pending
-        ↓
-Browser verification of complete Career workflow
-        ↓
-Profile version history + read-only inspection
+Backend structured-section expansion             ✅ verified
+Detailed Experience / Education / Project forms  ✅ verified
+Edit / remove / reorder UX                       ✅ verified
+Custom sections + nested entries                 ✅ verified
+Database migration + integration coverage        ✅ verified
+Browser verification of Career editor            ✅ verified
+Profile version history + read-only inspection   ✅ code complete / gate + browser pending
         ↓
 Verification/evidence indicators
         ↓
@@ -243,5 +270,9 @@ Formal Phase 2B closure
         ↓
 Resume-import handoff into Phase 3
 ```
+
+Detailed version-history implementation notes:
+
+- [`phase-2b-version-history.md`](./phase-2b-version-history.md)
 
 Do not collapse Career Passport into a resume editor. The Passport remains structured professional source data; resumes are later presentation artifacts and application-specific evidence.
