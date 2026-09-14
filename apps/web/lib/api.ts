@@ -76,7 +76,8 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const payload = await readJson(response);
-    const message = readString(payload, 'message') ?? `Request failed with status ${response.status}.`;
+    const message =
+      readString(payload, 'message') ?? `Request failed with status ${response.status}.`;
     const code = readString(payload, 'code');
     throw new ApiError(message, response.status, code);
   }

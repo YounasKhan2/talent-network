@@ -27,7 +27,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       router.replace('/app');
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Something went wrong. Please try again.');
+      setError(
+        caught instanceof ApiError ? caught.message : 'Something went wrong. Please try again.',
+      );
     } finally {
       setPending(false);
     }
@@ -41,13 +43,19 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         </Link>
         <div className="auth-brand-copy">
           <p className="eyebrow">Talent Network</p>
-          <h1>{isSignup ? 'Build one career identity. Reuse it everywhere.' : 'Return to your hiring network.'}</h1>
+          <h1>
+            {isSignup
+              ? 'Build one career identity. Reuse it everywhere.'
+              : 'Return to your hiring network.'}
+          </h1>
           <p>
-            Structured signal for candidates. High-confidence context for hiring teams. No application spam,
-            opaque scoring, or generic dashboard noise.
+            Structured signal for candidates. High-confidence context for hiring teams. No
+            application spam, opaque scoring, or generic dashboard noise.
           </p>
         </div>
-        <p className="auth-footnote">Editorial precision. Operational density. Human-controlled AI.</p>
+        <p className="auth-footnote">
+          Editorial precision. Operational density. Human-controlled AI.
+        </p>
       </section>
 
       <section className="auth-form-panel">
@@ -89,7 +97,11 @@ export function AuthScreen({ mode }: { mode: Mode }) {
               />
             </label>
 
-            {error ? <p className="form-error" role="alert">{error}</p> : null}
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
 
             <button className="primary-action" disabled={pending} type="submit">
               {pending ? 'Working…' : isSignup ? 'Create account' : 'Continue'}
@@ -98,7 +110,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
 
           <div className="auth-switch-row">
             <span>{isSignup ? 'Already have an account?' : 'New to Talent Network?'}</span>
-            <Link href={isSignup ? '/login' : '/signup'}>{isSignup ? 'Sign in' : 'Create account'}</Link>
+            <Link href={isSignup ? '/login' : '/signup'}>
+              {isSignup ? 'Sign in' : 'Create account'}
+            </Link>
           </div>
         </div>
       </section>

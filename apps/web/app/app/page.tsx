@@ -129,7 +129,11 @@ export default function WorkspaceEntryPage() {
             <p className="field-note">
               We will create you as the owner. You can invite recruiters and hiring managers next.
             </p>
-            {error ? <p className="form-error" role="alert">{error}</p> : null}
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
             <button className="primary-action" disabled={organizationPending} type="submit">
               {organizationPending ? 'Creating…' : 'Create workspace'}
             </button>
@@ -144,10 +148,18 @@ export default function WorkspaceEntryPage() {
       <aside className="product-sidebar">
         <div className="sidebar-brand">TN</div>
         <nav aria-label="Workspace navigation">
-          <a className="nav-item nav-item-active" href="#overview">Overview</a>
-          <a className="nav-item" href="#jobs">Jobs</a>
-          <a className="nav-item" href="#candidates">Candidates</a>
-          <a className="nav-item" href="#interviews">Interviews</a>
+          <a className="nav-item nav-item-active" href="#overview">
+            Overview
+          </a>
+          <a className="nav-item" href="#jobs">
+            Jobs
+          </a>
+          <a className="nav-item" href="#candidates">
+            Candidates
+          </a>
+          <a className="nav-item" href="#interviews">
+            Interviews
+          </a>
         </nav>
         <button className="sidebar-account" onClick={() => void signOut()} type="button">
           <span>{session.user.primaryEmail}</span>
