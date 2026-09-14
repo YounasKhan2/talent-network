@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B is now current.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B implementation is now in progress.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -82,18 +82,72 @@ Verification evidence:
 
 ### Phase 3B — Private object storage + direct upload ← CURRENT
 
-Deliverables:
+Implemented so far:
 
-- provider-neutral S3 adapter
-- local RustFS compatibility
-- bucket bootstrap for local development
-- short-lived presigned upload authorization
-- server-controlled opaque storage keys
-- size/content-type constraints
-- upload completion verification through object metadata / HEAD
-- presigned private download/preview access after authorization
+- provider-neutral S3 adapter using the AWS S3 SDK
+- local RustFS compatibility through existing generic S3 environment variables
+- development/test bucket bootstrap with production fail-closed behavior
+- short-lived presigned PUT upload authorization
+- server-controlled opaque object keys from the Phase 3A resume domain
+- PDF/DOCX MIME allowlist
+- 10 MiB initial upload-size ceiling
+- upload completion verification with S3 `HEAD`
+- size and content-type consistency checks before `UPLOADED`
+- idempotent `UPLOADED` completion behavior
+- private candidate-authorized presigned download URLs
+- upload-completed audit/outbox event
+- candidate resume list/detail HTTP endpoints
 
-The API must not proxy normal resume bytes through the NestJS process.
+Current HTTP contract:
+
+```text
+POST /api/v1/candidate/resumes/upload-authorization
+GET  /api/v1/candidate/resumes
+GET  /api/v1/candidate/resumes/:resumeId
+POST /api/v1/candidate/resumes/upload-complete
+POST /api/v1/candidate/resumes/:resumeVersionId/download-authorization
+```
+
+Direct-upload flow:
+
+```text
+Browser
+  │ authenticated + CSRF
+  │ POST upload-authorization
+  ▼
+API
+  │ creates Resume / ResumeVersion in UPLOADING
+  │ signs PUT for exact private storage key + content type
+  ▼
+Browser
+  │ PUT bytes directly
+  ▼
+Private S3-compatible object storage / RustFS
+  │
+  │ browser calls upload-complete with resumeVersionId
+  ▼
+API
+  │ candidate ownership check
+  │ HEAD object
+  │ size/content-type consistency
+  ▼
+ResumeVersion = UPLOADED
+  │ audit + outbox
+  ▼
+Phase 3C validation / malware scanning
+```
+
+The API does not proxy normal resume bytes through the NestJS process.
+
+Phase 3B verification still required before closure:
+
+- install/update dependency lockfile locally
+- run complete local `pnpm check`
+- exercise the RustFS direct-upload path with a real PDF/DOCX object
+- prove another candidate cannot complete or download the ResumeVersion
+- prove object size mismatch fails without advancing state
+- prove presigned private download works only after upload completion
+- return repository to a clean working tree
 
 ### Phase 3C — Validation and malware scanning
 
@@ -247,17 +301,20 @@ Reprocessing the same ResumeVersion must not create duplicate proposals or dupli
 
 ## Upload constraints baseline
 
-Initial MVP constraints should be conservative and explicit:
+Initial Phase 3B constraints:
 
 - accepted document families: PDF and DOCX
-- maximum file size: defined server-side and included in upload authorization
+- maximum upload size: 10 MiB
+- presigned PUT TTL: 10 minutes
+- private download TTL: 5 minutes
 - no permanently public URLs
 - original file stored privately
-- content type from the browser is advisory only
-- file signature/container validation occurs before parsing
-- encrypted/password-protected documents fail safely unless explicit support is added
+- object key is server-created; browser cannot choose a storage location
+- browser content type is constrained by the signed request but remains advisory until Phase 3C file-signature validation
+- upload completion checks exact stored byte length and reported content type
+- encrypted/password-protected document handling belongs to Phase 3C validation
 
-Exact size/page limits will be finalized with the direct-upload implementation and load testing.
+These values are configuration/product baselines, not immutable platform limits; change them through measured load/security work.
 
 ## Queue and idempotency contract
 
@@ -317,7 +374,7 @@ Phase 3 is not closed until all of the following are proven:
 
 ## Current implementation checkpoint
 
-Verified now:
+Verified Phase 3A:
 
 ```text
 Resume processing-state vocabulary       ✅
@@ -331,15 +388,19 @@ Root pnpm check                           ✅
 Repository clean after verification      ✅
 ```
 
-Current implementation checkpoint:
+Implemented Phase 3B code awaiting local verification:
 
 ```text
-Provider-neutral S3 adapter
-→ RustFS compatibility
-→ local bucket bootstrap
-→ presigned direct upload authorization
-→ upload completion HEAD verification
-→ private candidate-authorized download/preview URLs
+Provider-neutral S3 adapter                    ✅ code
+RustFS-compatible configuration                ✅ code
+Development bucket bootstrap                   ✅ code
+Presigned direct upload authorization          ✅ code
+Upload completion HEAD verification            ✅ code
+Candidate-authorized private download URL      ✅ code
+Resume HTTP list/detail surface                ✅ code
+Dependency lockfile + local quality gate       ⏳ verify locally
+Real RustFS PDF/DOCX direct upload              ⏳ verify locally
+Cross-candidate storage authorization tests     ⏳ verify locally
 ```
 
-Phase 3B must preserve the direct-upload boundary: normal resume bytes go browser → private object storage, not browser → NestJS API → object storage.
+Phase 3B preserves the direct-upload boundary: normal resume bytes go browser → private object storage, not browser → NestJS API → object storage.
