@@ -181,7 +181,9 @@ export default function WorkspaceEntryPage() {
         roleKey: inviteRole,
       });
       setInviteEmail('');
-      setTeamMessage('Invitation created. In development, the acceptance URL is printed by the API.');
+      setTeamMessage(
+        'Invitation created. In development, the acceptance URL is printed by the API.',
+      );
       setInvitations(await listOrganizationInvitations(activeMembership.organizationId));
     } catch (caught) {
       setTeamMessage(caught instanceof ApiError ? caught.message : 'Unable to create invitation.');
@@ -437,7 +439,10 @@ export default function WorkspaceEntryPage() {
 
             <div className="team-panel-workspace">
               {canManageTeam ? (
-                <form className="team-invite-form" onSubmit={(event) => void inviteTeamMember(event)}>
+                <form
+                  className="team-invite-form"
+                  onSubmit={(event) => void inviteTeamMember(event)}
+                >
                   <label>
                     <span>Email</span>
                     <input

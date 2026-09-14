@@ -20,7 +20,9 @@ export function PasswordResetRequestScreen() {
       await requestPasswordReset(email);
       setSent(true);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Unable to request a reset right now.');
+      setError(
+        caught instanceof ApiError ? caught.message : 'Unable to request a reset right now.',
+      );
     } finally {
       setPending(false);
     }

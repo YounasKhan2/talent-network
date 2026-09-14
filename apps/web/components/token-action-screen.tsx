@@ -124,9 +124,7 @@ export function InvitationAcceptanceScreen() {
       setMessage('Invitation accepted. Your organization membership is now active.');
     } catch (caught) {
       setState('error');
-      setMessage(
-        caught instanceof ApiError ? caught.message : 'Unable to accept this invitation.',
-      );
+      setMessage(caught instanceof ApiError ? caught.message : 'Unable to accept this invitation.');
     }
   }
 
@@ -141,10 +139,7 @@ export function InvitationAcceptanceScreen() {
           <p className="token-action-note">
             Sign in or create an account with the invited email first.
           </p>
-          <Link
-            className="primary-link"
-            href={{ pathname: '/login', query: { next: returnPath } }}
-          >
+          <Link className="primary-link" href={{ pathname: '/login', query: { next: returnPath } }}>
             Sign in to continue
           </Link>
           <Link

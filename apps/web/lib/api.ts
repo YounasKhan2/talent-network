@@ -17,12 +17,7 @@ export type Permission =
   | 'audit.read';
 
 export type OrganizationRoleKey =
-  | 'ORG_OWNER'
-  | 'ORG_ADMIN'
-  | 'RECRUITER'
-  | 'HIRING_MANAGER'
-  | 'INTERVIEWER'
-  | 'VIEWER';
+  'ORG_OWNER' | 'ORG_ADMIN' | 'RECRUITER' | 'HIRING_MANAGER' | 'INTERVIEWER' | 'VIEWER';
 
 export interface MembershipResponse {
   organizationId: string;
@@ -184,16 +179,21 @@ export function createOrganizationInvitation(
   organizationId: string,
   input: { email: string; roleKey: Exclude<OrganizationRoleKey, 'ORG_OWNER'> },
 ): Promise<OrganizationInvitationResponse> {
-  return apiRequest<OrganizationInvitationResponse>(`/organizations/${organizationId}/invitations`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return apiRequest<OrganizationInvitationResponse>(
+    `/organizations/${organizationId}/invitations`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function listOrganizationInvitations(
   organizationId: string,
 ): Promise<OrganizationInvitationResponse[]> {
-  return apiRequest<OrganizationInvitationResponse[]>(`/organizations/${organizationId}/invitations`);
+  return apiRequest<OrganizationInvitationResponse[]>(
+    `/organizations/${organizationId}/invitations`,
+  );
 }
 
 export function revokeOrganizationInvitation(
