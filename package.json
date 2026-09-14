@@ -5,7 +5,7 @@
   "description": "Scalable, reusable employment operating system monorepo.",
   "packageManager": "pnpm@11.18.0",
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
