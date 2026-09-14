@@ -1,8 +1,17 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  PayloadTooLargeException,
+  UnsupportedMediaTypeException,
+} from '@nestjs/common';
 import type { DatabaseClient } from '@talent-network/database';
 import { randomUUID } from 'node:crypto';
 import { DATABASE_CLIENT } from '../database/database.module.js';
 import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
+import { StorageService } from '../storage/storage.service.js';
+import { assertResumeProcessingTransition } from './resume-processing-state.js';
 
 export interface PrepareResumeUploadInput {
   title: string;
@@ -12,12 +21,23 @@ export interface PrepareResumeUploadInput {
 }
 
 const PROCESSING_PIPELINE_VERSION = 'resume-pipeline-v1';
+const MAX_RESUME_SIZE_BYTES = 10 * 1024 * 1024;
+const UPLOAD_URL_TTL_SECONDS = 10 * 60;
+const DOWNLOAD_URL_TTL_SECONDS = 5 * 60;
+const ALLOWED_RESUME_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
 
 @Injectable()
 export class ResumesService {
-  constructor(@Inject(DATABASE_CLIENT) private readonly database: DatabaseClient) {}
+  constructor(
+    @Inject(DATABASE_CLIENT) private readonly database: DatabaseClient,
+    @Inject(StorageService) private readonly storage: StorageService,
+  ) {}
 
   async prepareInitialUpload(userId: string, input: PrepareResumeUploadInput) {
+    validateUploadMetadata(input);
     const candidate = await this.database.candidate.findUnique({
       where: { userId },
       select: { id: true },
@@ -87,6 +107,110 @@ export class ResumesService {
     });
   }
 
+  async createUploadAuthorization(userId: string, input: PrepareResumeUploadInput) {
+    await this.storage.ensureBucketExists();
+    const prepared = await this.prepareInitialUpload(userId, input);
+    const uploadUrl = await this.storage.createPresignedUploadUrl({
+      objectKey: prepared.version.objectKey,
+      contentType: prepared.version.mimeType,
+      expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
+    });
+
+    return {
+      resumeId: prepared.resume.id,
+      resumeVersionId: prepared.version.id,
+      upload: {
+        method: 'PUT' as const,
+        url: uploadUrl,
+        headers: { 'Content-Type': prepared.version.mimeType },
+        expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
+        maxSizeBytes: MAX_RESUME_SIZE_BYTES,
+      },
+    };
+  }
+
+  async completeDirectUpload(userId: string, resumeVersionId: string) {
+    const version = await this.database.resumeVersion.findFirst({
+      where: { id: resumeVersionId, resume: { candidate: { userId } } },
+      select: {
+        id: true,
+        resumeId: true,
+        processingState: true,
+        objectKey: true,
+        mimeType: true,
+        sizeBytes: true,
+      },
+    });
+    if (!version) throw new NotFoundException({ code: 'RESUME_VERSION_NOT_FOUND' });
+
+    if (version.processingState === 'UPLOADED') return version;
+    assertResumeProcessingTransition(version.processingState, 'UPLOADED');
+
+    const object = await this.storage.headObject(version.objectKey);
+    if (object.contentLength !== version.sizeBytes) {
+      throw new ConflictException({
+        code: 'RESUME_UPLOAD_SIZE_MISMATCH',
+        expectedSizeBytes: version.sizeBytes,
+        actualSizeBytes: object.contentLength,
+      });
+    }
+    if (object.contentType && object.contentType !== version.mimeType) {
+      throw new ConflictException({
+        code: 'RESUME_UPLOAD_CONTENT_TYPE_MISMATCH',
+        expectedMimeType: version.mimeType,
+        actualMimeType: object.contentType,
+      });
+    }
+
+    return this.database.$transaction(async (transaction) => {
+      const updated = await transaction.resumeVersion.update({
+        where: { id: version.id },
+        data: { processingState: 'UPLOADED' },
+      });
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: userId,
+        action: 'candidate.resume.upload_completed',
+        resourceType: 'ResumeVersion',
+        resourceId: version.id,
+        metadata: { resumeId: version.resumeId, eTag: object.eTag },
+      });
+      await writeOutboxEvent(transaction, {
+        aggregateType: 'ResumeVersion',
+        aggregateId: version.id,
+        eventType: 'candidate.resume.upload_completed',
+        payload: { resumeId: version.resumeId, resumeVersionId: version.id },
+      });
+      return updated;
+    });
+  }
+
+  async createDownloadAuthorization(userId: string, resumeVersionId: string) {
+    const version = await this.database.resumeVersion.findFirst({
+      where: { id: resumeVersionId, resume: { candidate: { userId } } },
+      select: {
+        id: true,
+        objectKey: true,
+        originalFilename: true,
+        processingState: true,
+      },
+    });
+    if (!version) throw new NotFoundException({ code: 'RESUME_VERSION_NOT_FOUND' });
+    if (version.processingState === 'UPLOADING') {
+      throw new ConflictException({ code: 'RESUME_UPLOAD_NOT_COMPLETED' });
+    }
+
+    return {
+      resumeVersionId: version.id,
+      url: await this.storage.createPresignedDownloadUrl({
+        objectKey: version.objectKey,
+        expiresInSeconds: DOWNLOAD_URL_TTL_SECONDS,
+        downloadFilename: version.originalFilename,
+      }),
+      expiresInSeconds: DOWNLOAD_URL_TTL_SECONDS,
+    };
+  }
+
   async list(userId: string) {
     const candidate = await this.database.candidate.findUnique({
       where: { userId },
@@ -130,6 +254,18 @@ export class ResumesService {
     });
     if (!version) throw new NotFoundException({ code: 'RESUME_VERSION_NOT_FOUND' });
     return version;
+  }
+}
+
+function validateUploadMetadata(input: PrepareResumeUploadInput): void {
+  if (!ALLOWED_RESUME_MIME_TYPES.has(input.mimeType)) {
+    throw new UnsupportedMediaTypeException({ code: 'UNSUPPORTED_RESUME_TYPE' });
+  }
+  if (input.sizeBytes <= 0 || input.sizeBytes > MAX_RESUME_SIZE_BYTES) {
+    throw new PayloadTooLargeException({
+      code: 'RESUME_SIZE_LIMIT_EXCEEDED',
+      maxSizeBytes: MAX_RESUME_SIZE_BYTES,
+    });
   }
 }
 
