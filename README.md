@@ -6,22 +6,26 @@ Talent Network is a documentation-led, production-oriented employment operating 
 
 ## Project Status
 
-| Area                                   | Status              |
-| -------------------------------------- | ------------------- |
-| Product blueprint                      | ✅ Complete         |
-| Architecture baseline                  | ✅ Complete         |
-| Security / scale / data specifications | ✅ Complete         |
-| UX / information architecture          | ✅ Complete         |
-| Monorepo bootstrap                     | ✅ Complete         |
-| Engineering foundation                 | ✅ Complete         |
-| Phase 1 backend foundation             | ✅ Verified         |
-| Phase 1 authenticated web experience   | ✅ Verified         |
-| Candidate Career Passport              | 🟡 Current phase    |
-| Resume Intelligence                    | ⏳ Next major phase |
+| Area                                   | Status                         |
+| -------------------------------------- | ------------------------------ |
+| Product blueprint                      | ✅ Complete                    |
+| Architecture baseline                  | ✅ Complete                    |
+| Security / scale / data specifications | ✅ Complete                    |
+| UX / information architecture          | ✅ Complete                    |
+| Monorepo bootstrap                     | ✅ Complete                    |
+| Engineering foundation                 | ✅ Complete                    |
+| Phase 1 backend foundation             | ✅ Verified                    |
+| Phase 1 authenticated web experience   | ✅ Verified                    |
+| Career Passport initial foundation     | ✅ Quality gate green          |
+| Identity / workspace context hardening | 🟡 Current cross-cutting step |
+| Career Passport expansion              | ⏳ Next                        |
+| Resume Intelligence                    | ⏳ Next major phase            |
 
-**Current implementation phase:** Phase 2 — Candidate Career Passport.
+**Current implementation phase:** Phase 2 — Candidate Career Passport, with identity/workspace-context hardening inserted before expanding the Passport surface.
 
 Phase 1 is closed after repository quality-gate verification plus browser-tested signup/login, organization onboarding, email verification, password recovery, invitation acceptance/revocation, multi-workspace switching, and permission-aware owner/recruiter behavior.
+
+The initial Phase 2 Career Passport foundation now has a green repository quality gate, including Phase 2 database-backed integration coverage for initialization, versioned professional-profile updates, section preservation, experience/education versioning, and privacy state remaining separate from profile versions. Browser verification for the final onboarding/context behavior remains part of the active hardening work.
 
 The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
 
@@ -47,6 +51,40 @@ Initial market focus is Pakistan, while the architecture remains capable of evol
 **Candidate:** Apply where you genuinely have a strong chance.  
 **Employer:** Review relevant people instead of manually screening hundreds of resumes.  
 **Platform:** Convert fragmented employment data into reusable, explainable, structured hiring signal.
+
+---
+
+## Identity Model
+
+Talent Network does **not** permanently classify a user as either a candidate or an employer.
+
+A `User` is the authenticated human identity. Candidate and organization participation are independent contexts that can coexist:
+
+```text
+User
+├── Candidate?                 personal career context
+└── OrganizationMember[]      zero or more hiring contexts
+    └── Organization
+```
+
+A founder can maintain a private Career Passport while owning an organization. A recruiter can belong to several organizations. A candidate can accept a recruiter invitation without creating a second account.
+
+Onboarding therefore asks what the person wants to do now:
+
+```text
+Build my career
+Hire talent
+```
+
+The choice is not permanent, and the other context can be added later.
+
+Active UI context is navigation state only. Server-side candidate ownership, organization membership, tenant scope, and permission evaluation remain authoritative for every protected operation.
+
+See:
+
+- [`docs/10-decisions/ADR-0002-user-context-not-account-type.md`](./docs/10-decisions/ADR-0002-user-context-not-account-type.md)
+- [`docs/03-architecture/identity-and-workspace-context.md`](./docs/03-architecture/identity-and-workspace-context.md)
+- [`docs/07-design/onboarding-and-context-switching.md`](./docs/07-design/onboarding-and-context-switching.md)
 
 ---
 
@@ -199,10 +237,11 @@ format check
 → typecheck
 → unit/security tests
 → Phase 1 PostgreSQL integration tests
+→ Phase 2 Career Passport integration tests
 → production build
 ```
 
-The integration stage deploys committed Prisma migrations before running isolated Phase 1 database-backed tests. Local PostgreSQL therefore needs to be reachable for the complete gate.
+The integration stages deploy committed Prisma migrations before running isolated database-backed suites. Local PostgreSQL therefore needs to be reachable for the complete gate.
 
 A hosted CI provider may be added later, but it should only execute these repository-owned commands. Quality logic must never depend on a specific CI vendor.
 
@@ -226,6 +265,7 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 - [`docs/03-architecture/data-architecture.md`](./docs/03-architecture/data-architecture.md)
 - [`docs/03-architecture/event-architecture.md`](./docs/03-architecture/event-architecture.md)
 - [`docs/03-architecture/multi-tenancy-and-authorization.md`](./docs/03-architecture/multi-tenancy-and-authorization.md)
+- [`docs/03-architecture/identity-and-workspace-context.md`](./docs/03-architecture/identity-and-workspace-context.md)
 
 ### API
 
@@ -251,6 +291,7 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 
 - [`docs/07-design/design-system.md`](./docs/07-design/design-system.md)
 - [`docs/07-design/information-architecture.md`](./docs/07-design/information-architecture.md)
+- [`docs/07-design/onboarding-and-context-switching.md`](./docs/07-design/onboarding-and-context-switching.md)
 - [`docs/07-design/employer-workspace-ux.md`](./docs/07-design/employer-workspace-ux.md)
 - [`docs/07-design/candidate-experience-ux.md`](./docs/07-design/candidate-experience-ux.md)
 - [`docs/07-design/admin-trust-ux.md`](./docs/07-design/admin-trust-ux.md)
@@ -262,18 +303,23 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 ### Architecture Decisions
 
 - [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md)
+- [`docs/10-decisions/ADR-0002-user-context-not-account-type.md`](./docs/10-decisions/ADR-0002-user-context-not-account-type.md)
 
 ### Implementation
 
 - [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md)
 - [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/local-quality-gates.md)
 - [`docs/11-implementation/phase-1-closure.md`](./docs/11-implementation/phase-1-closure.md)
+- [`docs/11-implementation/phase-2-career-passport.md`](./docs/11-implementation/phase-2-career-passport.md)
+- [`docs/11-implementation/identity-context-hardening.md`](./docs/11-implementation/identity-context-hardening.md)
 
 ---
 
 ## Core Architecture Decisions
 
 - Modular monolith first; extraction only when scaling, ownership, reliability, or compliance justifies it.
+- `User` is the human identity; Candidate and organization membership are independent, combinable contexts rather than permanent account types.
+- Active workspace/context selection is navigation state, never an authorization grant.
 - PostgreSQL is transactional truth.
 - Redis is ephemeral infrastructure, never permanent business truth.
 - Files belong in private object storage rather than relational blobs.
@@ -284,7 +330,7 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 - Match results preserve strengths, gaps, uncertainty, conflicts, versions, and evidence—not only a score.
 - AI access is centralized behind a provider-neutral gateway.
 - Tenant isolation and authorization are enforced on the backend.
-- Candidate privacy is distinct from employer permissions.
+- Candidate privacy is distinct from employer permissions and organization membership.
 - Important hiring inputs are versioned so historical decisions remain explainable.
 - Search, caches, analytics, embeddings, and read projections remain rebuildable derivatives.
 - Employer workflows are table-first, high-density, saved-view capable, and split-pane oriented.
@@ -299,7 +345,11 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
         ↓
 1 Identity + Organizations + Permissions       ✅ complete
         ↓
-2 Candidate Career Passport                    ← current
+2 Candidate Career Passport foundation         ✅ initial gate green
+        ↓
+2A Identity / Workspace Context Hardening      ← current
+        ↓
+2B Career Passport expansion
         ↓
 3 Resume Intelligence
         ↓
@@ -322,7 +372,9 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 Production Hardening / MVP Launch
 ```
 
-Implementation must follow [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md). Significant deviations require documentation updates and, when consequential, an ADR.
+The context-hardening insertion is intentionally small and cross-cutting. It prevents the temporary development behavior of implicitly creating Candidate state from becoming a permanent account-type assumption.
+
+Implementation must follow [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md) plus the active [`docs/11-implementation/identity-context-hardening.md`](./docs/11-implementation/identity-context-hardening.md) plan. Significant deviations require documentation updates and, when consequential, an ADR.
 
 ---
 
