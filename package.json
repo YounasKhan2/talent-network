@@ -10,6 +10,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:integration:phase1": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
