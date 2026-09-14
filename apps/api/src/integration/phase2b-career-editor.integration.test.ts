@@ -79,7 +79,10 @@ void test('Phase 2B Career Passport preserves full replacement and ordering sema
       assert.equal(updated.currentProfileVersion!.versionNumber, seededVersion.versionNumber + 1);
       assert.equal(updated.currentProfileVersion!.employments.length, 1);
       assert.equal(updated.currentProfileVersion!.employments[0]?.companyName, 'Beta Systems');
-      assert.equal(updated.currentProfileVersion!.employments[0]?.title, 'Senior Full Stack Engineer');
+      assert.equal(
+        updated.currentProfileVersion!.employments[0]?.title,
+        'Senior Full Stack Engineer',
+      );
       assert.equal(updated.currentProfileVersion!.employments[0]?.sortOrder, 0);
 
       const previous = await database.candidateProfileVersion.findUniqueOrThrow({
@@ -103,7 +106,10 @@ void test('Phase 2B Career Passport preserves full replacement and ordering sema
         { name: 'TypeScript', proficiency: 'ADVANCED', experienceMonths: 36, lastUsedAt: null },
       ]);
 
-      assert.equal(reordered.currentProfileVersion!.versionNumber, first.currentProfileVersion!.versionNumber + 1);
+      assert.equal(
+        reordered.currentProfileVersion!.versionNumber,
+        first.currentProfileVersion!.versionNumber + 1,
+      );
       assert.deepEqual(
         reordered.currentProfileVersion!.skills.map((item) => [item.name, item.sortOrder]),
         [
@@ -113,125 +119,146 @@ void test('Phase 2B Career Passport preserves full replacement and ordering sema
       );
     });
 
-    await t.test('custom sections and items are versioned, editable, removable and reorderable', async () => {
-      const created = await candidates.replaceCustomSections(userId!, [
-        {
-          title: 'Awards',
-          description: 'Selected recognition.',
-          items: [
-            {
-              title: 'Hackathon Winner',
-              subtitle: 'SMIT',
-              description: 'Won for a citizen complaint platform.',
-              startDate: new Date('2026-03-01T00:00:00.000Z'),
-              endDate: null,
-              url: 'https://example.com/award',
-            },
-            {
-              title: 'Engineering Award',
-              subtitle: 'University',
-              description: null,
-              startDate: new Date('2025-06-01T00:00:00.000Z'),
-              endDate: null,
-              url: null,
-            },
-          ],
-        },
-        {
-          title: 'Volunteering',
-          description: null,
-          items: [
-            {
-              title: 'Student Mentor',
-              subtitle: 'Community Program',
-              description: 'Mentored MERN students.',
-              startDate: new Date('2025-01-01T00:00:00.000Z'),
-              endDate: null,
-              url: null,
-            },
-          ],
-        },
-      ]);
+    await t.test(
+      'custom sections and items are versioned, editable, removable and reorderable',
+      async () => {
+        const created = await candidates.replaceCustomSections(userId!, [
+          {
+            title: 'Awards',
+            description: 'Selected recognition.',
+            items: [
+              {
+                title: 'Hackathon Winner',
+                subtitle: 'SMIT',
+                description: 'Won for a citizen complaint platform.',
+                startDate: new Date('2026-03-01T00:00:00.000Z'),
+                endDate: null,
+                url: 'https://example.com/award',
+              },
+              {
+                title: 'Engineering Award',
+                subtitle: 'University',
+                description: null,
+                startDate: new Date('2025-06-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+          {
+            title: 'Volunteering',
+            description: null,
+            items: [
+              {
+                title: 'Student Mentor',
+                subtitle: 'Community Program',
+                description: 'Mentored MERN students.',
+                startDate: new Date('2025-01-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+        ]);
 
-      assert.deepEqual(
-        created.currentProfileVersion!.customSections.map((section) => [section.title, section.sortOrder]),
-        [
-          ['Awards', 0],
-          ['Volunteering', 1],
-        ],
-      );
-      assert.deepEqual(
-        created.currentProfileVersion!.customSections[0]?.items.map((item) => [item.title, item.sortOrder]),
-        [
-          ['Hackathon Winner', 0],
-          ['Engineering Award', 1],
-        ],
-      );
-
-      const changed = await candidates.replaceCustomSections(userId!, [
-        {
-          title: 'Volunteering & Community',
-          description: 'Community work outside employment.',
-          items: [
-            {
-              title: 'Student Mentor',
-              subtitle: 'Community Program',
-              description: 'Mentored MERN and full-stack students.',
-              startDate: new Date('2025-01-01T00:00:00.000Z'),
-              endDate: null,
-              url: null,
-            },
+        assert.deepEqual(
+          created.currentProfileVersion!.customSections.map((section) => [
+            section.title,
+            section.sortOrder,
+          ]),
+          [
+            ['Awards', 0],
+            ['Volunteering', 1],
           ],
-        },
-        {
-          title: 'Awards',
-          description: 'Selected recognition.',
-          items: [
-            {
-              title: 'Engineering Award',
-              subtitle: 'University',
-              description: null,
-              startDate: new Date('2025-06-01T00:00:00.000Z'),
-              endDate: null,
-              url: null,
-            },
+        );
+        assert.deepEqual(
+          created.currentProfileVersion!.customSections[0]?.items.map((item) => [
+            item.title,
+            item.sortOrder,
+          ]),
+          [
+            ['Hackathon Winner', 0],
+            ['Engineering Award', 1],
           ],
-        },
-      ]);
+        );
 
-      assert.equal(changed.currentProfileVersion!.versionNumber, created.currentProfileVersion!.versionNumber + 1);
-      assert.deepEqual(
-        changed.currentProfileVersion!.customSections.map((section) => [section.title, section.sortOrder]),
-        [
-          ['Volunteering & Community', 0],
-          ['Awards', 1],
-        ],
-      );
-      assert.equal(changed.currentProfileVersion!.customSections[1]?.items.length, 1);
-      assert.equal(changed.currentProfileVersion!.customSections[1]?.items[0]?.title, 'Engineering Award');
+        const changed = await candidates.replaceCustomSections(userId!, [
+          {
+            title: 'Volunteering & Community',
+            description: 'Community work outside employment.',
+            items: [
+              {
+                title: 'Student Mentor',
+                subtitle: 'Community Program',
+                description: 'Mentored MERN and full-stack students.',
+                startDate: new Date('2025-01-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+          {
+            title: 'Awards',
+            description: 'Selected recognition.',
+            items: [
+              {
+                title: 'Engineering Award',
+                subtitle: 'University',
+                description: null,
+                startDate: new Date('2025-06-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+        ]);
 
-      const removed = await candidates.replaceCustomSections(userId!, [
-        {
-          title: 'Volunteering & Community',
-          description: 'Community work outside employment.',
-          items: [
-            {
-              title: 'Student Mentor',
-              subtitle: 'Community Program',
-              description: 'Mentored MERN and full-stack students.',
-              startDate: new Date('2025-01-01T00:00:00.000Z'),
-              endDate: null,
-              url: null,
-            },
+        assert.equal(
+          changed.currentProfileVersion!.versionNumber,
+          created.currentProfileVersion!.versionNumber + 1,
+        );
+        assert.deepEqual(
+          changed.currentProfileVersion!.customSections.map((section) => [
+            section.title,
+            section.sortOrder,
+          ]),
+          [
+            ['Volunteering & Community', 0],
+            ['Awards', 1],
           ],
-        },
-      ]);
+        );
+        assert.equal(changed.currentProfileVersion!.customSections[1]?.items.length, 1);
+        assert.equal(
+          changed.currentProfileVersion!.customSections[1]?.items[0]?.title,
+          'Engineering Award',
+        );
 
-      assert.equal(removed.currentProfileVersion!.customSections.length, 1);
-      assert.equal(removed.currentProfileVersion!.customSections[0]?.title, 'Volunteering & Community');
-      assert.equal(removed.currentProfileVersion!.employments.length, 1);
-      assert.equal(removed.currentProfileVersion!.skills.length, 2);
-    });
+        const removed = await candidates.replaceCustomSections(userId!, [
+          {
+            title: 'Volunteering & Community',
+            description: 'Community work outside employment.',
+            items: [
+              {
+                title: 'Student Mentor',
+                subtitle: 'Community Program',
+                description: 'Mentored MERN and full-stack students.',
+                startDate: new Date('2025-01-01T00:00:00.000Z'),
+                endDate: null,
+                url: null,
+              },
+            ],
+          },
+        ]);
+
+        assert.equal(removed.currentProfileVersion!.customSections.length, 1);
+        assert.equal(
+          removed.currentProfileVersion!.customSections[0]?.title,
+          'Volunteering & Community',
+        );
+        assert.equal(removed.currentProfileVersion!.employments.length, 1);
+        assert.equal(removed.currentProfileVersion!.skills.length, 2);
+      },
+    );
   } finally {
     if (candidateId) {
       await database.outboxEvent.deleteMany({

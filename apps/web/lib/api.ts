@@ -17,19 +17,11 @@ export type Permission =
   | 'audit.read';
 
 export type OrganizationRoleKey =
-  | 'ORG_OWNER'
-  | 'ORG_ADMIN'
-  | 'RECRUITER'
-  | 'HIRING_MANAGER'
-  | 'INTERVIEWER'
-  | 'VIEWER';
+  'ORG_OWNER' | 'ORG_ADMIN' | 'RECRUITER' | 'HIRING_MANAGER' | 'INTERVIEWER' | 'VIEWER';
 
 export type CandidateWorkMode = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE';
 export type CandidateAvailabilityStatus =
-  | 'IMMEDIATE'
-  | 'NOTICE_PERIOD'
-  | 'OPEN_TO_OFFERS'
-  | 'NOT_LOOKING';
+  'IMMEDIATE' | 'NOTICE_PERIOD' | 'OPEN_TO_OFFERS' | 'NOT_LOOKING';
 
 export interface MembershipResponse {
   organizationId: string;
@@ -252,7 +244,8 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const payload = await readJson(response);
-    const message = readString(payload, 'message') ?? `Request failed with status ${response.status}.`;
+    const message =
+      readString(payload, 'message') ?? `Request failed with status ${response.status}.`;
     const code = readString(payload, 'code');
     throw new ApiError(message, response.status, code);
   }

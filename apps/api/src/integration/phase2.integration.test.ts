@@ -282,7 +282,10 @@ void test('Phase 2 Career Passport versions candidate-owned professional state',
           reordered.currentProfileVersion?.customSections.map((section) => section.title),
           ['Awards', 'Publications'],
         );
-        assert.equal(reordered.currentProfileVersion?.customSections[0]?.items[0]?.description, 'Finalist entry.');
+        assert.equal(
+          reordered.currentProfileVersion?.customSections[0]?.items[0]?.description,
+          'Finalist entry.',
+        );
         assert.equal(reordered.currentProfileVersion?.employments.length, 1);
       },
     );
