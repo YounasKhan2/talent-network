@@ -37,13 +37,13 @@ export async function writeAuditEvent(
 ): Promise<void> {
   await transaction.auditEvent.create({
     data: {
-      organizationId: input.organizationId,
+      ...(input.organizationId ? { organizationId: input.organizationId } : {}),
       actorType: input.actorType,
-      actorId: input.actorId,
+      ...(input.actorId ? { actorId: input.actorId } : {}),
       action: input.action,
       resourceType: input.resourceType,
       resourceId: input.resourceId,
-      metadata: input.metadata,
+      ...(input.metadata ? { metadata: input.metadata } : {}),
     },
   });
 }
@@ -60,7 +60,7 @@ export async function writeOutboxEvent(
 ): Promise<void> {
   await transaction.outboxEvent.create({
     data: {
-      organizationId: input.organizationId,
+      ...(input.organizationId ? { organizationId: input.organizationId } : {}),
       aggregateType: input.aggregateType,
       aggregateId: input.aggregateId,
       eventType: input.eventType,
