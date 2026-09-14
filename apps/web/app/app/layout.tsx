@@ -2,16 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError } from '../../lib/api';
-import { getWorkspaceContextState, type WorkspaceContextState } from '../../lib/workspace-context';
+import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
+import { ApiError, getAccountContexts, type AccountContextResponse } from '../../lib/api';
 import styles from '../career/context-bar.module.css';
+
+const workspaceStorageKey = 'tn_active_organization';
 
 type LoadState = 'loading' | 'ready' | 'redirecting' | 'error';
 
 export default function HiringWorkspaceLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<LoadState>('loading');
-  const [context, setContext] = useState<WorkspaceContextState | null>(null);
+  const [contexts, setContexts] = useState<AccountContextResponse | null>(null);
+  const [activeOrganizationId, setActiveOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,9 +22,24 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
 
     async function resolveHiringContext() {
       try {
-        const nextContext = await getWorkspaceContextState();
+        const nextContexts = await getAccountContexts();
         if (!active) return;
-        setContext(nextContext);
+
+        const storedOrganizationId = window.localStorage.getItem(workspaceStorageKey);
+        const selectedOrganization =
+          nextContexts.organizations.find(
+            (organization) => organization.organizationId === storedOrganizationId,
+          ) ?? nextContexts.organizations[0];
+
+        if (selectedOrganization) {
+          window.localStorage.setItem(workspaceStorageKey, selectedOrganization.organizationId);
+          setActiveOrganizationId(selectedOrganization.organizationId);
+        } else {
+          window.localStorage.removeItem(workspaceStorageKey);
+          setActiveOrganizationId(null);
+        }
+
+        setContexts(nextContexts);
         setState('ready');
       } catch (caught) {
         if (!active) return;
@@ -51,7 +69,7 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
     );
   }
 
-  if (state === 'error') {
+  if (state === 'error' || !contexts) {
     return (
       <main className={styles.gate}>
         <p className="eyebrow">Talent Network</p>
@@ -64,23 +82,15 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
   return (
     <>
       <div className={styles.bar} aria-label="Workspace context">
-        <div className={styles.identity}>
-          <span className={styles.label}>Active context</span>
-          <strong>
-            {context && context.organizationCount > 0 ? 'Organization · Hiring' : 'Hiring setup'}
-          </strong>
-        </div>
-        <div className={styles.actions}>
-          <button
-            className={styles.button}
-            onClick={() =>
-              router.push(context?.hasCandidate ? '/career' : '/onboarding?intent=career')
-            }
-            type="button"
-          >
-            {context?.hasCandidate ? 'Switch to Personal · Career' : 'Add Career workspace'}
-          </button>
-        </div>
+        <span className={styles.contextHint}>Talent Network workspace</span>
+        <WorkspaceContextSwitcher
+          activeContext={
+            activeOrganizationId
+              ? { kind: 'organization', organizationId: activeOrganizationId }
+              : { kind: 'hiring-setup' }
+          }
+          contexts={contexts}
+        />
       </div>
       {children}
     </>
