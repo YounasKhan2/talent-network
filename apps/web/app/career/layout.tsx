@@ -92,7 +92,9 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 
         <nav className={styles.navigation}>
           {CAREER_NAVIGATION.map((item) => {
-            const active = item.href === '/career' ? pathname === '/career' : pathname.startsWith(item.href);
+            const active =
+              item.href === '/career' ? pathname === '/career' : pathname.startsWith(item.href);
+
             return (
               <Link
                 aria-current={active ? 'page' : undefined}
