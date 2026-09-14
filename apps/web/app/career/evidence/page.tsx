@@ -187,9 +187,7 @@ function EvidenceRow({ indicator }: { indicator: CandidateEvidenceIndicator }) {
 }
 
 function EvidenceBadge({ level }: { level: EvidenceLevel }) {
-  return (
-    <span className={`${styles.badge} ${styles[`badge${level}`]}`}>{readable(level)}</span>
-  );
+  return <span className={`${styles.badge} ${styles[`badge${level}`]}`}>{readable(level)}</span>;
 }
 
 function EvidenceState({ title, detail }: { title: string; detail?: string | null }) {

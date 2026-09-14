@@ -47,19 +47,19 @@ FUTURE_VERIFICATION
 
 ## Current derivation rules
 
-| Subject | Rule | Result |
-| --- | --- | --- |
-| Skill | Candidate entered skill | `DECLARED` |
-| Experience | Candidate entered employment | `DECLARED` |
-| Project | Repository URL attached | `SUPPORTED / REPOSITORY` |
-| Project | Project URL attached, no repository | `SUPPORTED / URL` |
-| Project | No evidence URL | `DECLARED` |
-| Certification | Credential URL attached | `SUPPORTED / CREDENTIAL` |
-| Certification | Credential ID attached | `SUPPORTED / CREDENTIAL` |
-| Certification | No credential evidence | `DECLARED` |
-| Professional link | URL attached | `SUPPORTED / URL` |
-| Custom entry | URL attached | `SUPPORTED / URL` |
-| Custom entry | No URL | `DECLARED` |
+| Subject           | Rule                                | Result                   |
+| ----------------- | ----------------------------------- | ------------------------ |
+| Skill             | Candidate entered skill             | `DECLARED`               |
+| Experience        | Candidate entered employment        | `DECLARED`               |
+| Project           | Repository URL attached             | `SUPPORTED / REPOSITORY` |
+| Project           | Project URL attached, no repository | `SUPPORTED / URL`        |
+| Project           | No evidence URL                     | `DECLARED`               |
+| Certification     | Credential URL attached             | `SUPPORTED / CREDENTIAL` |
+| Certification     | Credential ID attached              | `SUPPORTED / CREDENTIAL` |
+| Certification     | No credential evidence              | `DECLARED`               |
+| Professional link | URL attached                        | `SUPPORTED / URL`        |
+| Custom entry      | URL attached                        | `SUPPORTED / URL`        |
+| Custom entry      | No URL                              | `DECLARED`               |
 
 ## Architectural choice
 

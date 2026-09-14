@@ -4,18 +4,9 @@ type Profile = NonNullable<CandidatePassportResponse['currentProfileVersion']>;
 
 export type EvidenceLevel = 'DECLARED' | 'SUPPORTED' | 'VERIFIED';
 export type EvidenceSubjectType =
-  | 'SKILL'
-  | 'EXPERIENCE'
-  | 'PROJECT'
-  | 'CERTIFICATION'
-  | 'PROFESSIONAL_LINK'
-  | 'CUSTOM_ENTRY';
+  'SKILL' | 'EXPERIENCE' | 'PROJECT' | 'CERTIFICATION' | 'PROFESSIONAL_LINK' | 'CUSTOM_ENTRY';
 export type EvidenceSourceType =
-  | 'PROFILE'
-  | 'URL'
-  | 'REPOSITORY'
-  | 'CREDENTIAL'
-  | 'FUTURE_VERIFICATION';
+  'PROFILE' | 'URL' | 'REPOSITORY' | 'CREDENTIAL' | 'FUTURE_VERIFICATION';
 
 export interface CandidateEvidenceIndicator {
   id: string;
