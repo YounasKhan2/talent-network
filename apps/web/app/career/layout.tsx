@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
 import { ApiError, getAccountContexts, type AccountContextResponse } from '../../lib/api';
@@ -10,8 +10,27 @@ import styles from './context-bar.module.css';
 
 type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
 
+const CAREER_NAVIGATION = [
+  {
+    href: '/career',
+    label: 'Career Passport',
+    description: 'Your reusable professional identity',
+  },
+  {
+    href: '/career/evidence',
+    label: 'Evidence',
+    description: 'Declared and supported signals',
+  },
+  {
+    href: '/career/history',
+    label: 'Version history',
+    description: 'Read-only Passport snapshots',
+  },
+] as const;
+
 export default function CareerWorkspaceLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [state, setState] = useState<GuardState>('loading');
   const [contexts, setContexts] = useState<AccountContextResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +56,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
         if (!active) return;
         if (caught instanceof ApiError && caught.status === 401) {
           setState('redirecting');
-          router.replace('/login?next=/career');
+          router.replace(`/login?next=${encodeURIComponent(pathname)}`);
           return;
         }
 
@@ -50,7 +69,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [pathname, router]);
 
   if (state === 'loading' || state === 'redirecting') {
     return (
@@ -72,20 +91,66 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
   }
 
   return (
-    <>
-      <div className={styles.bar} aria-label="Workspace context">
-        <span className={styles.contextHint}>Talent Network workspace</span>
-        <div className={styles.actions}>
-          <Link className={styles.historyLink} href="/career/evidence">
-            Evidence
+    <div className={styles.workspace}>
+      <aside className={styles.sidebar} aria-label="Candidate workspace navigation">
+        <div className={styles.sidebarTop}>
+          <Link className={styles.brand} href="/career" aria-label="Talent Network Career">
+            <span className={styles.brandMark}>TN</span>
+            <span>
+              <strong>Talent Network</strong>
+              <small>Personal workspace</small>
+            </span>
           </Link>
-          <Link className={styles.historyLink} href="/career/history">
-            Version history
-          </Link>
+
+          <div className={styles.navGroup}>
+            <p className={styles.navLabel}>Career</p>
+            <nav className={styles.navigation}>
+              {CAREER_NAVIGATION.map((item) => {
+                const active =
+                  item.href === '/career' ? pathname === '/career' : pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    aria-current={active ? 'page' : undefined}
+                    className={active ? styles.navItemActive : styles.navItem}
+                    href={item.href}
+                    key={item.href}
+                  >
+                    <span>{item.label}</span>
+                    <small>{item.description}</small>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        <div className={styles.sidebarFooter}>
+          <div className={styles.nextModule}>
+            <span>Next module</span>
+            <strong>Resume Intelligence</strong>
+            <small>Activates after Phase 2B closes.</small>
+          </div>
           <WorkspaceContextSwitcher activeContext={{ kind: 'career' }} contexts={contexts} />
         </div>
+      </aside>
+
+      <div className={styles.stage}>
+        <header className={styles.contextBar}>
+          <div>
+            <span>Candidate workspace</span>
+            <strong>{activePageLabel(pathname)}</strong>
+          </div>
+          <span className={styles.privacyNote}>Private by default · candidate controlled</span>
+        </header>
+        <div className={styles.content}>{children}</div>
       </div>
-      {children}
-    </>
+    </div>
   );
+}
+
+function activePageLabel(pathname: string): string {
+  if (pathname.startsWith('/career/evidence')) return 'Evidence';
+  if (pathname.startsWith('/career/history')) return 'Version history';
+  return 'Career Passport';
 }
