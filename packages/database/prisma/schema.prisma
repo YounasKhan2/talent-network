@@ -238,6 +238,7 @@ model CandidateProfileVersion {
   languages                CandidateLanguage[]
   links                    CandidateLink[]
   locationPreferences      CandidateLocationPreference[]
+  customSections           CandidateCustomSection[]
 
   @@unique([candidateId, versionNumber])
   @@index([candidateId, createdAt(sort: Desc)])
@@ -245,38 +246,38 @@ model CandidateProfileVersion {
 }
 
 model CandidateEmployment {
-  id              String                  @id @default(uuid()) @db.Uuid
+  id               String                  @id @default(uuid()) @db.Uuid
   profileVersionId String                  @db.Uuid
-  companyName     String
-  title           String
-  employmentType  String?
-  location        String?
-  workMode        CandidateWorkMode?
-  startDate       DateTime?
-  endDate         DateTime?
-  isCurrent       Boolean                 @default(false)
-  summary         String?
-  sortOrder       Int                     @default(0)
-  createdAt       DateTime                @default(now())
-  profileVersion  CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+  companyName      String
+  title            String
+  employmentType   String?
+  location         String?
+  workMode         CandidateWorkMode?
+  startDate        DateTime?
+  endDate          DateTime?
+  isCurrent        Boolean                 @default(false)
+  summary          String?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
 
   @@index([profileVersionId, sortOrder])
 }
 
 model CandidateEducation {
-  id              String                  @id @default(uuid()) @db.Uuid
+  id               String                  @id @default(uuid()) @db.Uuid
   profileVersionId String                  @db.Uuid
-  institutionName String
-  degree          String?
-  fieldOfStudy    String?
-  location        String?
-  startDate       DateTime?
-  endDate         DateTime?
-  isCurrent       Boolean                 @default(false)
-  description     String?
-  sortOrder       Int                     @default(0)
-  createdAt       DateTime                @default(now())
-  profileVersion  CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+  institutionName  String
+  degree           String?
+  fieldOfStudy     String?
+  location         String?
+  startDate        DateTime?
+  endDate          DateTime?
+  isCurrent        Boolean                 @default(false)
+  description      String?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
 
   @@index([profileVersionId, sortOrder])
 }
@@ -371,6 +372,35 @@ model CandidateLocationPreference {
 
   @@index([profileVersionId, sortOrder])
   @@index([countryCode, city])
+}
+
+model CandidateCustomSection {
+  id               String                       @id @default(uuid()) @db.Uuid
+  profileVersionId String                       @db.Uuid
+  title            String
+  description      String?
+  sortOrder        Int                          @default(0)
+  createdAt        DateTime                     @default(now())
+  profileVersion   CandidateProfileVersion      @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+  items            CandidateCustomSectionItem[]
+
+  @@index([profileVersionId, sortOrder])
+}
+
+model CandidateCustomSectionItem {
+  id              String                 @id @default(uuid()) @db.Uuid
+  customSectionId String                 @db.Uuid
+  title           String
+  subtitle        String?
+  description     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  url             String?
+  sortOrder       Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  customSection   CandidateCustomSection @relation(fields: [customSectionId], references: [id], onDelete: Cascade)
+
+  @@index([customSectionId, sortOrder])
 }
 
 model AuditEvent {
