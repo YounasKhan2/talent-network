@@ -1,6 +1,5 @@
 'use client';
 
-import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError, getAccountContexts, type MembershipResponse } from '../../lib/api';
@@ -77,17 +76,13 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
         </div>
         <div className={styles.actions}>
           {memberships.length > 0 ? (
-            <button
-              className={styles.button}
-              onClick={() => router.push('/app' as Route)}
-              type="button"
-            >
+            <button className={styles.button} onClick={() => router.push('/app')} type="button">
               Switch to hiring ({memberships.length})
             </button>
           ) : (
             <button
               className={styles.button}
-              onClick={() => router.push('/onboarding?intent=hire' as Route)}
+              onClick={() => router.push('/onboarding?intent=hire')}
               type="button"
             >
               Add hiring workspace
