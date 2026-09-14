@@ -26,6 +26,6 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   const logger = createLogger({ service: 'scheduler-bootstrap' });
-  logger.fatal({ error }, 'Scheduler failed to start');
+  logger.fatal({ err: error }, 'Scheduler failed to start');
   process.exitCode = 1;
 });
