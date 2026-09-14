@@ -26,7 +26,14 @@ const transitions: Readonly<Record<ResumeProcessingState, readonly ResumeProcess
   READY_FOR_REVIEW: ['APPROVED', 'REJECTED'],
   APPROVED: [],
   REJECTED: [],
-  FAILED_RETRYABLE: ['VALIDATING', 'SCANNING', 'EXTRACTING', 'OCR_REQUIRED', 'PARSING', 'FAILED_TERMINAL'],
+  FAILED_RETRYABLE: [
+    'VALIDATING',
+    'SCANNING',
+    'EXTRACTING',
+    'OCR_REQUIRED',
+    'PARSING',
+    'FAILED_TERMINAL',
+  ],
   FAILED_TERMINAL: [],
 };
 
