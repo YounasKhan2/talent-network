@@ -2,15 +2,11 @@ import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import type { DatabaseClient } from '@talent-network/database';
 import {
   type MalwareScanner,
+  type ResumeSecurityJobData,
   validateResumeDocument,
 } from '@talent-network/resume-security';
 
-export const RESUME_SCAN_QUEUE = 'resume.scan';
 export const MAX_RESUME_SIZE_BYTES = 10 * 1024 * 1024;
-
-export interface ResumeScanJobData {
-  resumeVersionId: string;
-}
 
 export interface ResumeSecurityProcessorDependencies {
   database: DatabaseClient;
@@ -20,7 +16,7 @@ export interface ResumeSecurityProcessorDependencies {
 }
 
 export async function processResumeSecurityJob(
-  input: ResumeScanJobData,
+  input: ResumeSecurityJobData,
   dependencies: ResumeSecurityProcessorDependencies,
 ): Promise<void> {
   const { database, storage, bucket, scanner } = dependencies;
@@ -29,7 +25,6 @@ export async function processResumeSecurityJob(
     data: {
       processingState: 'VALIDATING',
       failureCode: null,
-      failureMetadata: undefined,
     },
   });
 
@@ -101,7 +96,6 @@ export async function processResumeSecurityJob(
       processingState: 'SCANNING',
       checksumSha256: validation.checksumSha256,
       failureCode: null,
-      failureMetadata: undefined,
     },
   });
 
@@ -181,7 +175,11 @@ export async function processResumeSecurityJob(
   });
 }
 
-async function readPrivateObject(client: S3Client, bucket: string, objectKey: string): Promise<Uint8Array> {
+async function readPrivateObject(
+  client: S3Client,
+  bucket: string,
+  objectKey: string,
+): Promise<Uint8Array> {
   const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: objectKey }));
   if (!response.Body) throw new Error('Stored resume object has no body.');
   return response.Body.transformToByteArray();
