@@ -126,6 +126,28 @@
   font-size: 10px;
 }
 
+.loadMore {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-top: 1px solid #bfb7aa;
+  background: transparent;
+  color: #514cf5;
+  font-size: 10px;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.loadMore:hover {
+  background: #ebe6dc;
+}
+
+.loadMore:disabled {
+  color: #9b958b;
+  cursor: wait;
+}
+
 .snapshot {
   min-width: 0;
   background: #fcfbf7;
