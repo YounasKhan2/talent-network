@@ -52,11 +52,7 @@ void test('denies a recruiter a permission outside the recruiter bundle', async 
 
   await assert.rejects(
     () =>
-      service.authorizeOrganization(
-        'session-token',
-        organizationId,
-        'organization.members.manage',
-      ),
+      service.authorizeOrganization('session-token', organizationId, 'organization.members.manage'),
     ForbiddenException,
   );
 });
