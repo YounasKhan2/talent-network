@@ -91,6 +91,21 @@ export interface CandidateLocationPreferenceInput {
   remoteOnly: boolean;
 }
 
+export interface CandidateCustomSectionItemInput {
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  url: string | null;
+}
+
+export interface CandidateCustomSectionInput {
+  title: string;
+  description: string | null;
+  items: CandidateCustomSectionItemInput[];
+}
+
 const profileInclude = {
   employments: { orderBy: { sortOrder: 'asc' as const } },
   education: { orderBy: { sortOrder: 'asc' as const } },
@@ -100,6 +115,10 @@ const profileInclude = {
   languages: { orderBy: { sortOrder: 'asc' as const } },
   links: { orderBy: { sortOrder: 'asc' as const } },
   locationPreferences: { orderBy: { sortOrder: 'asc' as const } },
+  customSections: {
+    orderBy: { sortOrder: 'asc' as const },
+    include: { items: { orderBy: { sortOrder: 'asc' as const } } },
+  },
 };
 
 @Injectable()
@@ -223,6 +242,10 @@ export class CandidatesService {
     return this.createNextVersion(userId, { locationPreferences });
   }
 
+  replaceCustomSections(userId: string, customSections: CandidateCustomSectionInput[]) {
+    return this.createNextVersion(userId, { customSections });
+  }
+
   private async requireCandidate(userId: string) {
     const candidate = await this.database.candidate.findUnique({ where: { userId } });
     if (!candidate) throw candidateNotInitialized();
@@ -241,6 +264,7 @@ export class CandidatesService {
       languages?: CandidateLanguageInput[];
       links?: CandidateLinkInput[];
       locationPreferences?: CandidateLocationPreferenceInput[];
+      customSections?: CandidateCustomSectionInput[];
     },
   ) {
     const candidate = await this.database.candidate.findUnique({
@@ -259,6 +283,7 @@ export class CandidatesService {
     const languages = replacement.languages ?? current.languages;
     const links = replacement.links ?? current.links;
     const locationPreferences = replacement.locationPreferences ?? current.locationPreferences;
+    const customSections = replacement.customSections ?? current.customSections;
 
     return this.database.$transaction(async (transaction) => {
       const next = await transaction.candidateProfileVersion.create({
@@ -378,6 +403,24 @@ export class CandidatesService {
               city: location.city,
               remoteOnly: location.remoteOnly,
               sortOrder: index,
+            })),
+          },
+          customSections: {
+            create: customSections.map((section, sectionIndex) => ({
+              title: section.title,
+              description: section.description,
+              sortOrder: sectionIndex,
+              items: {
+                create: section.items.map((item, itemIndex) => ({
+                  title: item.title,
+                  subtitle: item.subtitle,
+                  description: item.description,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  url: item.url,
+                  sortOrder: itemIndex,
+                })),
+              },
             })),
           },
         },
