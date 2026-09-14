@@ -34,7 +34,7 @@ function createAuthorizationService(session: SessionResponse): AuthorizationServ
   return new AuthorizationService(authService);
 }
 
-test('allows a recruiter to use permissions included in the recruiter bundle', async () => {
+void test('allows a recruiter to use permissions included in the recruiter bundle', async () => {
   const session = createSession('RECRUITER');
   const service = createAuthorizationService(session);
 
@@ -47,7 +47,7 @@ test('allows a recruiter to use permissions included in the recruiter bundle', a
   assert.equal(result, session);
 });
 
-test('denies a recruiter a permission outside the recruiter bundle', async () => {
+void test('denies a recruiter a permission outside the recruiter bundle', async () => {
   const service = createAuthorizationService(createSession('RECRUITER'));
 
   await assert.rejects(
@@ -61,7 +61,7 @@ test('denies a recruiter a permission outside the recruiter bundle', async () =>
   );
 });
 
-test('denies access when membership belongs to a different organization', async () => {
+void test('denies access when membership belongs to a different organization', async () => {
   const service = createAuthorizationService(createSession('ORG_OWNER'));
 
   await assert.rejects(
@@ -70,7 +70,7 @@ test('denies access when membership belongs to a different organization', async 
   );
 });
 
-test('returns the resolved membership in organization context', async () => {
+void test('returns the resolved membership in organization context', async () => {
   const session = createSession('VIEWER');
   const service = createAuthorizationService(session);
 
