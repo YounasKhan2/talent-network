@@ -6,15 +6,15 @@ Talent Network is a documentation-led, production-oriented employment operating 
 
 ## Project Status
 
-| Area | Status |
-|---|---|
-| Product blueprint | ✅ Complete |
-| Architecture baseline | ✅ Complete |
-| Security / scale / data specifications | ✅ Complete |
-| UX / information architecture | ✅ Complete |
-| Monorepo bootstrap | ✅ Started |
-| Engineering foundation | 🟡 In progress |
-| Product implementation | ⏳ Next |
+| Area                                   | Status         |
+| -------------------------------------- | -------------- |
+| Product blueprint                      | ✅ Complete    |
+| Architecture baseline                  | ✅ Complete    |
+| Security / scale / data specifications | ✅ Complete    |
+| UX / information architecture          | ✅ Complete    |
+| Monorepo bootstrap                     | ✅ Started     |
+| Engineering foundation                 | 🟡 In progress |
+| Product implementation                 | ⏳ Next        |
 
 **Current implementation phase:** Phase 0 — Repository & Engineering Foundation.
 
@@ -207,9 +207,11 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 ## Documentation Index
 
 ### Product
+
 - [`docs/02-product/master-blueprint.md`](./docs/02-product/master-blueprint.md)
 
 ### Architecture
+
 - [`docs/03-architecture/engineering-principles.md`](./docs/03-architecture/engineering-principles.md)
 - [`docs/03-architecture/system-overview.md`](./docs/03-architecture/system-overview.md)
 - [`docs/03-architecture/domain-architecture.md`](./docs/03-architecture/domain-architecture.md)
@@ -218,22 +220,27 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 - [`docs/03-architecture/multi-tenancy-and-authorization.md`](./docs/03-architecture/multi-tenancy-and-authorization.md)
 
 ### API
+
 - [`docs/08-api/api-architecture.md`](./docs/08-api/api-architecture.md)
 
 ### AI & Intelligent Processing
+
 - [`docs/04-ai/resume-processing-architecture.md`](./docs/04-ai/resume-processing-architecture.md)
 - [`docs/04-ai/matching-screening-architecture.md`](./docs/04-ai/matching-screening-architecture.md)
 - [`docs/04-ai/ai-gateway-and-cost-controls.md`](./docs/04-ai/ai-gateway-and-cost-controls.md)
 
 ### Infrastructure
+
 - [`docs/05-infrastructure/load-capacity-model.md`](./docs/05-infrastructure/load-capacity-model.md)
 - [`docs/05-infrastructure/deployment-observability.md`](./docs/05-infrastructure/deployment-observability.md)
 - [`docs/05-infrastructure/object-storage.md`](./docs/05-infrastructure/object-storage.md)
 
 ### Security
+
 - [`docs/06-security/threat-model.md`](./docs/06-security/threat-model.md)
 
 ### Design & UX
+
 - [`docs/07-design/design-system.md`](./docs/07-design/design-system.md)
 - [`docs/07-design/information-architecture.md`](./docs/07-design/information-architecture.md)
 - [`docs/07-design/employer-workspace-ux.md`](./docs/07-design/employer-workspace-ux.md)
@@ -241,12 +248,15 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 - [`docs/07-design/admin-trust-ux.md`](./docs/07-design/admin-trust-ux.md)
 
 ### Data
+
 - [`docs/09-data/erd-and-entity-contracts.md`](./docs/09-data/erd-and-entity-contracts.md)
 
 ### Architecture Decisions
+
 - [`docs/10-decisions/ADR-0001-modular-monolith-first.md`](./docs/10-decisions/ADR-0001-modular-monolith-first.md)
 
 ### Implementation
+
 - [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md)
 - [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/local-quality-gates.md)
 

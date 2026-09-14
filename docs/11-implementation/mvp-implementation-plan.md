@@ -537,6 +537,7 @@ MVP is not considered ready merely because screens render.
 Required categories:
 
 ### Product
+
 - candidate can create/review Career Passport
 - employer can create/publish job
 - candidate can discover/apply
@@ -545,30 +546,35 @@ Required categories:
 - candidate can track application
 
 ### Security
+
 - tenancy tests pass
 - private candidate data controls work
 - file upload threat controls work
 - admin permissions audited
 
 ### Reliability
+
 - worker retries tested
 - idempotency tested
 - backup/restore procedure documented
 - provider failure has graceful behavior
 
 ### Performance
+
 - applicant list load tested
 - job search load tested
 - application burst tested
 - resume queue burst tested
 
 ### Operations
+
 - alerts/dashboards exist
 - moderation/admin tooling exists
 - deployment/rollback runbook exists
 - incident ownership defined
 
 ### Documentation
+
 - architecture and API docs match implementation
 - README local/deployment instructions work
 - ADRs updated for deviations

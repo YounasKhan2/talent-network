@@ -13,18 +13,19 @@ The system should progress through measurable thresholds rather than architectur
 
 ## Capacity Tiers
 
-| Tier | Registered Candidates | Organizations | Active Jobs | Annual Applications | Typical Architecture |
-|---|---:|---:|---:|---:|---|
-| Prototype | 1k | <100 | <500 | <25k | single API + worker + managed DB |
-| Early Production | 10k | 250 | 2k | 100k | horizontally scalable API/workers |
-| Growth | 100k | 2k | 10k | 1M | worker isolation + stronger caching/search |
-| Large Marketplace | 1M | 10k+ | 50k+ | 3–10M | dedicated search + replicas + analytics platform |
+| Tier              | Registered Candidates | Organizations | Active Jobs | Annual Applications | Typical Architecture                             |
+| ----------------- | --------------------: | ------------: | ----------: | ------------------: | ------------------------------------------------ |
+| Prototype         |                    1k |          <100 |        <500 |                <25k | single API + worker + managed DB                 |
+| Early Production  |                   10k |           250 |          2k |                100k | horizontally scalable API/workers                |
+| Growth            |                  100k |            2k |         10k |                  1M | worker isolation + stronger caching/search       |
+| Large Marketplace |                    1M |          10k+ |        50k+ |               3–10M | dedicated search + replicas + analytics platform |
 
 ## Traffic Shape
 
 Hiring traffic is bursty rather than uniform.
 
 Typical spikes:
+
 - newly published popular job
 - graduate/MTO campaign
 - employer bulk import
@@ -39,11 +40,13 @@ The architecture must absorb spikes through queues and backpressure rather than 
 ## Stress Scenario A — Viral Job
 
 Assumption:
+
 - 20,000 applications in 24 hours
 - peak 2,500/hour
 - burst 100–300 submissions/minute
 
 Synchronous request path should perform only:
+
 1. authenticate/authorize
 2. validate job/application eligibility
 3. enforce uniqueness/idempotency
@@ -56,11 +59,13 @@ Resume parsing, matching, notifications, analytics, and AI remain asynchronous.
 ## Stress Scenario B — Graduate Campaign
 
 Assumption:
+
 - 50,000 applicants
 - several jobs sharing one campaign
 - employer dashboard repeatedly filtering the same large applicant corpus
 
 Required behaviors:
+
 - cursor pagination
 - indexed job/stage/status filters
 - purpose-built applicant list projection
@@ -87,6 +92,7 @@ Upload
 Worker concurrency should be independently tunable per stage.
 
 Example planning model:
+
 - scan: 50 concurrent light workers
 - extraction: 20–50 depending on CPU/memory
 - OCR: small isolated expensive pool
@@ -117,20 +123,21 @@ This bounds cost by actual recruiter/candidate interaction.
 
 Initial engineering targets:
 
-| Operation | Target |
-|---|---|
-| CDN-served public content | <100ms where region/cache allows |
-| Typical API p50 | <150ms |
-| Typical API p95 | <500ms |
-| Search p95 | <800ms |
-| Application submit p95 | <700ms excluding client upload |
-| Interactive table action perceived feedback | ~100ms optimistic where safe |
+| Operation                                   | Target                           |
+| ------------------------------------------- | -------------------------------- |
+| CDN-served public content                   | <100ms where region/cache allows |
+| Typical API p50                             | <150ms                           |
+| Typical API p95                             | <500ms                           |
+| Search p95                                  | <800ms                           |
+| Application submit p95                      | <700ms excluding client upload   |
+| Interactive table action perceived feedback | ~100ms optimistic where safe     |
 
 These are objectives, not promises; production SLOs will be established from measurements.
 
 ## Database Capacity Strategy
 
 ### First
+
 - correct schema
 - bounded queries
 - appropriate composite indexes
@@ -140,12 +147,14 @@ These are objectives, not promises; production SLOs will be established from mea
 - projection endpoints
 
 ### Then
+
 - larger managed DB
 - read replica for suitable read workloads
 - materialized/derived read models
 - archival policies
 
 ### Much Later If Needed
+
 - partition very high-volume tables
 - split workload-specific databases
 - isolate enterprise tenants only where justified
@@ -155,6 +164,7 @@ Do not shard before evidence requires it.
 ## High-Growth Tables
 
 Expected fast-growing entities:
+
 - applications
 - application stage history
 - activities
@@ -170,6 +180,7 @@ These require deliberate indexes, retention, archival, and potentially partition
 ## Queue Capacity Rules
 
 Track per queue:
+
 - incoming rate
 - completion rate
 - backlog depth
@@ -185,6 +196,7 @@ Never autoscale purely from CPU for queue workloads.
 ## Backpressure
 
 When downstream providers or expensive processors are saturated:
+
 - accept durable user action if safe
 - queue derived computation
 - show processing state
@@ -196,9 +208,11 @@ When downstream providers or expensive processors are saturated:
 ## Search Scaling
 
 Phase 1:
+
 - PostgreSQL full-text + trigram + structured indexes
 
 Trigger dedicated search evaluation when one or more become true:
+
 - search p95 cannot meet target after DB optimization
 - ranking features outgrow relational query ergonomics
 - faceting/aggregation becomes too costly
@@ -210,6 +224,7 @@ Search remains a projection, not source of truth.
 ## Object Storage Planning
 
 If average resume file = 500 KB:
+
 - 10k resumes ≈ 5 GB
 - 100k ≈ 50 GB
 - 1M ≈ 500 GB
@@ -221,6 +236,7 @@ Store originals plus only required derivatives. Avoid unnecessary duplicated con
 AI capacity is bounded separately from web capacity.
 
 Controls:
+
 - global budget
 - per-tenant budget
 - per-capability concurrency
@@ -236,6 +252,7 @@ A traffic surge must not create an uncontrolled AI spend surge.
 Before production milestones, test:
 
 ### API
+
 - authentication
 - job discovery
 - applicant listing
@@ -243,28 +260,33 @@ Before production milestones, test:
 - stage changes
 
 ### Database
+
 - realistic dataset sizes
 - concurrent recruiter filters
 - application insertion bursts
 - audit/outbox write overhead
 
 ### Queues
+
 - worker crash/retry
 - duplicate jobs
 - provider throttling
 - backlog recovery
 
 ### Files
+
 - concurrent signed uploads
 - large valid files
 - malicious/invalid files
 
 ### Matching
+
 - candidate retrieval at 10k/100k/1M scale simulation
 
 ## Scale Gates
 
 Any infrastructure upgrade must document:
+
 1. measured bottleneck
 2. current p95/p99 or throughput
 3. target

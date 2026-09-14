@@ -137,16 +137,16 @@ This avoids the failure mode where a database transaction commits but its requir
 
 ## Source-of-truth boundaries
 
-| Data type | Authoritative store |
-|---|---|
-| Users, organizations, candidates, jobs, applications | PostgreSQL |
-| Pipeline state and stage history | PostgreSQL |
-| Resume metadata and versions | PostgreSQL |
-| Resume/file bytes | Object storage |
-| Sessions, rate limits, locks, queue state | Redis / ephemeral systems |
-| Search documents | Rebuildable search projection |
-| Embeddings/vector representations | Rebuildable derived projection |
-| Analytics aggregates | Rebuildable derived store |
+| Data type                                            | Authoritative store            |
+| ---------------------------------------------------- | ------------------------------ |
+| Users, organizations, candidates, jobs, applications | PostgreSQL                     |
+| Pipeline state and stage history                     | PostgreSQL                     |
+| Resume metadata and versions                         | PostgreSQL                     |
+| Resume/file bytes                                    | Object storage                 |
+| Sessions, rate limits, locks, queue state            | Redis / ephemeral systems      |
+| Search documents                                     | Rebuildable search projection  |
+| Embeddings/vector representations                    | Rebuildable derived projection |
+| Analytics aggregates                                 | Rebuildable derived store      |
 
 Derived systems must never become the only copy of transactional business truth.
 

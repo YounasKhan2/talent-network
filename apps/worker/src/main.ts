@@ -4,7 +4,11 @@ import { Redis } from 'ioredis';
 
 async function main(): Promise<void> {
   const env = parseWorkerEnv();
-  const logger = createLogger({ service: 'worker', level: env.LOG_LEVEL, environment: env.NODE_ENV });
+  const logger = createLogger({
+    service: 'worker',
+    level: env.LOG_LEVEL,
+    environment: env.NODE_ENV,
+  });
   const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 
   await redis.ping();

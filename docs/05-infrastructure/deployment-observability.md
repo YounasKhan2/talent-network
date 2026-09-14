@@ -67,22 +67,26 @@ flowchart TD
 ## Environment Strategy
 
 ### Local
+
 - Docker Compose for PostgreSQL, Redis, object-storage emulator
 - API, workers, scheduler, and web run locally
 - seeded deterministic development data
 
 ### Preview / PR
+
 - isolated web deployment where practical
 - shared or ephemeral non-production backend depending cost
 - never production data
 
 ### Staging
+
 - production-like topology
 - sanitized/synthetic data
 - migrations exercised before production
 - integrations use sandbox/test credentials
 
 ### Production
+
 - managed stateful infrastructure
 - horizontal API/web scaling
 - independently tunable workers
@@ -93,6 +97,7 @@ flowchart TD
 Use validated typed environment configuration.
 
 Rules:
+
 - fail startup on invalid required configuration
 - secrets never committed
 - no environment-specific business logic branches unless explicit
@@ -104,6 +109,7 @@ Rules:
 Use managed PostgreSQL.
 
 Requirements:
+
 - automated backups
 - point-in-time recovery when affordable/available
 - encrypted connections
@@ -112,6 +118,7 @@ Requirements:
 - migration safety
 
 Migration approach:
+
 1. additive changes first
 2. deploy compatible code
 3. backfill asynchronously if large
@@ -123,6 +130,7 @@ Avoid destructive schema changes coupled to a single deployment.
 ## Redis
 
 Use managed Redis for:
+
 - queue backend initially
 - rate limits
 - ephemeral cache
@@ -134,6 +142,7 @@ Redis data loss must not corrupt authoritative business state.
 ## Object Storage
 
 Requirements:
+
 - private bucket by default
 - signed short-lived access
 - separate prefixes/buckets for environment
@@ -143,6 +152,7 @@ Requirements:
 ## Deployment Safety
 
 Production deploy must support:
+
 - health/readiness probes
 - graceful shutdown
 - worker drain
@@ -167,6 +177,7 @@ Install
 ```
 
 Later:
+
 - contract tests
 - E2E smoke tests
 - load smoke tests
@@ -177,6 +188,7 @@ Later:
 Prefer small reversible releases.
 
 Use:
+
 - feature flags
 - expand/contract migrations
 - progressive rollout where platform supports it
@@ -185,6 +197,7 @@ Use:
 ## Observability Standard
 
 Every deployable unit must emit:
+
 - structured logs
 - metrics
 - traces where useful
@@ -198,6 +211,7 @@ OpenTelemetry-compatible instrumentation is preferred so telemetry backend remai
 Structured JSON logs in production.
 
 Recommended fields:
+
 - timestamp
 - severity
 - service
@@ -215,6 +229,7 @@ Never log secrets or raw sensitive resume content by default.
 ## Core Metrics
 
 ### API
+
 - request rate
 - p50/p95/p99 latency
 - error rate
@@ -222,6 +237,7 @@ Never log secrets or raw sensitive resume content by default.
 - rate-limit hits
 
 ### PostgreSQL
+
 - connections
 - pool saturation
 - query latency
@@ -231,6 +247,7 @@ Never log secrets or raw sensitive resume content by default.
 - replica lag later
 
 ### Redis
+
 - memory
 - command latency
 - connection count
@@ -238,6 +255,7 @@ Never log secrets or raw sensitive resume content by default.
 - queue-specific health
 
 ### Queues
+
 - depth
 - oldest job age
 - processing duration
@@ -245,6 +263,7 @@ Never log secrets or raw sensitive resume content by default.
 - DLQ count
 
 ### Resume Pipeline
+
 - upload success/failure
 - malware rejects
 - scan duration
@@ -254,6 +273,7 @@ Never log secrets or raw sensitive resume content by default.
 - review approval rate
 
 ### Matching
+
 - compute duration
 - candidates evaluated
 - cache/reuse rate
@@ -261,6 +281,7 @@ Never log secrets or raw sensitive resume content by default.
 - failure rate
 
 ### AI
+
 - requests by capability/model
 - latency
 - token/input-output usage where applicable
@@ -270,6 +291,7 @@ Never log secrets or raw sensitive resume content by default.
 - provider error/throttle rate
 
 ### Business
+
 - applications/job
 - qualified/shortlisted/interviewed/offered/hired
 - employer response time
@@ -281,6 +303,7 @@ Never log secrets or raw sensitive resume content by default.
 Initial SLOs should be modest and measurable.
 
 Example future targets:
+
 - API availability 99.9% once business need warrants
 - application submission success >99.9% excluding invalid requests
 - queue jobs processed within capability-specific latency windows
@@ -292,6 +315,7 @@ Do not claim contractual SLOs until operational history supports them.
 Alert on user/business impact, not noise.
 
 Examples:
+
 - application create error spike
 - auth failure anomaly
 - DB saturation
@@ -305,6 +329,7 @@ Examples:
 ## Runbooks
 
 Before production, create runbooks for:
+
 - database unavailable
 - Redis/queue unavailable
 - object storage unavailable
@@ -321,6 +346,7 @@ Before production, create runbooks for:
 Define RPO/RTO before launch based on business requirements.
 
 Minimum:
+
 - scheduled DB backups
 - restore test procedure
 - object-store durability/versioning policy where appropriate
@@ -331,6 +357,7 @@ Backups that have never been restored in testing are not considered proven.
 ## Cost Controls
 
 Track infrastructure unit economics:
+
 - cost per active employer
 - cost per application
 - cost per resume processed
@@ -342,6 +369,7 @@ Autoscaling requires max bounds to avoid accidental spend explosions.
 ## Vendor Portability
 
 Keep seams around:
+
 - hosting
 - object storage
 - email

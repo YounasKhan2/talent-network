@@ -66,6 +66,7 @@ erDiagram
 Represents authentication identity, not professional profile.
 
 Core fields conceptually:
+
 - id
 - primaryEmail
 - emailVerifiedAt
@@ -81,6 +82,7 @@ Do not put employer/candidate business fields directly on User.
 Represents the candidate domain identity.
 
 Fields:
+
 - id
 - userId unique
 - discoverability status
@@ -122,6 +124,7 @@ Unique constraint:
 Initial implementation may use stable role keys, but authorization APIs should operate on permissions.
 
 Potential normalized entities later:
+
 - OrganizationRole
 - Permission
 - RolePermission
@@ -135,6 +138,7 @@ Avoid encoding all authorization into DB enums that become hard to evolve.
 Immutable-ish version snapshot representing approved professional state.
 
 Fields conceptually:
+
 - id
 - candidateId
 - versionNumber
@@ -151,6 +155,7 @@ Fields conceptually:
 Child tables should reference profileVersionId when historical reproducibility matters.
 
 Potential children:
+
 - CandidateEmployment
 - CandidateEducation
 - CandidateProject
@@ -217,6 +222,7 @@ Resume processing metadata belongs to versions so results are reproducible.
 ### ResumeParseResult
 
 Could be a separate structured record:
+
 - resumeVersionId
 - parserVersion
 - schemaVersion
@@ -333,6 +339,7 @@ A product-level rule must explicitly define whether a candidate can have one act
 ### ApplicationStageHistory
 
 Append-only history:
+
 - id
 - applicationId
 - fromStageId nullable
@@ -515,6 +522,7 @@ Avoid storing secret provider payloads unnecessarily.
 ### AuditEvent
 
 Append-oriented record:
+
 - id
 - organizationId nullable
 - actorType
@@ -526,6 +534,7 @@ Append-oriented record:
 - occurredAt
 
 Examples:
+
 - candidate viewed/exported
 - stage changed
 - offer approved
@@ -580,6 +589,7 @@ Raw prompts/responses should only be persisted when explicitly justified by priv
 Not authoritative tables.
 
 Possible projections:
+
 - CandidateSearchDocument
 - JobSearchDocument
 - ApplicantListProjection
@@ -612,6 +622,7 @@ Final indexes must be validated against query plans and actual read patterns.
 Deletion cannot be treated as simple cascading removal.
 
 Policy must distinguish:
+
 - user-requested deletion
 - legal/audit retention
 - organization-owned hiring records
@@ -627,6 +638,7 @@ A dedicated retention specification should be created before production launch.
 The future Prisma schema must implement this domain model without using Prisma relations as permission boundaries.
 
 Application services/repositories must still enforce:
+
 - tenant ownership
 - candidate privacy
 - permissions

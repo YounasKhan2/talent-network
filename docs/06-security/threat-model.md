@@ -66,6 +66,7 @@ Every crossing is treated as untrusted until validated.
 ### 1. Authentication Abuse
 
 Threats:
+
 - credential stuffing
 - brute force
 - session theft
@@ -74,6 +75,7 @@ Threats:
 - replayed sessions
 
 Controls:
+
 - strong password hashing
 - rate limits by IP/account/device signals
 - secure, HttpOnly, SameSite cookies where sessions are used
@@ -86,6 +88,7 @@ Controls:
 ### 2. Authorization / Tenant Escape
 
 Threats:
+
 - recruiter accesses another organization
 - horizontal IDOR
 - role escalation
@@ -93,6 +96,7 @@ Threats:
 - cross-tenant cache/search leakage
 
 Controls:
+
 - server-resolved organization context
 - permission checks in application/service layer
 - repository queries scoped by tenant
@@ -108,6 +112,7 @@ Rule:
 ### 3. Candidate Privacy Abuse
 
 Threats:
+
 - unauthorized employer discovery
 - contact scraping
 - private-profile exposure
@@ -115,6 +120,7 @@ Threats:
 - mass export of candidate data
 
 Controls:
+
 - visibility and discoverability settings
 - blocked-organization support
 - contact-access permissions
@@ -126,6 +132,7 @@ Controls:
 ### 4. Resume / File Upload Attacks
 
 Threats:
+
 - malware
 - archive bombs
 - malformed PDF/DOCX parser exploits
@@ -135,6 +142,7 @@ Threats:
 - active content
 
 Controls:
+
 - direct signed uploads to isolated object path
 - extension + MIME + magic-byte validation
 - strict size/page limits
@@ -148,6 +156,7 @@ Controls:
 ### 5. AI-Specific Threats
 
 Threats:
+
 - prompt injection from resumes or job descriptions
 - model output treated as trusted authorization/business logic
 - sensitive-data leakage to providers
@@ -156,6 +165,7 @@ Threats:
 - runaway cost amplification
 
 Controls:
+
 - AI gateway only
 - explicit capability contracts
 - schema validation
@@ -172,12 +182,14 @@ Controls:
 ### 6. Scraping / Enumeration
 
 Threats:
+
 - job scraping at abusive volume
 - candidate harvesting
 - API enumeration
 - resume/contact database extraction
 
 Controls:
+
 - endpoint-specific rate limits
 - pagination caps
 - anti-automation signals where appropriate
@@ -190,6 +202,7 @@ Controls:
 ### 7. Job / Employer Fraud
 
 Threats:
+
 - fake companies
 - fake jobs
 - phishing links
@@ -197,6 +210,7 @@ Threats:
 - impersonated recruiters
 
 Controls:
+
 - company/recruiter verification states
 - domain verification
 - moderation workflow
@@ -208,6 +222,7 @@ Controls:
 ### 8. Injection
 
 Threats:
+
 - SQL injection
 - command injection
 - template injection
@@ -215,6 +230,7 @@ Threats:
 - header injection
 
 Controls:
+
 - parameterized ORM/query APIs
 - tightly reviewed raw SQL
 - output encoding
@@ -226,6 +242,7 @@ Controls:
 ### 9. CSRF / Cross-Origin Abuse
 
 Controls:
+
 - SameSite cookies
 - CSRF tokens where required
 - strict CORS allowlist
@@ -235,6 +252,7 @@ Controls:
 ### 10. Queue / Worker Abuse
 
 Threats:
+
 - forged jobs
 - cross-tenant job payloads
 - duplicate execution
@@ -242,6 +260,7 @@ Threats:
 - infinite retry storms
 
 Controls:
+
 - queue payload schema validation
 - trusted producer boundaries
 - resolve tenant/resource ownership again in worker
@@ -253,6 +272,7 @@ Controls:
 ### 11. Webhook / Integration Abuse
 
 Controls:
+
 - signed webhook verification
 - replay protection
 - timestamps/nonces where available
@@ -264,11 +284,13 @@ Controls:
 ### 12. Billing Abuse
 
 Threats:
+
 - forged entitlement state
 - replayed payment webhooks
 - unauthorized plan upgrade
 
 Controls:
+
 - billing provider webhook verification
 - server-owned entitlement computation
 - idempotent billing events
@@ -278,6 +300,7 @@ Controls:
 ### 13. Logging / Observability Leakage
 
 Never log:
+
 - passwords
 - reset tokens
 - auth secrets

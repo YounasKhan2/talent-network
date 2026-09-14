@@ -370,16 +370,16 @@ Do not place mutable business rules in a generic `shared` package.
 
 ## Data ownership examples
 
-| Question | Owning domain |
-|---|---|
-| Is this recruiter allowed to view this organization's candidates? | Organizations / Authorization |
-| What did this candidate profile contain when they applied? | Candidates + Application snapshot reference |
-| What is the current pipeline stage? | Applications/Pipelines contract |
-| Why is the candidate ranked 91? | Matching |
-| Was the resume parse accepted by the candidate? | Resumes |
-| Has an interview email been delivered? | Notifications |
-| What plan features can this company use? | Billing/Entitlements |
-| Who changed this offer? | Audit |
+| Question                                                          | Owning domain                               |
+| ----------------------------------------------------------------- | ------------------------------------------- |
+| Is this recruiter allowed to view this organization's candidates? | Organizations / Authorization               |
+| What did this candidate profile contain when they applied?        | Candidates + Application snapshot reference |
+| What is the current pipeline stage?                               | Applications/Pipelines contract             |
+| Why is the candidate ranked 91?                                   | Matching                                    |
+| Was the resume parse accepted by the candidate?                   | Resumes                                     |
+| Has an interview email been delivered?                            | Notifications                               |
+| What plan features can this company use?                          | Billing/Entitlements                        |
+| Who changed this offer?                                           | Audit                                       |
 
 ## Extraction readiness
 
