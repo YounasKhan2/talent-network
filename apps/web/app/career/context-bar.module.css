@@ -14,6 +14,26 @@
   margin: 0;
 }
 
+.bar {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 18px;
+  border-bottom: 1px solid #d7d1c6;
+  background: #171714;
+  color: #fff;
+}
+
+.contextHint {
+  color: #aaa69d;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .workspace {
   min-height: 100vh;
   display: grid;
@@ -147,6 +167,13 @@
 }
 
 @media (max-width: 860px) {
+  .bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }
