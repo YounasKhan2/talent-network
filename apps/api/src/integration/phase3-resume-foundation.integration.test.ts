@@ -5,6 +5,7 @@ import { createDatabaseClient } from '@talent-network/database';
 import { AuthService } from '../auth/auth.service.js';
 import { CandidatesService } from '../candidates/candidates.service.js';
 import { ResumesService } from '../resumes/resumes.service.js';
+import type { StorageObjectMetadata } from '../storage/storage.service.js';
 import { StorageService } from '../storage/storage.service.js';
 
 const connectionString = process.env.DATABASE_URL;
@@ -16,7 +17,17 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
   const runId = randomUUID();
   const auth = new AuthService(database);
   const candidates = new CandidatesService(database);
-  const storage = new StorageService();
+  let storedObject: StorageObjectMetadata = {
+    contentLength: 245_760,
+    contentType: 'application/pdf',
+    eTag: 'phase3-integration-etag',
+  };
+  const storage = {
+    ensureBucketExists: async () => undefined,
+    createPresignedUploadUrl: async () => 'http://storage.local/presigned-upload',
+    createPresignedDownloadUrl: async () => 'http://storage.local/presigned-download',
+    headObject: async () => storedObject,
+  } as unknown as StorageService;
   const resumes = new ResumesService(database, storage);
   const createdUserIds: string[] = [];
   const createdResumeVersionIds: string[] = [];
@@ -63,7 +74,7 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
       assert.equal(detail.versions[0]?.id, prepared.version.id);
     });
 
-    await t.test('does not expose a resume or resume version to another candidate', async () => {
+    await t.test('does not expose storage authorization to another candidate', async () => {
       const other = await auth.signup(
         `resume-other-${runId}@integration.local`,
         'IntegrationPass!2026',
@@ -89,25 +100,104 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
           typeof (error as { getStatus?: unknown }).getStatus === 'function' &&
           (error as { getStatus: () => number }).getStatus() === 404,
       );
+
+      await assert.rejects(
+        () => resumes.completeDirectUpload(other.session.user.id, prepared.version.id),
+        (error: unknown) =>
+          error instanceof Error &&
+          'getStatus' in error &&
+          typeof (error as { getStatus?: unknown }).getStatus === 'function' &&
+          (error as { getStatus: () => number }).getStatus() === 404,
+      );
+
+      await assert.rejects(
+        () => resumes.createDownloadAuthorization(other.session.user.id, prepared.version.id),
+        (error: unknown) =>
+          error instanceof Error &&
+          'getStatus' in error &&
+          typeof (error as { getStatus?: unknown }).getStatus === 'function' &&
+          (error as { getStatus: () => number }).getStatus() === 404,
+      );
     });
 
-    await t.test('writes auditable upload-prepared and outbox records', async () => {
-      const audit = await database.auditEvent.findFirst({
+    await t.test('size mismatch fails without advancing the resume state', async () => {
+      storedObject = {
+        contentLength: prepared.version.sizeBytes + 1,
+        contentType: prepared.version.mimeType,
+        eTag: 'wrong-size',
+      };
+
+      await assert.rejects(
+        () => resumes.completeDirectUpload(primary.session.user.id, prepared.version.id),
+        (error: unknown) =>
+          error instanceof Error &&
+          'getStatus' in error &&
+          typeof (error as { getStatus?: unknown }).getStatus === 'function' &&
+          (error as { getStatus: () => number }).getStatus() === 409,
+      );
+
+      const persisted = await database.resumeVersion.findUniqueOrThrow({
+        where: { id: prepared.version.id },
+        select: { processingState: true },
+      });
+      assert.equal(persisted.processingState, 'UPLOADING');
+
+      storedObject = {
+        contentLength: prepared.version.sizeBytes,
+        contentType: prepared.version.mimeType,
+        eTag: 'phase3-integration-etag',
+      };
+    });
+
+    await t.test('matching object metadata advances to uploaded and enables private download', async () => {
+      const completed = await resumes.completeDirectUpload(
+        primary.session.user.id,
+        prepared.version.id,
+      );
+      assert.equal(completed.processingState, 'UPLOADED');
+
+      const download = await resumes.createDownloadAuthorization(
+        primary.session.user.id,
+        prepared.version.id,
+      );
+      assert.equal(download.url, 'http://storage.local/presigned-download');
+      assert.equal(download.resumeVersionId, prepared.version.id);
+      assert.equal(download.expiresInSeconds, 300);
+    });
+
+    await t.test('writes auditable upload-prepared and upload-completed records', async () => {
+      const preparedAudit = await database.auditEvent.findFirst({
         where: {
           resourceType: 'ResumeVersion',
           resourceId: prepared.version.id,
           action: 'candidate.resume.upload_prepared',
         },
       });
-      const outbox = await database.outboxEvent.findFirst({
+      const preparedOutbox = await database.outboxEvent.findFirst({
         where: {
           aggregateType: 'ResumeVersion',
           aggregateId: prepared.version.id,
           eventType: 'candidate.resume.upload_prepared',
         },
       });
-      assert.ok(audit);
-      assert.ok(outbox);
+      const completedAudit = await database.auditEvent.findFirst({
+        where: {
+          resourceType: 'ResumeVersion',
+          resourceId: prepared.version.id,
+          action: 'candidate.resume.upload_completed',
+        },
+      });
+      const completedOutbox = await database.outboxEvent.findFirst({
+        where: {
+          aggregateType: 'ResumeVersion',
+          aggregateId: prepared.version.id,
+          eventType: 'candidate.resume.upload_completed',
+        },
+      });
+      assert.ok(preparedAudit);
+      assert.ok(preparedOutbox);
+      assert.ok(completedAudit);
+      assert.ok(completedOutbox);
     });
   } finally {
     for (const resumeVersionId of createdResumeVersionIds) {
