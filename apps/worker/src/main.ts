@@ -41,12 +41,18 @@ async function main(): Promise<void> {
   const resumeSecurityWorker = new Worker<ResumeSecurityJobData>(
     RESUME_SECURITY_QUEUE,
     async (job) => {
-      await processResumeSecurityJob(job.data, {
-        database,
-        storage,
-        bucket: env.S3_BUCKET,
-        scanner,
-      });
+      const maxAttempts = job.opts.attempts ?? 1;
+      const finalAttempt = job.attemptsMade + 1 >= maxAttempts;
+      await processResumeSecurityJob(
+        job.data,
+        {
+          database,
+          storage,
+          bucket: env.S3_BUCKET,
+          scanner,
+        },
+        { finalAttempt },
+      );
     },
     {
       connection: redis,
@@ -63,7 +69,13 @@ async function main(): Promise<void> {
   });
   resumeSecurityWorker.on('failed', (job, error) => {
     logger.error(
-      { jobId: job?.id, resumeVersionId: job?.data.resumeVersionId, err: error },
+      {
+        jobId: job?.id,
+        resumeVersionId: job?.data.resumeVersionId,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err: error,
+      },
       'Resume security job failed',
     );
   });
