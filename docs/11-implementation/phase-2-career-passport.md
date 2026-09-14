@@ -29,8 +29,8 @@ The Career Passport currently includes:
 - compensation, availability, work-mode, and employment-type preferences
 - candidate audit events and transactional outbox events
 - authenticated Career Passport API endpoints
-- candidate Career Passport web workspace for the initial sections
-- profile completeness guidance without gamified hiring scores
+- Candidate Career Passport web workspace for every currently active structured section
+- profile completeness guidance without hiring-rank gamification
 - PostgreSQL integration coverage for version preservation
 
 ## Versioning invariant
@@ -90,7 +90,7 @@ PATCH /api/v1/candidate/settings
 
 All mutations use the existing session + CSRF boundary. Candidate ownership is derived from the authenticated session user; the client never supplies a Candidate ID to authorize a write.
 
-The replacement endpoints intentionally accept ordered arrays. Array order becomes persisted `sortOrder`, which gives the later edit/reorder UX one consistent backend contract rather than introducing per-row ordering mutations prematurely.
+The replacement endpoints intentionally accept ordered arrays. Array order becomes persisted `sortOrder`, which gives edit/reorder UX one consistent backend contract rather than introducing per-row ordering mutations prematurely.
 
 ## Phase 2B backend expansion slice
 
@@ -139,33 +139,34 @@ Current route:
 
 The visual model remains calm, editorial, section-based, and document-like rather than an employer dashboard.
 
-Already surfaced in the current UI:
+The current UI now surfaces:
 
 - professional overview
 - experience
 - education
 - skills
-- privacy & discoverability
-
-Next web slice activates:
-
 - projects
 - certifications
 - languages
 - links / GitHub / LinkedIn / portfolio
 - location preferences
-- richer employment/compensation preferences
-- proper edit/remove/reorder interactions instead of append-only helpers
-- profile completeness based on meaningful professional evidence rather than arbitrary percentage gaming
+- privacy & discoverability
+
+The web API contract now exposes all of those sections explicitly and provides typed replacement helpers matching the backend endpoints.
+
+As defense in depth, the Career page no longer contains an implicit `initializeCandidatePassport()` fallback. If Candidate state is absent, it routes back to explicit Career onboarding. The Phase 2A layout guard remains the primary context boundary.
+
+Current web interactions for the newly activated sections are intentionally simple append-to-version flows. The next slice replaces these with richer record editing/removal/reordering behavior while keeping the same ordered-array backend contract.
+
+Profile completeness now considers the expanded structured Passport surface. It remains guidance rather than a hiring score and must never be exposed as an employer ranking signal.
 
 ## Remaining Phase 2B sequence
 
 ```text
 Backend domain/API expansion                     ✅ code complete / gate pending
+Web API contracts + Career sections              ✅ code complete / gate pending
         ↓
-Web API contracts + Career sections              ← next
-        ↓
-Edit / remove / reorder UX
+Edit / remove / reorder UX                       ← next after gate
         ↓
 Profile version history + read-only inspection
         ↓
