@@ -26,8 +26,10 @@ export default function OnboardingPage() {
 
     async function load() {
       try {
-        const nextSession = await getSession();
-        const nextContext = await getWorkspaceContextState(nextSession);
+        const [nextSession, nextContext] = await Promise.all([
+          getSession(),
+          getWorkspaceContextState(),
+        ]);
         if (!active) return;
         setSession(nextSession);
         setContext(nextContext);
