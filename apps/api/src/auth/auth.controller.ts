@@ -50,7 +50,8 @@ export class AuthController {
   constructor(
     @Inject(AuthService) private readonly authService: AuthService,
     @Inject(AuthRateLimitService) private readonly authRateLimitService: AuthRateLimitService,
-    @Inject(AuthTokenDeliveryService) private readonly authTokenDeliveryService: AuthTokenDeliveryService,
+    @Inject(AuthTokenDeliveryService)
+    private readonly authTokenDeliveryService: AuthTokenDeliveryService,
   ) {}
 
   @Post('signup')
@@ -100,7 +101,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async confirmEmailVerification(@Body() body: unknown, @Req() request: RequestLike) {
     const input = parseToken(body);
-    await this.authRateLimitService.assertTokenConsumeAllowed(sessionContextFromRequest(request).ip);
+    await this.authRateLimitService.assertTokenConsumeAllowed(
+      sessionContextFromRequest(request).ip,
+    );
     await this.authService.verifyEmail(input.token);
     return { status: 'verified' as const };
   }
@@ -126,17 +129,16 @@ export class AuthController {
     @Res({ passthrough: true }) response: ResponseLike,
   ): Promise<void> {
     const input = parsePasswordReset(body);
-    await this.authRateLimitService.assertTokenConsumeAllowed(sessionContextFromRequest(request).ip);
+    await this.authRateLimitService.assertTokenConsumeAllowed(
+      sessionContextFromRequest(request).ip,
+    );
     await this.authService.resetPassword(input.token, input.password);
     clearAuthCookies(response, this.production);
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(
-    @Req() request: RequestLike,
-    @Res({ passthrough: true }) response: ResponseLike,
-  ) {
+  async refresh(@Req() request: RequestLike, @Res({ passthrough: true }) response: ResponseLike) {
     assertCsrf(request);
     const result = await this.authService.refresh(
       readSessionToken(request),
@@ -167,7 +169,11 @@ export class AuthController {
 function parseCredentials(body: unknown): z.infer<typeof credentialsSchema> {
   const parsed = credentialsSchema.safeParse(body);
   if (parsed.success) return parsed.data;
-  throw invalidPayload('INVALID_CREDENTIALS_PAYLOAD', 'Email and password are invalid.', parsed.error.flatten());
+  throw invalidPayload(
+    'INVALID_CREDENTIALS_PAYLOAD',
+    'Email and password are invalid.',
+    parsed.error.flatten(),
+  );
 }
 
 function parseEmail(body: unknown): z.infer<typeof emailSchema> {
@@ -179,13 +185,21 @@ function parseEmail(body: unknown): z.infer<typeof emailSchema> {
 function parseToken(body: unknown): z.infer<typeof tokenSchema> {
   const parsed = tokenSchema.safeParse(body);
   if (parsed.success) return parsed.data;
-  throw invalidPayload('INVALID_TOKEN_PAYLOAD', 'Authentication token is invalid.', parsed.error.flatten());
+  throw invalidPayload(
+    'INVALID_TOKEN_PAYLOAD',
+    'Authentication token is invalid.',
+    parsed.error.flatten(),
+  );
 }
 
 function parsePasswordReset(body: unknown): z.infer<typeof resetPasswordSchema> {
   const parsed = resetPasswordSchema.safeParse(body);
   if (parsed.success) return parsed.data;
-  throw invalidPayload('INVALID_PASSWORD_RESET_PAYLOAD', 'Password reset details are invalid.', parsed.error.flatten());
+  throw invalidPayload(
+    'INVALID_PASSWORD_RESET_PAYLOAD',
+    'Password reset details are invalid.',
+    parsed.error.flatten(),
+  );
 }
 
 function invalidPayload(code: string, message: string, details: unknown): BadRequestException {

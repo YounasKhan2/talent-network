@@ -24,14 +24,42 @@ interface RateLimitPolicy {
   windowMs: number;
 }
 
-const SIGNUP_IP_POLICY: RateLimitPolicy = { scope: 'signup:ip', limit: 5, windowMs: 15 * 60 * 1000 };
-const SIGNUP_EMAIL_POLICY: RateLimitPolicy = { scope: 'signup:email', limit: 3, windowMs: 60 * 60 * 1000 };
+const SIGNUP_IP_POLICY: RateLimitPolicy = {
+  scope: 'signup:ip',
+  limit: 5,
+  windowMs: 15 * 60 * 1000,
+};
+const SIGNUP_EMAIL_POLICY: RateLimitPolicy = {
+  scope: 'signup:email',
+  limit: 3,
+  windowMs: 60 * 60 * 1000,
+};
 const LOGIN_IP_POLICY: RateLimitPolicy = { scope: 'login:ip', limit: 20, windowMs: 15 * 60 * 1000 };
-const LOGIN_ACCOUNT_POLICY: RateLimitPolicy = { scope: 'login:account', limit: 10, windowMs: 15 * 60 * 1000 };
-const PASSWORD_RESET_IP_POLICY: RateLimitPolicy = { scope: 'password-reset:ip', limit: 5, windowMs: 15 * 60 * 1000 };
-const PASSWORD_RESET_EMAIL_POLICY: RateLimitPolicy = { scope: 'password-reset:email', limit: 3, windowMs: 60 * 60 * 1000 };
-const EMAIL_VERIFICATION_IP_POLICY: RateLimitPolicy = { scope: 'email-verification:ip', limit: 10, windowMs: 60 * 60 * 1000 };
-const TOKEN_CONSUME_IP_POLICY: RateLimitPolicy = { scope: 'token-consume:ip', limit: 20, windowMs: 15 * 60 * 1000 };
+const LOGIN_ACCOUNT_POLICY: RateLimitPolicy = {
+  scope: 'login:account',
+  limit: 10,
+  windowMs: 15 * 60 * 1000,
+};
+const PASSWORD_RESET_IP_POLICY: RateLimitPolicy = {
+  scope: 'password-reset:ip',
+  limit: 5,
+  windowMs: 15 * 60 * 1000,
+};
+const PASSWORD_RESET_EMAIL_POLICY: RateLimitPolicy = {
+  scope: 'password-reset:email',
+  limit: 3,
+  windowMs: 60 * 60 * 1000,
+};
+const EMAIL_VERIFICATION_IP_POLICY: RateLimitPolicy = {
+  scope: 'email-verification:ip',
+  limit: 10,
+  windowMs: 60 * 60 * 1000,
+};
+const TOKEN_CONSUME_IP_POLICY: RateLimitPolicy = {
+  scope: 'token-consume:ip',
+  limit: 20,
+  windowMs: 15 * 60 * 1000,
+};
 
 @Injectable()
 export class AuthRateLimitService {
@@ -103,13 +131,17 @@ function normalizeEmail(value: string): string {
 
 function parseRateLimitResult(value: unknown): [number, number] {
   if (!Array.isArray(value) || value.length < 2) {
-    throw new ServiceUnavailableException('Authentication rate limiting returned an invalid response.');
+    throw new ServiceUnavailableException(
+      'Authentication rate limiting returned an invalid response.',
+    );
   }
 
   const count = Number(value[0]);
   const ttlMs = Number(value[1]);
   if (!Number.isFinite(count) || !Number.isFinite(ttlMs)) {
-    throw new ServiceUnavailableException('Authentication rate limiting returned an invalid response.');
+    throw new ServiceUnavailableException(
+      'Authentication rate limiting returned an invalid response.',
+    );
   }
 
   return [count, ttlMs];

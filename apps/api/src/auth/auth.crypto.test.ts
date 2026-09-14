@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  createOpaqueToken,
-  hashOpaqueToken,
-  hashPassword,
-  verifyPassword,
-} from './auth.crypto.js';
+import { createOpaqueToken, hashOpaqueToken, hashPassword, verifyPassword } from './auth.crypto.js';
 
 await test('password hashing verifies the original password and rejects a different password', async () => {
   const encoded = await hashPassword('correct horse battery staple');

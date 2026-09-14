@@ -25,7 +25,12 @@ export interface ResponseLike {
   ): void;
   clearCookie(
     name: string,
-    options: { httpOnly?: boolean; secure?: boolean; sameSite?: 'lax' | 'strict' | 'none'; path?: string },
+    options: {
+      httpOnly?: boolean;
+      secure?: boolean;
+      sameSite?: 'lax' | 'strict' | 'none';
+      path?: string;
+    },
   ): void;
 }
 
@@ -49,7 +54,11 @@ export function assertCsrf(request: RequestLike): void {
   }
 }
 
-export function setAuthCookies(response: ResponseLike, sessionToken: string, production: boolean): string {
+export function setAuthCookies(
+  response: ResponseLike,
+  sessionToken: string,
+  production: boolean,
+): string {
   const csrfToken = createOpaqueToken();
 
   response.cookie(SESSION_COOKIE, sessionToken, {
@@ -85,7 +94,10 @@ export function clearAuthCookies(response: ResponseLike, production: boolean): v
   });
 }
 
-export function sessionContextFromRequest(request: RequestLike): { userAgent?: string; ip?: string } {
+export function sessionContextFromRequest(request: RequestLike): {
+  userAgent?: string;
+  ip?: string;
+} {
   const userAgentValue = request.headers['user-agent'];
   const forwardedForValue = request.headers['x-forwarded-for'];
   const userAgent = Array.isArray(userAgentValue) ? userAgentValue[0] : userAgentValue;

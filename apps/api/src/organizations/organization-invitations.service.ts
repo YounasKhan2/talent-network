@@ -6,10 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  ORGANIZATION_ROLE_KEYS,
-  type OrganizationRoleKey,
-} from '@talent-network/contracts';
+import { ORGANIZATION_ROLE_KEYS, type OrganizationRoleKey } from '@talent-network/contracts';
 import type { DatabaseClient } from '@talent-network/database';
 import { createOpaqueToken, hashOpaqueToken } from '../auth/auth.crypto.js';
 import { DATABASE_CLIENT } from '../database/database.module.js';

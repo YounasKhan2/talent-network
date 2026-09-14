@@ -134,11 +134,7 @@ export class OrganizationsController {
     const organizationId = parseOrganizationId(organizationIdValue);
     const invitationId = parseInvitationId(invitationIdValue);
     const session = await this.authService.getSession(readSessionToken(request));
-    await this.organizationInvitationsService.revoke(
-      organizationId,
-      invitationId,
-      session.user.id,
-    );
+    await this.organizationInvitationsService.revoke(organizationId, invitationId, session.user.id);
   }
 }
 

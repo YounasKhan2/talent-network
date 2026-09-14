@@ -20,7 +20,8 @@ export class AuthorizationService {
     organizationId: string,
     permission: Permission,
   ): Promise<SessionResponse> {
-    return (await this.authorizeOrganizationContext(sessionToken, organizationId, permission)).session;
+    return (await this.authorizeOrganizationContext(sessionToken, organizationId, permission))
+      .session;
   }
 
   async authorizeOrganizationContext(

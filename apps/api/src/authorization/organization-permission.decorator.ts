@@ -4,8 +4,7 @@ import type { Permission } from '@talent-network/contracts';
 export const ORGANIZATION_PERMISSION_METADATA = 'talent-network:organization-permission';
 
 export type OrganizationIdSource =
-  | { kind: 'param'; name: string }
-  | { kind: 'header'; name: string };
+  { kind: 'param'; name: string } | { kind: 'header'; name: string };
 
 export interface OrganizationPermissionRequirement {
   permission: Permission;
