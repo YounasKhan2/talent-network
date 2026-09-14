@@ -77,6 +77,21 @@ enum CandidateWorkMode {
   FLEXIBLE
 }
 
+enum ResumeProcessingState {
+  UPLOADING
+  UPLOADED
+  VALIDATING
+  SCANNING
+  EXTRACTING
+  OCR_REQUIRED
+  PARSING
+  READY_FOR_REVIEW
+  APPROVED
+  REJECTED
+  FAILED_RETRYABLE
+  FAILED_TERMINAL
+}
+
 model User {
   id                  String                    @id @default(uuid()) @db.Uuid
   primaryEmail        String                    @unique
@@ -206,39 +221,41 @@ model Candidate {
   user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   profileVersions          CandidateProfileVersion[] @relation("CandidateProfileVersions")
   currentProfileVersion   CandidateProfileVersion?  @relation("CandidateCurrentProfile", fields: [currentProfileVersionId], references: [id], onDelete: SetNull)
+  resumes                  Resume[]
 
   @@index([discoverability, visibility, updatedAt(sort: Desc)])
 }
 
 model CandidateProfileVersion {
-  id                       String                        @id @default(uuid()) @db.Uuid
-  candidateId              String                        @db.Uuid
-  versionNumber            Int
-  status                   CandidateProfileVersionStatus @default(DRAFT)
-  source                   CandidateProfileSource        @default(MANUAL)
-  headline                 String?
-  summary                  String?
-  availabilityStatus       CandidateAvailabilityStatus?
-  availableFrom            DateTime?
-  compensationCurrency     String?
-  compensationMinimum      Int?
-  compensationTarget       Int?
-  compensationPeriod       String?
-  preferredWorkModes       CandidateWorkMode[]
-  preferredEmploymentTypes String[]
-  approvedAt               DateTime?
-  createdAt                DateTime                      @default(now())
-  candidate                Candidate                     @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
-  currentForCandidate      Candidate?                    @relation("CandidateCurrentProfile")
-  employments              CandidateEmployment[]
-  education                CandidateEducation[]
-  skills                   CandidateSkill[]
-  projects                 CandidateProject[]
-  certifications           CandidateCertification[]
-  languages                CandidateLanguage[]
-  links                    CandidateLink[]
-  locationPreferences      CandidateLocationPreference[]
-  customSections           CandidateCustomSection[]
+  id                         String                        @id @default(uuid()) @db.Uuid
+  candidateId                String                        @db.Uuid
+  versionNumber              Int
+  status                     CandidateProfileVersionStatus @default(DRAFT)
+  source                     CandidateProfileSource        @default(MANUAL)
+  headline                   String?
+  summary                    String?
+  availabilityStatus         CandidateAvailabilityStatus?
+  availableFrom              DateTime?
+  compensationCurrency       String?
+  compensationMinimum        Int?
+  compensationTarget         Int?
+  compensationPeriod         String?
+  preferredWorkModes         CandidateWorkMode[]
+  preferredEmploymentTypes   String[]
+  approvedAt                 DateTime?
+  createdAt                  DateTime                      @default(now())
+  candidate                  Candidate                     @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
+  currentForCandidate        Candidate?                    @relation("CandidateCurrentProfile")
+  employments                CandidateEmployment[]
+  education                  CandidateEducation[]
+  skills                     CandidateSkill[]
+  projects                   CandidateProject[]
+  certifications             CandidateCertification[]
+  languages                  CandidateLanguage[]
+  links                      CandidateLink[]
+  locationPreferences        CandidateLocationPreference[]
+  customSections             CandidateCustomSection[]
+  approvedFromResumeVersions ResumeVersion[]               @relation("ResumeApprovedProfileVersion")
 
   @@unique([candidateId, versionNumber])
   @@index([candidateId, createdAt(sort: Desc)])
@@ -401,6 +418,47 @@ model CandidateCustomSectionItem {
   customSection   CandidateCustomSection @relation(fields: [customSectionId], references: [id], onDelete: Cascade)
 
   @@index([customSectionId, sortOrder])
+}
+
+model Resume {
+  id               String          @id @default(uuid()) @db.Uuid
+  candidateId      String          @db.Uuid
+  title            String
+  currentVersionId String?         @unique @db.Uuid
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  candidate        Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  versions         ResumeVersion[] @relation("ResumeVersions")
+  currentVersion   ResumeVersion?  @relation("ResumeCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId, updatedAt(sort: Desc)])
+}
+
+model ResumeVersion {
+  id                       String                @id @default(uuid()) @db.Uuid
+  resumeId                 String                @db.Uuid
+  versionNumber            Int
+  processingState          ResumeProcessingState @default(UPLOADING)
+  objectKey                String                @unique
+  originalFilename         String
+  mimeType                 String
+  sizeBytes                Int
+  checksumSha256           String?
+  processingPipelineVersion String               @default("resume-pipeline-v1")
+  failureCode              String?
+  failureMetadata          Json?
+  uploadedAt               DateTime?
+  approvedProfileVersionId String?               @db.Uuid
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  resume                   Resume                @relation("ResumeVersions", fields: [resumeId], references: [id], onDelete: Cascade)
+  currentForResume         Resume?               @relation("ResumeCurrentVersion")
+  approvedProfileVersion   CandidateProfileVersion? @relation("ResumeApprovedProfileVersion", fields: [approvedProfileVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([resumeId, versionNumber])
+  @@index([resumeId, createdAt(sort: Desc)])
+  @@index([processingState, updatedAt])
+  @@index([approvedProfileVersionId])
 }
 
 model AuditEvent {
