@@ -74,10 +74,26 @@ export default function CareerEvidencePage() {
       </header>
 
       <section className={styles.summary} aria-label="Evidence summary">
-        <EvidenceMetric label="Total signals" value={summary.total} note="Current Passport version" />
-        <EvidenceMetric label="Declared" value={summary.declared} note="Candidate-provided claims" />
-        <EvidenceMetric label="Supported" value={summary.supported} note="Evidence link or credential attached" />
-        <EvidenceMetric label="Verified" value={summary.verified} note="Independent verification not enabled yet" />
+        <EvidenceMetric
+          label="Total signals"
+          value={summary.total}
+          note="Current Passport version"
+        />
+        <EvidenceMetric
+          label="Declared"
+          value={summary.declared}
+          note="Candidate-provided claims"
+        />
+        <EvidenceMetric
+          label="Supported"
+          value={summary.supported}
+          note="Evidence link or credential attached"
+        />
+        <EvidenceMetric
+          label="Verified"
+          value={summary.verified}
+          note="Independent verification not enabled yet"
+        />
       </section>
 
       <section className={styles.policy}>
