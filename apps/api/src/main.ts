@@ -14,6 +14,12 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.enableShutdownHooks();
+  app.enableCors({
+    origin: env.WEB_ORIGIN,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Organization-Id'],
+  });
   app.setGlobalPrefix('api/v1');
 
   await app.listen(env.API_PORT, '0.0.0.0');
