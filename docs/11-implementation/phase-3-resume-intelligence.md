@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A in implementation — resume ingestion/state-machine foundation.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B is now current.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -38,9 +38,9 @@ New Career Passport version
 
 ## Phase slices
 
-### Phase 3A — Resume domain and processing contract
+### Phase 3A — Resume domain and processing contract ✅ VERIFIED
 
-Deliverables:
+Delivered:
 
 - explicit processing-state machine
 - Resume / ResumeVersion persistence model
@@ -48,8 +48,10 @@ Deliverables:
 - immutable version numbering
 - storage-key ownership metadata
 - failure/retry metadata
-- resume-version history read model
+- resume-version history read model foundation
 - database integration coverage
+- audit/outbox record for upload preparation
+- root quality-gate integration
 
 Processing states:
 
@@ -68,9 +70,17 @@ FAILED_RETRYABLE
 FAILED_TERMINAL
 ```
 
-The state machine must prevent impossible jumps and post-terminal mutation.
+The state machine prevents impossible jumps and post-terminal mutation.
 
-### Phase 3B — Private object storage + direct upload
+Verification evidence:
+
+- full `pnpm check` passed locally on 2026-09-15
+- Phase 3 database integration suite passed as part of the root quality gate
+- production build passed
+- repository returned to a clean `main` working tree after a formatting-only transition-table change
+- final formatting-only commit: `1084bcd style(api): format resume processing transitions`
+
+### Phase 3B — Private object storage + direct upload ← CURRENT
 
 Deliverables:
 
@@ -147,7 +157,7 @@ Deliverables:
 
 ## State-machine rules
 
-The first implementation slice establishes the shared transition contract before workers begin mutating state.
+The first implementation slice established the shared transition contract before workers begin mutating state.
 
 Happy path:
 
@@ -307,22 +317,29 @@ Phase 3 is not closed until all of the following are proven:
 
 ## Current implementation checkpoint
 
-Implemented now:
+Verified now:
 
 ```text
-Resume processing-state vocabulary      ✅
-Allowed transition contract             ✅
-Terminal/review-state helpers           ✅
-Unit coverage for happy/OCR/retry paths ✅
+Resume processing-state vocabulary       ✅
+Allowed transition contract              ✅
+Terminal/review-state helpers            ✅
+Resume + ResumeVersion persistence       ✅
+Candidate-owned service/read foundation  ✅
+Audit/outbox upload-prepared event        ✅
+Phase 3 database integration coverage    ✅
+Root pnpm check                           ✅
+Repository clean after verification      ✅
 ```
 
-Next implementation checkpoint:
+Current implementation checkpoint:
 
 ```text
-Resume + ResumeVersion persistence
-→ migration
-→ candidate-owned service/read model
-→ Phase 3 database integration suite
+Provider-neutral S3 adapter
+→ RustFS compatibility
+→ local bucket bootstrap
+→ presigned direct upload authorization
+→ upload completion HEAD verification
+→ private candidate-authorized download/preview URLs
 ```
 
-After that, the S3/RustFS adapter and presigned direct-upload contract become the next boundary.
+Phase 3B must preserve the direct-upload boundary: normal resume bytes go browser → private object storage, not browser → NestJS API → object storage.
