@@ -1,12 +1,10 @@
 # Identity & Workspace Context Hardening Plan
 
-## Why this work is inserted now
+## Status
 
-Phase 1 established authentication, organizations, memberships, invitations, permissions, and multi-workspace behavior. Phase 2 established the initial Candidate Career Passport slice.
+**Phase 2A: CLOSED / VERIFIED — 2026-09-14**
 
-Before Career Passport expands further, Talent Network needs an explicit product boundary for users who may be candidates, organization members, or both.
-
-This is not a new permanent product phase that replaces the MVP sequence. It is a cross-cutting hardening boundary between the existing identity foundation and the remainder of Candidate/Employer product development.
+Phase 1 established authentication, organizations, memberships, invitations, permissions, and multi-workspace behavior. The initial Phase 2 slice established the Candidate Career Passport. Phase 2A inserted the privacy and context boundary required before expanding either side of the product.
 
 Governing documents:
 
@@ -15,50 +13,28 @@ Governing documents:
 - [`onboarding-and-context-switching.md`](../07-design/onboarding-and-context-switching.md)
 - [`candidate-organization-privacy-firewall.md`](../06-security/candidate-organization-privacy-firewall.md)
 
-## Current state
+## Verified outcome
 
-Implemented and verified foundations:
+Talent Network does not permanently classify a human as Candidate or Employer. `User` remains the authenticated person; Career and Organization participation are independent contexts that may coexist.
 
-- authenticated `User`
-- candidate entity and Career Passport
-- organization creation and membership
-- invitation acceptance/revocation
-- role-to-permission bundles
-- tenant-aware server authorization
-- explicit `/onboarding` intent selection
-- explicit Candidate creation from onboarding
-- `/career` route guard that never creates Candidate state implicitly in verified navigation flows
-- account context discovery contract at `GET /api/v1/account/contexts`
+Verified foundations:
+
+- explicit `Build my career` / `Hire talent` onboarding
+- Candidate creation only from explicit intent; route navigation does not create Candidate state
+- authenticated `GET /api/v1/account/contexts` capability discovery
 - reusable Career/Organization context switcher
-- candidate ↔ organization and organization ↔ organization switching
-- client-side last-active context preference with authoritative validation
-- stale organization preference fallback
-- Phase 2A privacy-firewall integration suite
+- Candidate ↔ Organization and Organization ↔ Organization switching without logout
+- last-active Career and Organization preference restoration
+- authoritative stale-organization fallback
+- tenant-aware organization permissions remain server authoritative
+- Career ownership remains bound to authenticated `session.userId`
+- Candidate/Organization privacy-firewall integration regression gate
+- mixed-context invitation and Career-creation invariants
+- internal-mobility/self-evaluation seam reserved for Applications/ATS
 
-The remaining closure work is deliberately small: browser revalidation of the final last-active implementation, documentation alignment, and reserving the internal-mobility/self-evaluation seam for the future Applications/ATS phase.
+## Context resolution contract
 
-## Boundary 1 — Context Resolution Contract
-
-**Status: implemented and quality-gate verified.**
-
-Reusable authenticated capability:
-
-```text
-GET /api/v1/account/contexts
-```
-
-It answers:
-
-```text
-Who is this authenticated user?
-Does Candidate exist?
-Which ACTIVE organization memberships are available?
-Which permissions apply to each organization?
-```
-
-It does not encode a permanent `userType` and does not expose Career Passport professional data.
-
-Current response shape:
+`GET /api/v1/account/contexts` answers which contexts are currently available without encoding a permanent `userType` or exposing Career Passport professional data.
 
 ```text
 user
@@ -73,105 +49,29 @@ organizations[]
   permissions[]
 ```
 
-Frontend context resolution consumes this contract instead of probing Candidate existence through the Career Passport endpoint.
+This endpoint is context discovery, not authorization. Candidate operations still resolve ownership from the authenticated user. Organization operations still require ACTIVE membership, tenant scope, and the relevant permission bundle.
 
-### Acceptance criteria
-
-- candidate-only state represented
-- organization-only state represented
-- mixed state represented
-- multiple organizations represented
-- removed/suspended memberships excluded through authoritative ACTIVE session membership resolution
-- no private Candidate professional data included merely to resolve context
-
-## Boundary 2 — Explicit Onboarding
-
-**Status: implemented and browser verified for core Career activation behavior.**
-
-Route:
-
-```text
-/onboarding
-```
-
-Primary intents:
+## Explicit onboarding and Career activation
 
 ```text
 Build my career
+→ explicit Candidate / Career Passport initialization
+
 Hire talent
+├── accept relevant invitation
+└── create organization
 ```
 
-Career action:
+Verified browser behavior:
 
-```text
-explicitly initialize Candidate / Career Passport
-```
+- logged-out `/career` redirects through authentication
+- authenticated organization-only `/career` redirects to explicit Career onboarding
+- opening `/career` does not silently create Candidate state
+- repeated explicit Candidate initialization remains idempotent
 
-Hiring action:
+## Context switching and last-active preference
 
-```text
-pending invitation? → join
-otherwise → create organization
-```
-
-### Acceptance criteria
-
-- no context → onboarding
-- choosing Career explicitly creates Candidate
-- choosing Hiring alone does not create Candidate
-- valid invitation is preserved across authentication
-- copy explains who should choose each option
-- copy explains that both contexts can coexist
-
-## Boundary 3 — Stop Implicit Candidate Creation
-
-**Status: implemented and browser verified at the route/context boundary.**
-
-Current behavior:
-
-```text
-Candidate exists
-→ open Career workspace
-
-Candidate absent
-→ /onboarding?intent=career
-→ explicit creation action required
-```
-
-The API initialization endpoint remains idempotent, but context navigation must never create Candidate state merely because `/career` was opened.
-
-### Acceptance criteria
-
-- employer-only user can visit a Career URL without silently acquiring Candidate state
-- explicit button/action creates Candidate
-- repeated explicit initialization remains safe/idempotent
-
-## Boundary 4 — Context-Aware Post-Login Routing
-
-**Status: implemented; final last-active browser revalidation pending.**
-
-First-use routing:
-
-```text
-no contexts
-→ /onboarding
-
-candidate only
-→ /career
-
-organization only
-→ /app
-```
-
-Mixed-context routing uses the last valid UX preference when one exists.
-
-Do not use last-active state as authorization.
-
-## Boundary 5 — Reusable Context Switcher
-
-**Status: implemented, quality-gate verified, and browser verified for switching/accessibility/mobile behavior.**
-
-Shared switcher is used by Career and Hiring layouts and presents:
+The shared switcher presents personal Career context independently from organization workspaces. The selected context is UX state only.
 
 ```text
 Personal
@@ -184,29 +84,7 @@ Organizations
 + Create or join organization
 ```
 
-Behavior:
-
-- Career ↔ organization switching does not require logout
-- organization ↔ organization switching re-resolves authoritative account contexts
-- each organization shows its current role for orientation
-- organization-only users can explicitly create Career state through onboarding
-- candidate-only users can create or join an organization
-- Escape closes the switcher and native focusable menu controls preserve keyboard accessibility
-
-### Acceptance criteria
-
-- candidate ↔ organization switching without logout
-- organization ↔ organization switching
-- role/permissions update navigation independently per org
-- stale membership cannot remain usable
-- keyboard accessible
-- narrow/mobile viewport remains usable
-
-## Boundary 6 — Last-Active Context Preference
-
-**Status: implemented and repository quality-gate verified; final browser revalidation pending.**
-
-Persist UX preference only:
+The persisted preference contains no permission claims:
 
 ```text
 { kind: 'career' }
@@ -216,15 +94,9 @@ or
 { kind: 'organization', organizationId: UUID }
 ```
 
-Rules:
+Before an organization preference is used, it is validated against current authoritative account contexts.
 
-- preference contains no permissions
-- preference is client navigation state, not trust state
-- organization preferences are checked against current `/account/contexts`
-- stale/removed organization IDs are rejected
-- fallback resolves safely to another valid organization, Career, or onboarding
-
-Required final browser revalidation:
+Final browser verification passed:
 
 ```text
 Career last active
@@ -233,83 +105,56 @@ Career last active
 
 Org B last active
 → logout/login
-→ /app with Org B
+→ /app with Org B active
 
 Org B membership removed
 → stale preference rejected
 → another valid org / Career / onboarding
 ```
 
-## Boundary 7 — Privacy Firewall
+Keyboard and narrow/mobile switcher behavior were also browser verified.
 
-**Status: implemented as an explicit architecture rule and integration regression gate.**
+## Candidate / Organization Privacy Firewall
 
-Canonical security document:
-
-- [`candidate-organization-privacy-firewall.md`](../06-security/candidate-organization-privacy-firewall.md)
-
-Core invariant:
+Canonical security rule:
 
 > Organization membership never grants direct read access to a member's private Candidate/Career data.
 
-Current Phase 2A integration coverage proves:
+Current integration coverage proves:
 
-- another organization's owner cannot obtain a different user's Career Passport through candidate-owned access paths
-- account context discovery returns capability metadata, not professional profile data
-- mixed-context Career state survives organization invitation acceptance unchanged
-- organization memberships/permissions survive explicit Career creation unchanged
-- candidate privacy changes remain independent of membership
+- Candidate Passport lookup is bound to the authenticated user identity
+- account context discovery exposes capability metadata rather than professional profile data
+- Candidate acceptance of an organization invitation preserves Career profile/privacy state
+- explicit Career creation for an organization member preserves memberships and permissions
+- Candidate privacy changes do not alter organization membership
 
-Future application, recruiter-search, matching, sourcing, and internal-mobility features must extend this regression suite.
+Future Applications, recruiter search, matching, sourcing, internal mobility, assessments, and analytics must extend this firewall rather than bypass it.
 
-## Boundary 8 — Invitation Mixed-Context Tests
-
-**Status: covered by the Phase 2A privacy-firewall integration suite.**
-
-Verified invariant:
+The controlled future boundary is:
 
 ```text
-Candidate user
-→ accepts invitation
-→ organization membership added
-→ Candidate profile/privacy unchanged
+Candidate context
+    ↓ explicit submission / consent
+Application snapshot
+    ↓
+Organization-owned hiring process
 ```
 
-And:
+The employer should evaluate the candidate-submitted snapshot, not gain unrestricted access to the live private Career workspace.
 
-```text
-Organization-only user
-→ explicitly creates Career Passport
-→ memberships/permissions unchanged
-```
+## Internal mobility / self-evaluation seam
 
-## Boundary 9 — Internal Mobility Seam
-
-**Status: architecture seam reserved; full implementation intentionally deferred.**
-
-Do not implement internal mobility before Applications/ATS entities exist.
-
-Future application authorization must be able to detect:
+Full internal mobility is intentionally deferred until Applications/ATS exists. Future organization-side application authorization must detect:
 
 ```text
 actor.userId == application.candidate.userId
 ```
 
-Before allowing organization-side actions such as:
+before allowing actions such as stage movement, scorecard submission, interview feedback, offer actions, or restricted evaluator notes. Organization permissions alone must never allow a mixed-context user to evaluate their own application.
 
-- stage movement
-- scorecard submission
-- interview feedback
-- offer actions
-- restricted evaluator notes
+## Future identity seams
 
-This prevents a user who is both a candidate and an organization member from evaluating or advancing their own application merely because they hold recruiter/admin/owner permissions.
-
-The canonical privacy firewall document records this requirement so the Applications phase must implement it deliberately.
-
-## Boundary 10 — Future Identity Seams
-
-No MVP implementation required yet, but avoid schema/product assumptions that block:
+No MVP implementation is required yet, but future work must avoid assumptions that block:
 
 - multiple verified emails per user
 - work vs personal email
@@ -322,63 +167,53 @@ No MVP implementation required yet, but avoid schema/product assumptions that bl
 - scoped suspensions
 - separate personal vs organization deletion/retention
 
-## Test Matrix
+## Closure test matrix
 
-| Scenario                              | Expected destination/capability | Status                                    |
-| ------------------------------------- | ------------------------------- | ----------------------------------------- |
-| No Candidate, no org                  | onboarding                      | implemented                               |
-| Candidate only                        | Career                          | implemented                               |
-| One org only                          | employer workspace              | implemented                               |
-| Candidate + one org                   | last valid context              | implemented; browser revalidation pending |
-| Candidate + many orgs                 | switcher + last valid context   | implemented; browser revalidation pending |
-| Many orgs, no Candidate               | employer workspace + switcher   | implemented                               |
-| Removed last-active org               | safe fallback                   | implemented; browser revalidation pending |
-| Candidate accepts org invite          | both contexts preserved         | integration verified                      |
-| Org user explicitly starts Career     | Candidate added, org preserved  | integration verified                      |
-| Org user merely opens Career URL      | no silent Candidate creation    | browser verified                          |
-| Org membership vs private Career data | no implicit Candidate access    | integration verified                      |
+| Scenario | Expected behavior | Status |
+| --- | --- | --- |
+| No Candidate, no org | onboarding | ✅ verified |
+| Candidate only | Career | ✅ verified |
+| One org only | employer workspace | ✅ verified |
+| Candidate + one org | restore last valid context | ✅ browser verified |
+| Candidate + many orgs | switcher + restore last valid context | ✅ browser verified |
+| Many orgs, no Candidate | employer workspace + switcher | ✅ verified |
+| Removed last-active org | safe authoritative fallback | ✅ browser verified |
+| Candidate accepts org invite | both contexts preserved | ✅ integration verified |
+| Org user explicitly starts Career | Candidate added, org preserved | ✅ integration verified |
+| Org user merely opens Career URL | no silent Candidate creation | ✅ browser verified |
+| Org membership vs private Career | no implicit Candidate access | ✅ integration verified |
 
-## Quality Gate
+## Quality gate
 
-This hardening boundary is complete only when:
+Phase 2A closes with:
 
-- architecture/docs agree
-- explicit onboarding exists
-- implicit Candidate creation-on-route is blocked
-- context-aware routing works
-- mixed candidate/organization use is browser-tested
-- last-active context restore/stale fallback is browser-revalidated after the final implementation
-- existing Phase 1 organization authorization remains green
-- Candidate integration tests remain green
-- Phase 2A privacy-firewall integration tests remain green
-- `pnpm check` passes
+- architecture and implementation documentation aligned
+- explicit onboarding verified
+- implicit Candidate creation blocked at the route/context boundary
+- account-context discovery verified
+- reusable context switching verified
+- last-active restoration and stale fallback browser verified
+- Phase 1 authorization regression suite green
+- Phase 2 Candidate integration suite green
+- Phase 2A privacy-firewall integration suite green
+- repository `pnpm check` green
 
-Current repository quality gate: **green**, including the Phase 2A privacy-firewall integration suite.
-
-## Sequencing Relative to Phase 2
+## Next
 
 ```text
-Phase 2 initial Career Passport foundation      ✅ quality gate green
+Phase 2 initial Career Passport foundation      ✅
+Phase 2A Identity / Workspace Hardening         ✅ CLOSED
         ↓
-Identity & workspace context hardening
-  explicit onboarding                          ✅ verified
-  no implicit Candidate creation               ✅ verified at route boundary
-  account context API                          ✅ verified
-  reusable multi-context switcher              ✅ verified
-  last-active context + stale fallback         ✅ code/gate green; browser revalidation pending
-  privacy firewall + mixed-context tests       ✅ integration verified
-  internal mobility seam                       ✅ documented / intentionally deferred
-        ↓
-Phase 2 Career Passport expansion               ← next after closure
+Phase 2B Career Passport expansion              ← CURRENT
   projects
   certifications
   languages
   links
   location/preferences
   edit/remove/reorder
-  history UX
+  version-history UX
         ↓
 Phase 3 Resume Intelligence
 ```
 
-This keeps the already-built Candidate domain while preventing temporary development assumptions from becoming permanent identity, authorization, or privacy weaknesses.
+Phase 2B must preserve every Phase 2A identity, tenant-isolation, explicit-consent, and privacy-firewall invariant.
