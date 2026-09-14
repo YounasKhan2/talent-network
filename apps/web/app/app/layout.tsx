@@ -76,7 +76,9 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
           <button
             className={styles.button}
             onClick={() =>
-              router.push((context?.hasCandidate ? '/career' : '/onboarding?intent=career') as Route)
+              router.push(
+                (context?.hasCandidate ? '/career' : '/onboarding?intent=career') as Route,
+              )
             }
             type="button"
           >
