@@ -43,15 +43,38 @@ test('rejects encrypted PDFs', () => {
   assert.equal(result.code, 'ENCRYPTED_DOCUMENT');
 });
 
-test('accepts a DOCX-like OOXML ZIP container', () => {
-  const bytes = Buffer.concat([
-    Buffer.from([0x50, 0x4b, 0x03, 0x04]),
-    Buffer.from('placeholder [Content_Types].xml placeholder word/document.xml', 'latin1'),
-  ]);
+test('accepts a structurally valid DOCX OOXML ZIP container', () => {
+  const bytes = createStoredZip(['[Content_Types].xml', 'word/document.xml']);
   const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
   assert.equal(result.ok, true);
   if (!result.ok) return;
   assert.equal(result.kind, 'DOCX');
+  assert.equal(result.detectedMimeType, RESUME_DOCX_MIME_TYPE);
+});
+
+test('rejects truncated DOCX containers even when required names are present', () => {
+  const valid = createStoredZip(['[Content_Types].xml', 'word/document.xml']);
+  const bytes = valid.subarray(0, valid.length - 10);
+  const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.code, 'CORRUPT_DOCUMENT');
+});
+
+test('rejects DOCX containers missing the Word document part', () => {
+  const bytes = createStoredZip(['[Content_Types].xml', 'custom/data.xml']);
+  const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.code, 'CORRUPT_DOCUMENT');
+});
+
+test('rejects encrypted ZIP entries presented as DOCX', () => {
+  const bytes = createStoredZip(['[Content_Types].xml', 'word/document.xml'], true);
+  const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.code, 'ENCRYPTED_DOCUMENT');
 });
 
 test('rejects encrypted Office compound documents presented as DOCX', () => {
@@ -77,3 +100,60 @@ test('rejects recorded-size mismatches before processing', () => {
   if (result.ok) return;
   assert.equal(result.code, 'CORRUPT_DOCUMENT');
 });
+
+function createStoredZip(entryNames: string[], encrypted = false): Buffer {
+  const localParts: Buffer[] = [];
+  const centralParts: Buffer[] = [];
+  let localOffset = 0;
+
+  for (const entryName of entryNames) {
+    const name = Buffer.from(entryName, 'utf8');
+    const flags = encrypted ? 0x0001 : 0;
+
+    const localHeader = Buffer.alloc(30);
+    localHeader.writeUInt32LE(0x04034b50, 0);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(flags, 6);
+    localHeader.writeUInt16LE(0, 8);
+    localHeader.writeUInt32LE(0, 14);
+    localHeader.writeUInt32LE(0, 18);
+    localHeader.writeUInt32LE(0, 22);
+    localHeader.writeUInt16LE(name.length, 26);
+    localHeader.writeUInt16LE(0, 28);
+    localParts.push(localHeader, name);
+
+    const centralHeader = Buffer.alloc(46);
+    centralHeader.writeUInt32LE(0x02014b50, 0);
+    centralHeader.writeUInt16LE(20, 4);
+    centralHeader.writeUInt16LE(20, 6);
+    centralHeader.writeUInt16LE(flags, 8);
+    centralHeader.writeUInt16LE(0, 10);
+    centralHeader.writeUInt32LE(0, 16);
+    centralHeader.writeUInt32LE(0, 20);
+    centralHeader.writeUInt32LE(0, 24);
+    centralHeader.writeUInt16LE(name.length, 28);
+    centralHeader.writeUInt16LE(0, 30);
+    centralHeader.writeUInt16LE(0, 32);
+    centralHeader.writeUInt16LE(0, 34);
+    centralHeader.writeUInt16LE(0, 36);
+    centralHeader.writeUInt32LE(0, 38);
+    centralHeader.writeUInt32LE(localOffset, 42);
+    centralParts.push(centralHeader, name);
+
+    localOffset += localHeader.length + name.length;
+  }
+
+  const local = Buffer.concat(localParts);
+  const central = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(entryNames.length, 8);
+  eocd.writeUInt16LE(entryNames.length, 10);
+  eocd.writeUInt32LE(central.length, 12);
+  eocd.writeUInt32LE(local.length, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([local, central, eocd]);
+}
