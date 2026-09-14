@@ -13,7 +13,8 @@
     "test:integration": "node --env-file=../../.env --import tsx --test src/integration/phase1.integration.test.ts",
     "test:integration:phase2": "node --env-file=../../.env --import tsx --test src/integration/phase2.integration.test.ts",
     "test:integration:phase2a": "node --env-file=../../.env --import tsx --test src/integration/phase2a-privacy-firewall.integration.test.ts",
-    "test:integration:phase2b": "node --env-file=../../.env --import tsx --test src/integration/phase2b-career-editor.integration.test.ts src/integration/phase2b-version-history.integration.test.ts"
+    "test:integration:phase2b": "node --env-file=../../.env --import tsx --test src/integration/phase2b-career-editor.integration.test.ts src/integration/phase2b-version-history.integration.test.ts",
+    "test:integration:phase3": "node --env-file=../../.env --import tsx --test src/integration/phase3-resume-foundation.integration.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.0",
