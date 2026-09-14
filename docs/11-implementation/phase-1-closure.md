@@ -2,11 +2,11 @@
 
 ## Status
 
-Phase 1 backend foundation is **verified complete** for the current product scope.
+Phase 1 is **verified complete** for the current product scope.
 
-The implementation establishes the identity, organization tenancy, authorization, audit, and transactional-event primitives required by later product domains.
+The implementation establishes the identity, organization tenancy, authorization, audit, transactional-event, and authenticated web-product primitives required by later product domains.
 
-## Verified capabilities
+## Verified backend capabilities
 
 - email/password signup and login
 - opaque HttpOnly session cookies
@@ -30,15 +30,31 @@ The implementation establishes the identity, organization tenancy, authorization
 - audit/outbox rollback with the parent transaction
 - tenant isolation at authorization boundaries
 
+## Verified web capabilities
+
+- signup and login against cookie-backed API sessions
+- protected `/app` entry and authenticated workspace shell
+- employer organization onboarding
+- email-verification request and token-consume flow
+- forgot-password and password-reset flow
+- old-password rejection after reset and new-password login
+- organization invitation creation, listing, acceptance, and revocation
+- invitation continuation through logged-out login/signup flows
+- multi-workspace switching
+- server-authorized active organization resolution
+- permission-aware navigation based on backend-resolved permission bundles
+- unauthorized organization-management actions hidden from non-authorized memberships
+- account identity and workspace context surface
+
 ## Verification evidence
 
-The local quality gate now includes database-backed Phase 1 integration tests:
+The authoritative local quality gate remains:
 
 ```bash
 pnpm check
 ```
 
-The verified integration suite exercises real PostgreSQL state and covers:
+The database-backed integration suite exercises real PostgreSQL state and covers:
 
 1. signup creates a durable session, audit event, and outbox event
 2. organization creation establishes `ORG_OWNER` membership and events atomically
@@ -49,15 +65,39 @@ The verified integration suite exercises real PostgreSQL state and covers:
 7. password reset revokes active sessions and accepts the new password
 8. audit/outbox writes roll back when the domain transaction fails
 
-The most recent verified run completed with:
+Verified repository checks include:
 
 ```text
-API unit/security tests        17 passed / 0 failed
-Phase 1 DB integration tests    8 passed / 0 failed
-Workspace lint                 passed
-Workspace typecheck            passed
-Production build               passed
+API unit/security tests         passed
+Phase 1 DB integration tests    passed
+Workspace lint                  passed
+Workspace typecheck             passed
+Production build                passed
 ```
+
+Browser verification additionally covered the complete Phase 1 product journeys:
+
+```text
+signup → organization onboarding → workspace → logout → login
+email verification
+password recovery/reset
+owner team invitation
+logged-out invitation continuation
+invitation acceptance
+multi-workspace switching
+permission-aware owner/recruiter UI
+invitation revocation and revoked-token rejection
+```
+
+## Security invariants preserved
+
+- raw session, reset, verification, and invitation secrets are not persisted
+- browser auth remains cookie-based; session secrets are never placed in `localStorage`
+- `localStorage` stores only the preferred active organization id for UX continuity
+- `X-Organization-Id` is a stateless workspace selector, not proof of authorization
+- backend authorization remains authoritative regardless of client navigation visibility
+- UI permissions are rendered from server-resolved permission bundles rather than hard-coded role checks
+- invitation acceptance remains bound to the authenticated account email
 
 ## Intentional non-goals
 
@@ -72,15 +112,6 @@ Phase 1 does not attempt to solve later product domains prematurely. The followi
 - interviews and scorecards
 - billing
 
-## Web handoff
+## Handoff
 
-The backend foundation is now being connected to the web product through:
-
-- credentialed browser API client
-- CSRF-aware mutation requests
-- signup/login screens
-- authenticated workspace entry
-- organization onboarding
-- permission-aware workspace shell foundations
-
-The next domain phase after this product-shell work is **Phase 2 — Candidate Career Passport**.
+Phase 1 is closed. The next implementation phase is **Phase 2 — Candidate Career Passport**.
