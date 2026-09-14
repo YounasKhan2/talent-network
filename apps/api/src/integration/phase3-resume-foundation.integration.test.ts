@@ -36,7 +36,7 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
     });
     createdResumeVersionIds.push(prepared.version.id);
 
-    await t.test('creates a logical resume with immutable first version metadata', async () => {
+    await t.test('creates a logical resume with immutable first version metadata', () => {
       assert.equal(prepared.resume.candidateId, candidate.id);
       assert.equal(prepared.resume.currentVersionId, prepared.version.id);
       assert.equal(prepared.version.versionNumber, 1);
