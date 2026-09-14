@@ -5,8 +5,10 @@ import { createDatabaseClient } from '@talent-network/database';
 import { AuthService } from '../auth/auth.service.js';
 import { CandidatesService } from '../candidates/candidates.service.js';
 import { ResumesService } from '../resumes/resumes.service.js';
-import type { StorageObjectMetadata } from '../storage/storage.service.js';
-import { StorageService } from '../storage/storage.service.js';
+import type {
+  StorageObjectMetadata,
+  StorageService,
+} from '../storage/storage.service.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for Phase 3 resume tests.');
@@ -23,10 +25,10 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
     eTag: 'phase3-integration-etag',
   };
   const storage = {
-    ensureBucketExists: async () => undefined,
-    createPresignedUploadUrl: async () => 'http://storage.local/presigned-upload',
-    createPresignedDownloadUrl: async () => 'http://storage.local/presigned-download',
-    headObject: async () => storedObject,
+    ensureBucketExists: () => Promise.resolve(),
+    createPresignedUploadUrl: () => Promise.resolve('http://storage.local/presigned-upload'),
+    createPresignedDownloadUrl: () => Promise.resolve('http://storage.local/presigned-download'),
+    headObject: () => Promise.resolve(storedObject),
   } as unknown as StorageService;
   const resumes = new ResumesService(database, storage);
   const createdUserIds: string[] = [];
