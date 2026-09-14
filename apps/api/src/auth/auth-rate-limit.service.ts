@@ -24,29 +24,14 @@ interface RateLimitPolicy {
   windowMs: number;
 }
 
-const SIGNUP_IP_POLICY: RateLimitPolicy = {
-  scope: 'signup:ip',
-  limit: 5,
-  windowMs: 15 * 60 * 1000,
-};
-
-const SIGNUP_EMAIL_POLICY: RateLimitPolicy = {
-  scope: 'signup:email',
-  limit: 3,
-  windowMs: 60 * 60 * 1000,
-};
-
-const LOGIN_IP_POLICY: RateLimitPolicy = {
-  scope: 'login:ip',
-  limit: 20,
-  windowMs: 15 * 60 * 1000,
-};
-
-const LOGIN_ACCOUNT_POLICY: RateLimitPolicy = {
-  scope: 'login:account',
-  limit: 10,
-  windowMs: 15 * 60 * 1000,
-};
+const SIGNUP_IP_POLICY: RateLimitPolicy = { scope: 'signup:ip', limit: 5, windowMs: 15 * 60 * 1000 };
+const SIGNUP_EMAIL_POLICY: RateLimitPolicy = { scope: 'signup:email', limit: 3, windowMs: 60 * 60 * 1000 };
+const LOGIN_IP_POLICY: RateLimitPolicy = { scope: 'login:ip', limit: 20, windowMs: 15 * 60 * 1000 };
+const LOGIN_ACCOUNT_POLICY: RateLimitPolicy = { scope: 'login:account', limit: 10, windowMs: 15 * 60 * 1000 };
+const PASSWORD_RESET_IP_POLICY: RateLimitPolicy = { scope: 'password-reset:ip', limit: 5, windowMs: 15 * 60 * 1000 };
+const PASSWORD_RESET_EMAIL_POLICY: RateLimitPolicy = { scope: 'password-reset:email', limit: 3, windowMs: 60 * 60 * 1000 };
+const EMAIL_VERIFICATION_IP_POLICY: RateLimitPolicy = { scope: 'email-verification:ip', limit: 10, windowMs: 60 * 60 * 1000 };
+const TOKEN_CONSUME_IP_POLICY: RateLimitPolicy = { scope: 'token-consume:ip', limit: 20, windowMs: 15 * 60 * 1000 };
 
 @Injectable()
 export class AuthRateLimitService {
@@ -64,6 +49,21 @@ export class AuthRateLimitService {
       this.consume(LOGIN_IP_POLICY, ip ?? 'unknown'),
       this.consume(LOGIN_ACCOUNT_POLICY, normalizeEmail(email)),
     ]);
+  }
+
+  async assertPasswordResetRequestAllowed(email: string, ip?: string): Promise<void> {
+    await Promise.all([
+      this.consume(PASSWORD_RESET_IP_POLICY, ip ?? 'unknown'),
+      this.consume(PASSWORD_RESET_EMAIL_POLICY, normalizeEmail(email)),
+    ]);
+  }
+
+  async assertEmailVerificationRequestAllowed(ip?: string): Promise<void> {
+    await this.consume(EMAIL_VERIFICATION_IP_POLICY, ip ?? 'unknown');
+  }
+
+  async assertTokenConsumeAllowed(ip?: string): Promise<void> {
+    await this.consume(TOKEN_CONSUME_IP_POLICY, ip ?? 'unknown');
   }
 
   private async consume(policy: RateLimitPolicy, subject: string): Promise<void> {
