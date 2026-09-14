@@ -4,6 +4,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError, getCandidatePassport, getSession, type MembershipResponse } from '../../lib/api';
+import styles from './context-bar.module.css';
 
 type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
 
@@ -58,7 +59,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 
   if (state === 'loading' || state === 'redirecting') {
     return (
-      <main className="workspace-context-gate">
+      <main className={styles.gate}>
         <p className="eyebrow">Talent Network</p>
         <p>{state === 'loading' ? 'Resolving your Career workspace…' : 'Opening onboarding…'}</p>
       </main>
@@ -67,7 +68,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 
   if (state === 'error') {
     return (
-      <main className="workspace-context-gate">
+      <main className={styles.gate}>
         <p className="eyebrow">Talent Network</p>
         <h1>We could not resolve your Career workspace.</h1>
         <p>{error ?? 'Please try again.'}</p>
@@ -77,15 +78,15 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 
   return (
     <>
-      <div className="workspace-context-bar" aria-label="Workspace context">
-        <div>
-          <span className="workspace-context-label">Active context</span>
+      <div className={styles.bar} aria-label="Workspace context">
+        <div className={styles.identity}>
+          <span className={styles.label}>Active context</span>
           <strong>Personal · Career</strong>
         </div>
-        <div className="workspace-context-actions">
+        <div className={styles.actions}>
           {memberships.length > 0 ? (
             <button
-              className="workspace-context-button"
+              className={styles.button}
               onClick={() => router.push('/app' as Route)}
               type="button"
             >
@@ -93,7 +94,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
             </button>
           ) : (
             <button
-              className="workspace-context-button"
+              className={styles.button}
               onClick={() => router.push('/onboarding?intent=hire' as Route)}
               type="button"
             >
