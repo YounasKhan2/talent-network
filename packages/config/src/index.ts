@@ -28,7 +28,10 @@ const apiEnvSchema = commonSchema
   .merge(databaseSchema)
   .merge(redisSchema)
   .merge(storageSchema)
-  .extend({ API_PORT: z.coerce.number().int().positive().default(4000) });
+  .extend({
+    API_PORT: z.coerce.number().int().positive().default(4000),
+    WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
+  });
 
 const workerEnvSchema = commonSchema.merge(databaseSchema).merge(redisSchema).merge(storageSchema);
 const schedulerEnvSchema = commonSchema.merge(databaseSchema).merge(redisSchema);
