@@ -8,9 +8,11 @@ coverage/
 .env.*
 !.env.example
 *.log
+*.tsbuildinfo
 .DS_Store
 .vscode/
 .idea/
 prisma/dev.db
+packages/database/src/generated/
 uploads/
 .tmp/
