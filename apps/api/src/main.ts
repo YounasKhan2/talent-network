@@ -22,6 +22,6 @@ async function bootstrap(): Promise<void> {
 
 bootstrap().catch((error: unknown) => {
   const logger = createLogger({ service: 'api-bootstrap' });
-  logger.fatal({ error }, 'API failed to start');
+  logger.fatal({ err: error }, 'API failed to start');
   process.exitCode = 1;
 });
