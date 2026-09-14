@@ -124,17 +124,20 @@ export class CandidatesController {
   async updateSettings(@Body() body: unknown, @Req() request: RequestLike) {
     assertCsrf(request);
     const session = await this.authService.getSession(readSessionToken(request));
-    return this.candidatesService.updateSettings(session.user.id, parseSettings(body));
+    await this.candidatesService.updateSettings(session.user.id, parseSettings(body));
+    return this.candidatesService.getPassport(session.user.id);
   }
 }
 
 function parseOverview(body: unknown): CandidateProfileOverviewInput {
   const parsed = overviewSchema.safeParse(body);
   if (!parsed.success) throw invalidPayload('INVALID_CANDIDATE_OVERVIEW', parsed.error.flatten());
+
+  const { availableFrom, ...rest } = parsed.data;
   return {
-    ...parsed.data,
-    ...(parsed.data.availableFrom !== undefined
-      ? { availableFrom: parsed.data.availableFrom ? new Date(parsed.data.availableFrom) : null }
+    ...rest,
+    ...(availableFrom !== undefined
+      ? { availableFrom: availableFrom ? new Date(availableFrom) : null }
       : {}),
   };
 }
