@@ -69,7 +69,9 @@ export default function CareerPassportPage() {
   }
 
   if (loadState === 'error' || !passport?.currentProfileVersion) {
-    return <CareerState title="We could not load your Career Passport." detail={error ?? undefined} />;
+    return (
+      <CareerState title="We could not load your Career Passport." detail={error ?? undefined} />
+    );
   }
 
   const profile = passport.currentProfileVersion;
@@ -176,7 +178,9 @@ function OverviewSection({
   const profile = passport.currentProfileVersion!;
   const [headline, setHeadline] = useState(profile.headline ?? '');
   const [summary, setSummary] = useState(profile.summary ?? '');
-  const [availabilityStatus, setAvailabilityStatus] = useState(profile.availabilityStatus ?? 'OPEN_TO_OFFERS');
+  const [availabilityStatus, setAvailabilityStatus] = useState(
+    profile.availabilityStatus ?? 'OPEN_TO_OFFERS',
+  );
   const [currency, setCurrency] = useState(profile.compensationCurrency ?? 'USD');
   const [target, setTarget] = useState(profile.compensationTarget?.toString() ?? '');
   const [workModes, setWorkModes] = useState<CandidateWorkMode[]>(profile.preferredWorkModes);
@@ -189,7 +193,11 @@ function OverviewSection({
 
   return (
     <section className="career-section" id="overview">
-      <SectionHeader index="01" title="Professional overview" note="The top-level signal employers and matching systems will read first." />
+      <SectionHeader
+        index="01"
+        title="Professional overview"
+        note="The top-level signal employers and matching systems will read first."
+      />
       <form
         className="career-form"
         onSubmit={(event) => {
@@ -207,16 +215,30 @@ function OverviewSection({
       >
         <label>
           <span>Professional headline</span>
-          <input maxLength={180} onChange={(event) => setHeadline(event.target.value)} value={headline} />
+          <input
+            maxLength={180}
+            onChange={(event) => setHeadline(event.target.value)}
+            value={headline}
+          />
         </label>
         <label>
           <span>Summary</span>
-          <textarea maxLength={4000} onChange={(event) => setSummary(event.target.value)} rows={6} value={summary} />
+          <textarea
+            maxLength={4000}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={6}
+            value={summary}
+          />
         </label>
         <div className="career-field-grid">
           <label>
             <span>Availability</span>
-            <select onChange={(event) => setAvailabilityStatus(event.target.value as typeof availabilityStatus)} value={availabilityStatus}>
+            <select
+              onChange={(event) =>
+                setAvailabilityStatus(event.target.value as typeof availabilityStatus)
+              }
+              value={availabilityStatus}
+            >
               <option value="IMMEDIATE">Immediately available</option>
               <option value="NOTICE_PERIOD">Serving notice period</option>
               <option value="OPEN_TO_OFFERS">Open to offers</option>
@@ -226,8 +248,17 @@ function OverviewSection({
           <label>
             <span>Target compensation</span>
             <div className="career-inline-fields">
-              <input maxLength={3} onChange={(event) => setCurrency(event.target.value.toUpperCase())} value={currency} />
-              <input min="0" onChange={(event) => setTarget(event.target.value)} type="number" value={target} />
+              <input
+                maxLength={3}
+                onChange={(event) => setCurrency(event.target.value.toUpperCase())}
+                value={currency}
+              />
+              <input
+                min="0"
+                onChange={(event) => setTarget(event.target.value)}
+                type="number"
+                value={target}
+              />
             </div>
           </label>
         </div>
@@ -235,37 +266,86 @@ function OverviewSection({
           <legend>Preferred work modes</legend>
           <div className="career-toggle-row">
             {(['REMOTE', 'HYBRID', 'ONSITE', 'FLEXIBLE'] as CandidateWorkMode[]).map((mode) => (
-              <button className={workModes.includes(mode) ? 'career-toggle career-toggle-active' : 'career-toggle'} key={mode} onClick={() => toggleWorkMode(mode)} type="button">
+              <button
+                className={
+                  workModes.includes(mode) ? 'career-toggle career-toggle-active' : 'career-toggle'
+                }
+                key={mode}
+                onClick={() => toggleWorkMode(mode)}
+                type="button"
+              >
                 {mode}
               </button>
             ))}
           </div>
         </fieldset>
-        <button className="primary-action" disabled={pending} type="submit">{pending ? 'Saving…' : 'Save overview'}</button>
+        <button className="primary-action" disabled={pending} type="submit">
+          {pending ? 'Saving…' : 'Save overview'}
+        </button>
       </form>
     </section>
   );
 }
 
-function SkillsSection({ passport, pending, onSave }: { passport: CandidatePassportResponse; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateSkills>[0]) => Promise<void> }) {
+function SkillsSection({
+  passport,
+  pending,
+  onSave,
+}: {
+  passport: CandidatePassportResponse;
+  pending: boolean;
+  onSave: (input: Parameters<typeof replaceCandidateSkills>[0]) => Promise<void>;
+}) {
   const profile = passport.currentProfileVersion!;
   const [value, setValue] = useState(profile.skills.map((skill) => skill.name).join(', '));
   return (
     <section className="career-section" id="skills">
-      <SectionHeader index="04" title="Skills" note="Keep skills factual. Evidence and verification attach in later phases." />
-      <form className="career-form" onSubmit={(event) => { event.preventDefault(); const names = value.split(',').map((item) => item.trim()).filter(Boolean); void onSave(names.map((name) => ({ name }))); }}>
+      <SectionHeader
+        index="04"
+        title="Skills"
+        note="Keep skills factual. Evidence and verification attach in later phases."
+      />
+      <form
+        className="career-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const names = value
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean);
+          void onSave(names.map((name) => ({ name })));
+        }}
+      >
         <label>
           <span>Skills, separated by commas</span>
           <textarea onChange={(event) => setValue(event.target.value)} rows={4} value={value} />
         </label>
-        <div className="career-tag-preview">{value.split(',').map((item) => item.trim()).filter(Boolean).map((skill) => <span key={skill}>{skill}</span>)}</div>
-        <button className="primary-action" disabled={pending} type="submit">{pending ? 'Saving…' : 'Save skills'}</button>
+        <div className="career-tag-preview">
+          {value
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((skill) => (
+              <span key={skill}>{skill}</span>
+            ))}
+        </div>
+        <button className="primary-action" disabled={pending} type="submit">
+          {pending ? 'Saving…' : 'Save skills'}
+        </button>
       </form>
     </section>
   );
 }
 
-function ExperienceSection({ passport, pending, onSave }: { passport: CandidatePassportResponse; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateEmployment>[0]) => Promise<void> }) {
+function ExperienceSection({
+  passport,
+  pending,
+  onSave,
+}: {
+  passport: CandidatePassportResponse;
+  pending: boolean;
+  onSave: (input: Parameters<typeof replaceCandidateEmployment>[0]) => Promise<void>;
+}) {
   const profile = passport.currentProfileVersion!;
   const [companyName, setCompanyName] = useState('');
   const [title, setTitle] = useState('');
@@ -273,24 +353,83 @@ function ExperienceSection({ passport, pending, onSave }: { passport: CandidateP
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!companyName.trim() || !title.trim()) return;
-    await onSave([...existing.map(({ companyName, title, employmentType, location, workMode, startDate, endDate, isCurrent, summary }) => ({ companyName, title, employmentType, location, workMode, startDate, endDate, isCurrent, summary })), { companyName: companyName.trim(), title: title.trim(), isCurrent: true }]);
+    await onSave([
+      ...existing.map(
+        ({
+          companyName,
+          title,
+          employmentType,
+          location,
+          workMode,
+          startDate,
+          endDate,
+          isCurrent,
+          summary,
+        }) => ({
+          companyName,
+          title,
+          employmentType,
+          location,
+          workMode,
+          startDate,
+          endDate,
+          isCurrent,
+          summary,
+        }),
+      ),
+      { companyName: companyName.trim(), title: title.trim(), isCurrent: true },
+    ]);
     setCompanyName('');
     setTitle('');
   }
   return (
     <section className="career-section" id="experience">
-      <SectionHeader index="02" title="Experience" note="Employment history is preserved with each profile version." />
-      <div className="career-record-list">{existing.length ? existing.map((item) => <article key={item.id}><strong>{item.title}</strong><span>{item.companyName}</span><small>{item.isCurrent ? 'Current role' : 'Previous role'}</small></article>) : <p>No work history added yet.</p>}</div>
+      <SectionHeader
+        index="02"
+        title="Experience"
+        note="Employment history is preserved with each profile version."
+      />
+      <div className="career-record-list">
+        {existing.length ? (
+          existing.map((item) => (
+            <article key={item.id}>
+              <strong>{item.title}</strong>
+              <span>{item.companyName}</span>
+              <small>{item.isCurrent ? 'Current role' : 'Previous role'}</small>
+            </article>
+          ))
+        ) : (
+          <p>No work history added yet.</p>
+        )}
+      </div>
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setTitle(event.target.value)} placeholder="Role title" value={title} />
-        <input onChange={(event) => setCompanyName(event.target.value)} placeholder="Company" value={companyName} />
-        <button className="compact-action" disabled={pending} type="submit">Add experience</button>
+        <input
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Role title"
+          value={title}
+        />
+        <input
+          onChange={(event) => setCompanyName(event.target.value)}
+          placeholder="Company"
+          value={companyName}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add experience
+        </button>
       </form>
     </section>
   );
 }
 
-function EducationSection({ passport, pending, onSave }: { passport: CandidatePassportResponse; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateEducation>[0]) => Promise<void> }) {
+function EducationSection({
+  passport,
+  pending,
+  onSave,
+}: {
+  passport: CandidatePassportResponse;
+  pending: boolean;
+  onSave: (input: Parameters<typeof replaceCandidateEducation>[0]) => Promise<void>;
+}) {
   const profile = passport.currentProfileVersion!;
   const [institutionName, setInstitutionName] = useState('');
   const [degree, setDegree] = useState('');
@@ -298,52 +437,166 @@ function EducationSection({ passport, pending, onSave }: { passport: CandidatePa
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!institutionName.trim()) return;
-    await onSave([...existing.map(({ institutionName, degree, fieldOfStudy, location, startDate, endDate, isCurrent, description }) => ({ institutionName, degree, fieldOfStudy, location, startDate, endDate, isCurrent, description })), { institutionName: institutionName.trim(), degree: degree.trim() || null }]);
+    await onSave([
+      ...existing.map(
+        ({
+          institutionName,
+          degree,
+          fieldOfStudy,
+          location,
+          startDate,
+          endDate,
+          isCurrent,
+          description,
+        }) => ({
+          institutionName,
+          degree,
+          fieldOfStudy,
+          location,
+          startDate,
+          endDate,
+          isCurrent,
+          description,
+        }),
+      ),
+      { institutionName: institutionName.trim(), degree: degree.trim() || null },
+    ]);
     setInstitutionName('');
     setDegree('');
   }
   return (
     <section className="career-section" id="education">
-      <SectionHeader index="03" title="Education" note="Add formal education without forcing it into hiring signal where it is irrelevant." />
-      <div className="career-record-list">{existing.length ? existing.map((item) => <article key={item.id}><strong>{item.degree || 'Education'}</strong><span>{item.institutionName}</span><small>{item.fieldOfStudy || 'Field not specified'}</small></article>) : <p>No education added yet.</p>}</div>
+      <SectionHeader
+        index="03"
+        title="Education"
+        note="Add formal education without forcing it into hiring signal where it is irrelevant."
+      />
+      <div className="career-record-list">
+        {existing.length ? (
+          existing.map((item) => (
+            <article key={item.id}>
+              <strong>{item.degree || 'Education'}</strong>
+              <span>{item.institutionName}</span>
+              <small>{item.fieldOfStudy || 'Field not specified'}</small>
+            </article>
+          ))
+        ) : (
+          <p>No education added yet.</p>
+        )}
+      </div>
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setInstitutionName(event.target.value)} placeholder="Institution" value={institutionName} />
-        <input onChange={(event) => setDegree(event.target.value)} placeholder="Degree" value={degree} />
-        <button className="compact-action" disabled={pending} type="submit">Add education</button>
+        <input
+          onChange={(event) => setInstitutionName(event.target.value)}
+          placeholder="Institution"
+          value={institutionName}
+        />
+        <input
+          onChange={(event) => setDegree(event.target.value)}
+          placeholder="Degree"
+          value={degree}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add education
+        </button>
       </form>
     </section>
   );
 }
 
-function PrivacySection({ passport, pending, onSave }: { passport: CandidatePassportResponse; pending: boolean; onSave: (input: Parameters<typeof updateCandidateSettings>[0]) => Promise<void> }) {
+function PrivacySection({
+  passport,
+  pending,
+  onSave,
+}: {
+  passport: CandidatePassportResponse;
+  pending: boolean;
+  onSave: (input: Parameters<typeof updateCandidateSettings>[0]) => Promise<void>;
+}) {
   const [visibility, setVisibility] = useState(passport.visibility);
   const [discoverability, setDiscoverability] = useState(passport.discoverability);
   return (
     <section className="career-section" id="privacy">
-      <SectionHeader index="05" title="Privacy & discoverability" note="Private by default. Visibility and recruiter discoverability are separate controls." />
-      <form className="career-form" onSubmit={(event) => { event.preventDefault(); void onSave({ visibility, discoverability }); }}>
+      <SectionHeader
+        index="05"
+        title="Privacy & discoverability"
+        note="Private by default. Visibility and recruiter discoverability are separate controls."
+      />
+      <form
+        className="career-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSave({ visibility, discoverability });
+        }}
+      >
         <div className="career-field-grid">
-          <label><span>Profile visibility</span><select onChange={(event) => setVisibility(event.target.value as typeof visibility)} value={visibility}><option value="PRIVATE">Private</option><option value="NETWORK">Talent Network</option><option value="VERIFIED_RECRUITERS">Verified recruiters</option></select></label>
-          <label><span>Search discoverability</span><select onChange={(event) => setDiscoverability(event.target.value as typeof discoverability)} value={discoverability}><option value="HIDDEN">Hidden</option><option value="SEARCHABLE">Searchable</option></select></label>
+          <label>
+            <span>Profile visibility</span>
+            <select
+              onChange={(event) => setVisibility(event.target.value as typeof visibility)}
+              value={visibility}
+            >
+              <option value="PRIVATE">Private</option>
+              <option value="NETWORK">Talent Network</option>
+              <option value="VERIFIED_RECRUITERS">Verified recruiters</option>
+            </select>
+          </label>
+          <label>
+            <span>Search discoverability</span>
+            <select
+              onChange={(event) => setDiscoverability(event.target.value as typeof discoverability)}
+              value={discoverability}
+            >
+              <option value="HIDDEN">Hidden</option>
+              <option value="SEARCHABLE">Searchable</option>
+            </select>
+          </label>
         </div>
-        <p className="career-privacy-note">Changing these settings does not bypass employer permission checks or expose private data outside the allowed product surface.</p>
-        <button className="primary-action" disabled={pending} type="submit">{pending ? 'Saving…' : 'Save privacy settings'}</button>
+        <p className="career-privacy-note">
+          Changing these settings does not bypass employer permission checks or expose private data
+          outside the allowed product surface.
+        </p>
+        <button className="primary-action" disabled={pending} type="submit">
+          {pending ? 'Saving…' : 'Save privacy settings'}
+        </button>
       </form>
     </section>
   );
 }
 
 function SectionHeader({ index, title, note }: { index: string; title: string; note: string }) {
-  return <header className="career-section-header"><span>{index}</span><div><h2>{title}</h2><p>{note}</p></div></header>;
+  return (
+    <header className="career-section-header">
+      <span>{index}</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{note}</p>
+      </div>
+    </header>
+  );
 }
 
 function CareerState({ title, detail }: { title: string; detail?: string }) {
-  return <main className="workspace-loading"><p className="eyebrow">Talent Network</p><h1>{title}</h1>{detail ? <p>{detail}</p> : null}</main>;
+  return (
+    <main className="workspace-loading">
+      <p className="eyebrow">Talent Network</p>
+      <h1>{title}</h1>
+      {detail ? <p>{detail}</p> : null}
+    </main>
+  );
 }
 
 function calculateCompleteness(passport: CandidatePassportResponse | null): number {
   const profile = passport?.currentProfileVersion;
   if (!profile) return 0;
-  const checks = [Boolean(profile.headline), Boolean(profile.summary), profile.employments.length > 0, profile.education.length > 0, profile.skills.length > 0, profile.preferredWorkModes.length > 0, Boolean(profile.availabilityStatus), Boolean(profile.compensationTarget)];
+  const checks = [
+    Boolean(profile.headline),
+    Boolean(profile.summary),
+    profile.employments.length > 0,
+    profile.education.length > 0,
+    profile.skills.length > 0,
+    profile.preferredWorkModes.length > 0,
+    Boolean(profile.availabilityStatus),
+    Boolean(profile.compensationTarget),
+  ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }

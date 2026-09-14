@@ -21,10 +21,7 @@ export type OrganizationRoleKey =
 
 export type CandidateWorkMode = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE';
 export type CandidateAvailabilityStatus =
-  | 'IMMEDIATE'
-  | 'NOTICE_PERIOD'
-  | 'OPEN_TO_OFFERS'
-  | 'NOT_LOOKING';
+  'IMMEDIATE' | 'NOTICE_PERIOD' | 'OPEN_TO_OFFERS' | 'NOT_LOOKING';
 
 export interface MembershipResponse {
   organizationId: string;
@@ -277,7 +274,9 @@ export function acceptOrganizationInvitation(token: string): Promise<unknown> {
 }
 
 export function initializeCandidatePassport(): Promise<CandidatePassportResponse> {
-  return apiRequest<CandidatePassportResponse>('/candidate/passport/initialize', { method: 'POST' });
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/initialize', {
+    method: 'POST',
+  });
 }
 
 export function getCandidatePassport(): Promise<CandidatePassportResponse> {

@@ -129,7 +129,10 @@ export class CandidatesService {
   async updateSettings(userId: string, input: CandidateSettingsInput) {
     const candidate = await this.requireCandidate(userId);
     return this.database.$transaction(async (transaction) => {
-      const updated = await transaction.candidate.update({ where: { id: candidate.id }, data: input });
+      const updated = await transaction.candidate.update({
+        where: { id: candidate.id },
+        data: input,
+      });
       await writeAuditEvent(transaction, {
         actorType: 'USER',
         actorId: userId,
@@ -343,7 +346,11 @@ export class CandidatesService {
         aggregateType: 'Candidate',
         aggregateId: candidate.id,
         eventType: 'candidate.passport.updated',
-        payload: { candidateId: candidate.id, profileVersionId: next.id, versionNumber: next.versionNumber },
+        payload: {
+          candidateId: candidate.id,
+          profileVersionId: next.id,
+          versionNumber: next.versionNumber,
+        },
       });
       return transaction.candidate.findUniqueOrThrow({
         where: { id: candidate.id },

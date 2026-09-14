@@ -1,4 +1,14 @@
-import { BadRequestException, Body, Controller, Get, Inject, Patch, Post, Put, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Patch,
+  Post,
+  Put,
+  Req,
+} from '@nestjs/common';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
@@ -69,7 +79,9 @@ const educationSchema = z.object({
 });
 
 const skillsPayloadSchema = z.object({ skills: z.array(skillSchema).max(100) }).strict();
-const employmentPayloadSchema = z.object({ employments: z.array(employmentSchema).max(50) }).strict();
+const employmentPayloadSchema = z
+  .object({ employments: z.array(employmentSchema).max(50) })
+  .strict();
 const educationPayloadSchema = z.object({ education: z.array(educationSchema).max(50) }).strict();
 
 @Controller('candidate')
