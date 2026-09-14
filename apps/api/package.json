@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
-    "test": "tsx --test src/auth/auth.crypto.test.ts"
+    "test": "tsx --test src/auth/auth.crypto.test.ts src/auth/auth.http.test.ts src/auth/auth-rate-limit.service.test.ts src/authorization/authorization.service.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.0",
