@@ -26,11 +26,13 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     setError(null);
 
     try {
-      const session = isSignup ? await signup(email, password) : await login(email, password);
+      if (isSignup) await signup(email, password);
+      else await login(email, password);
+
       if (nextPath) {
         router.replace(nextPath as Route);
       } else {
-        const context = await getWorkspaceContextState(session);
+        const context = await getWorkspaceContextState();
         router.replace(resolveWorkspaceLanding(context));
       }
       router.refresh();
