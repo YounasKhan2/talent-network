@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   ApiError,
   createOrganization,
@@ -23,7 +23,7 @@ export default function WorkspaceEntryPage() {
   useEffect(() => {
     let active = true;
 
-    getSession()
+    void getSession()
       .then((result) => {
         if (!active) return;
         setSession(result);
@@ -113,7 +113,7 @@ export default function WorkspaceEntryPage() {
             </p>
           </div>
 
-          <form className="workspace-create-form" onSubmit={createWorkspace}>
+          <form className="workspace-create-form" onSubmit={(event) => void createWorkspace(event)}>
             <div className="form-index">01</div>
             <label>
               <span>Organization name</span>
