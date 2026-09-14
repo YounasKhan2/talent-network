@@ -26,10 +26,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
         try {
           await getCandidatePassport();
         } catch (caught) {
-          if (
-            caught instanceof ApiError &&
-            caught.code === 'CANDIDATE_PASSPORT_NOT_INITIALIZED'
-          ) {
+          if (caught instanceof ApiError && caught.code === 'CANDIDATE_PASSPORT_NOT_INITIALIZED') {
             setState('redirecting');
             router.replace('/onboarding?intent=career');
             return;
