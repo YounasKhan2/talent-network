@@ -6,20 +6,20 @@ Talent Network is a documentation-led, production-oriented employment operating 
 
 ## Project Status
 
-| Area                                   | Status                         |
-| -------------------------------------- | ------------------------------ |
-| Product blueprint                      | ✅ Complete                    |
-| Architecture baseline                  | ✅ Complete                    |
-| Security / scale / data specifications | ✅ Complete                    |
-| UX / information architecture          | ✅ Complete                    |
-| Monorepo bootstrap                     | ✅ Complete                    |
-| Engineering foundation                 | ✅ Complete                    |
-| Phase 1 backend foundation             | ✅ Verified                    |
-| Phase 1 authenticated web experience   | ✅ Verified                    |
-| Career Passport initial foundation     | ✅ Quality gate green          |
+| Area                                   | Status                        |
+| -------------------------------------- | ----------------------------- |
+| Product blueprint                      | ✅ Complete                   |
+| Architecture baseline                  | ✅ Complete                   |
+| Security / scale / data specifications | ✅ Complete                   |
+| UX / information architecture          | ✅ Complete                   |
+| Monorepo bootstrap                     | ✅ Complete                   |
+| Engineering foundation                 | ✅ Complete                   |
+| Phase 1 backend foundation             | ✅ Verified                   |
+| Phase 1 authenticated web experience   | ✅ Verified                   |
+| Career Passport initial foundation     | ✅ Quality gate green         |
 | Identity / workspace context hardening | 🟡 Current cross-cutting step |
-| Career Passport expansion              | ⏳ Next                        |
-| Resume Intelligence                    | ⏳ Next major phase            |
+| Career Passport expansion              | ⏳ Next                       |
+| Resume Intelligence                    | ⏳ Next major phase           |
 
 **Current implementation phase:** Phase 2 — Candidate Career Passport, with identity/workspace-context hardening inserted before expanding the Passport surface.
 

@@ -29,14 +29,14 @@ User
 
 An authenticated user can be in one of these valid states:
 
-| Candidate | Active organization memberships | Meaning |
-| --- | ---: | --- |
-| No | 0 | New account; onboarding intent required |
-| Yes | 0 | Candidate-only user |
-| No | 1 | Employer-side user with one workspace |
-| No | Many | Employer-side multi-organization user |
-| Yes | 1 | Candidate + one hiring workspace |
-| Yes | Many | Candidate + multiple hiring workspaces |
+| Candidate | Active organization memberships | Meaning                                 |
+| --------- | ------------------------------: | --------------------------------------- |
+| No        |                               0 | New account; onboarding intent required |
+| Yes       |                               0 | Candidate-only user                     |
+| No        |                               1 | Employer-side user with one workspace   |
+| No        |                            Many | Employer-side multi-organization user   |
+| Yes       |                               1 | Candidate + one hiring workspace        |
+| Yes       |                            Many | Candidate + multiple hiring workspaces  |
 
 Do not collapse these states into a single `user.type` field.
 

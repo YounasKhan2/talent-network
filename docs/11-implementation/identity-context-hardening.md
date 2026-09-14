@@ -260,18 +260,18 @@ No MVP implementation required yet, but avoid schema/product assumptions that bl
 
 ## Test Matrix
 
-| Scenario | Expected destination/capability |
-| --- | --- |
-| No Candidate, no org | onboarding |
-| Candidate only | Career |
-| One org only | employer workspace |
-| Candidate + one org | last valid context or deterministic first-use choice |
-| Candidate + many orgs | context switcher + last valid context |
-| Many orgs, no Candidate | employer workspace + switcher |
-| Removed last-active org | safe fallback |
-| Candidate accepts org invite | both contexts preserved |
-| Org user explicitly starts Career | Candidate added, org preserved |
-| Org user merely opens Career URL | no silent Candidate creation |
+| Scenario                          | Expected destination/capability                      |
+| --------------------------------- | ---------------------------------------------------- |
+| No Candidate, no org              | onboarding                                           |
+| Candidate only                    | Career                                               |
+| One org only                      | employer workspace                                   |
+| Candidate + one org               | last valid context or deterministic first-use choice |
+| Candidate + many orgs             | context switcher + last valid context                |
+| Many orgs, no Candidate           | employer workspace + switcher                        |
+| Removed last-active org           | safe fallback                                        |
+| Candidate accepts org invite      | both contexts preserved                              |
+| Org user explicitly starts Career | Candidate added, org preserved                       |
+| Org user merely opens Career URL  | no silent Candidate creation                         |
 
 ## Quality Gate
 

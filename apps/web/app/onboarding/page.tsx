@@ -58,7 +58,9 @@ export default function OnboardingPage() {
       router.replace('/career');
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Unable to create your Career Passport.');
+      setError(
+        caught instanceof ApiError ? caught.message : 'Unable to create your Career Passport.',
+      );
       setPending(null);
     }
   }
