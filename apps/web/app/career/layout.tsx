@@ -76,6 +76,9 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
       <div className={styles.bar} aria-label="Workspace context">
         <span className={styles.contextHint}>Talent Network workspace</span>
         <div className={styles.actions}>
+          <Link className={styles.historyLink} href="/career/evidence">
+            Evidence
+          </Link>
           <Link className={styles.historyLink} href="/career/history">
             Version history
           </Link>
