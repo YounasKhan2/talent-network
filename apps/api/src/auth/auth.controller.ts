@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
   Req,
   Res,
@@ -32,7 +33,7 @@ const credentialsSchema = z.object({
 export class AuthController {
   private readonly production = parseApiEnv().NODE_ENV === 'production';
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Post('signup')
   async signup(
