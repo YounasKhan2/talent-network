@@ -31,12 +31,13 @@ Already available:
 - `/career` route guard that never creates Candidate state implicitly
 - authenticated browser verification for employer-only `/career` redirect behavior
 - account context discovery contract at `GET /api/v1/account/contexts`
+- reusable Career/Organization context switcher shared by Career and Hiring layouts
 
-Current hardening work is focused on making context discovery and navigation reusable across login, onboarding, Career, and Hiring surfaces without turning UI context into an authorization boundary.
+Current hardening work is focused on completing last-active context persistence, stale-context recovery, and privacy/mixed-context regression coverage without turning UI context into an authorization boundary.
 
 ## Boundary 1 — Context Resolution Contract
 
-**Status: implemented; local quality-gate verification pending for latest slice.**
+**Status: implemented and local quality-gate verified.**
 
 Reusable authenticated capability:
 
@@ -70,7 +71,7 @@ organizations[]
   permissions[]
 ```
 
-Frontend context resolution now consumes this contract instead of probing Candidate existence through the Career Passport endpoint.
+Frontend context resolution consumes this contract instead of probing Candidate existence through the Career Passport endpoint.
 
 ### Acceptance criteria
 
@@ -166,21 +167,31 @@ Do not use last-active state as authorization.
 
 ## Boundary 5 — Reusable Context Switcher
 
-**Status: foundation implemented; full multi-context switcher UX still pending.**
+**Status: implemented; local quality-gate and browser verification pending for latest slice.**
 
-Current Career/Hiring surfaces can move between:
+Shared switcher is used by Career and Hiring layouts and presents:
 
 ```text
 Personal
   Career
 
 Organizations
-  one or more memberships
+  Org A      Owner
+  Org B      Recruiter
+
++ Create or join organization
 ```
 
-For organization-only users, an explicit action is shown to build a Career Passport.
+Behavior:
 
-For candidate-only users, an explicit action is shown to add a Hiring workspace.
+- Career ↔ organization switching does not require logout
+- organization selection writes only the existing UI preference key used by the Hiring workspace
+- each organization shows its current role for orientation
+- organization-only users can explicitly create Career state through onboarding
+- candidate-only users can create or join an organization
+- Escape closes the switcher and native focusable menu controls preserve keyboard accessibility
+
+The selected organization preference is still treated only as navigation state. The `/app` page resolves the selected organization again through the server-authorized active-context endpoint before using it.
 
 ### Acceptance criteria
 
@@ -300,9 +311,9 @@ Phase 2 initial Career Passport foundation      ✅ implemented / quality gate g
 Identity & workspace context hardening
   explicit onboarding                          ✅
   no implicit Candidate creation               ✅
-  account context API                          ✅ code complete / gate pending
-  reusable multi-context switcher               ← next
-  last-active context + stale fallback
+  account context API                          ✅ verified
+  reusable multi-context switcher               ✅ code complete / gate pending
+  last-active context + stale fallback          ← next
   privacy / mixed-context tests
         ↓
 Phase 2 Career Passport expansion
