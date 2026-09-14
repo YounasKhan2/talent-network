@@ -11,3 +11,4 @@ allowBuilds:
 
 catalog:
   typescript: ^5.9.2
+  zod: ^4.1.5
