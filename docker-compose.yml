@@ -65,7 +65,24 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  clamav:
+    image: clamav/clamav:1.4
+    environment:
+      CLAMD_STARTUP_TIMEOUT: 180
+    ports:
+      - '3310:3310'
+    volumes:
+      - clamav_signatures:/var/lib/clamav
+    healthcheck:
+      test: ['CMD-SHELL', 'clamdscan --ping=5 >/dev/null 2>&1 || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
   rustfs_data:
+  clamav_signatures:
