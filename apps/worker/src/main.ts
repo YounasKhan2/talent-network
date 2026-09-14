@@ -2,14 +2,14 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { parseWorkerEnv } from '@talent-network/config';
 import { createDatabaseClient } from '@talent-network/database';
 import { createLogger } from '@talent-network/observability';
-import { ClamAvScanner } from '@talent-network/resume-security';
+import {
+  ClamAvScanner,
+  RESUME_SECURITY_QUEUE,
+  type ResumeSecurityJobData,
+} from '@talent-network/resume-security';
 import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
-import {
-  processResumeSecurityJob,
-  RESUME_SCAN_QUEUE,
-  type ResumeScanJobData,
-} from './resume-security-worker.js';
+import { processResumeSecurityJob } from './resume-security-worker.js';
 
 async function main(): Promise<void> {
   const env = parseWorkerEnv();
@@ -38,8 +38,8 @@ async function main(): Promise<void> {
   await redis.ping();
   const scannerVersion = await scanner.getVersion();
 
-  const resumeSecurityWorker = new Worker<ResumeScanJobData>(
-    RESUME_SCAN_QUEUE,
+  const resumeSecurityWorker = new Worker<ResumeSecurityJobData>(
+    RESUME_SECURITY_QUEUE,
     async (job) => {
       await processResumeSecurityJob(job.data, {
         database,
@@ -56,7 +56,10 @@ async function main(): Promise<void> {
   );
 
   resumeSecurityWorker.on('completed', (job) => {
-    logger.info({ jobId: job.id, resumeVersionId: job.data.resumeVersionId }, 'Resume security job completed');
+    logger.info(
+      { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
+      'Resume security job completed',
+    );
   });
   resumeSecurityWorker.on('failed', (job, error) => {
     logger.error(
@@ -65,7 +68,7 @@ async function main(): Promise<void> {
     );
   });
 
-  logger.info({ scanner: scannerVersion, queue: RESUME_SCAN_QUEUE }, 'Worker runtime ready');
+  logger.info({ scanner: scannerVersion, queue: RESUME_SECURITY_QUEUE }, 'Worker runtime ready');
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Worker shutting down');
