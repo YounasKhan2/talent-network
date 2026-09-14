@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { AccountContextResponse } from '../lib/api';
+import {
+  rememberCareerContext,
+  rememberOrganizationContext,
+} from '../lib/workspace-preference';
 import styles from './workspace-context-switcher.module.css';
-
-const workspaceStorageKey = 'tn_active_organization';
 
 type ActiveContext =
   { kind: 'career' } | { kind: 'organization'; organizationId: string } | { kind: 'hiring-setup' };
@@ -56,12 +58,13 @@ export function WorkspaceContextSwitcher({
 
   function openCareer() {
     setOpen(false);
+    if (contexts.career.available) rememberCareerContext();
     router.push(contexts.career.available ? '/career' : '/onboarding?intent=career');
   }
 
   function openOrganization(organizationId: string) {
     setOpen(false);
-    window.localStorage.setItem(workspaceStorageKey, organizationId);
+    rememberOrganizationContext(organizationId);
 
     if (activeContext.kind === 'organization' && activeContext.organizationId === organizationId) {
       return;
