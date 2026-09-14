@@ -21,6 +21,7 @@ lint
 typecheck
 unit tests
 Phase 1 database-backed integration tests
+Phase 2 database-backed integration tests
 build
 ```
 
@@ -49,13 +50,14 @@ pnpm install
 pnpm check
 ```
 
-The Phase 1 integration suite is exposed independently when focused execution is useful:
+Focused integration suites are exposed independently:
 
 ```bash
 pnpm test:integration:phase1
+pnpm test:integration:phase2
 ```
 
-That command builds the database package, deploys committed Prisma migrations, and runs the real PostgreSQL Phase 1 integration suite. The suite uses unique per-run users and organizations and cleans up the records it creates.
+Each command builds the database package, deploys committed Prisma migrations, and runs its real PostgreSQL integration suite. The suites use unique per-run records and clean up only the data they create.
 
 `pnpm check` remains the single authoritative top-level quality entry point; package-specific commands are implementation details and focused developer tools.
 
@@ -67,7 +69,7 @@ The integration gate requires:
 - PostgreSQL reachable at that URL
 - committed Prisma migrations deployable against that database
 
-The integration suite must not truncate or reset a developer database. Tests must isolate their own records, use unique identifiers, and clean up only data created by the test run.
+The integration suites must not truncate or reset a developer database. Tests must isolate their own records, use unique identifiers, and clean up only data created by the test run.
 
 ## CI Later
 
