@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ApiError,
   getCandidatePassport,
@@ -211,11 +211,13 @@ function OverviewSection({
   const [currency, setCurrency] = useState(profile.compensationCurrency ?? 'USD');
   const [target, setTarget] = useState(profile.compensationTarget?.toString() ?? '');
   const [workModes, setWorkModes] = useState<CandidateWorkMode[]>(profile.preferredWorkModes);
+
   function toggleWorkMode(mode: CandidateWorkMode) {
     setWorkModes((current) =>
       current.includes(mode) ? current.filter((item) => item !== mode) : [...current, mode],
     );
   }
+
   return (
     <section className="career-section" id="overview">
       <SectionHeader
@@ -322,6 +324,14 @@ function ExperienceSection({
   const existing = passport.currentProfileVersion!.employments;
   const [companyName, setCompanyName] = useState('');
   const [title, setTitle] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [location, setLocation] = useState('');
+  const [workMode, setWorkMode] = useState<CandidateWorkMode | ''>('');
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
+  const [isCurrent, setIsCurrent] = useState(false);
+  const [summary, setSummary] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!companyName.trim() || !title.trim()) return;
@@ -349,39 +359,122 @@ function ExperienceSection({
           summary,
         }),
       ),
-      { companyName: companyName.trim(), title: title.trim(), isCurrent: true },
+      {
+        companyName: companyName.trim(),
+        title: title.trim(),
+        employmentType: employmentType.trim() || null,
+        location: location.trim() || null,
+        workMode: workMode || null,
+        startDate: monthToIso(startMonth),
+        endDate: isCurrent ? null : monthToIso(endMonth),
+        isCurrent,
+        summary: summary.trim() || null,
+      },
     ]);
     setCompanyName('');
     setTitle('');
+    setEmploymentType('');
+    setLocation('');
+    setWorkMode('');
+    setStartMonth('');
+    setEndMonth('');
+    setIsCurrent(false);
+    setSummary('');
   }
+
   return (
     <SimpleRecordSection
       id="experience"
       index="02"
       title="Experience"
-      note="Employment history is preserved with each profile version."
+      note="Capture dates and context so role relevance can be evaluated from evidence, not title alone."
       empty="No work history added yet."
       records={existing.map((item) => ({
         id: item.id,
         title: item.title,
         subtitle: item.companyName,
-        meta: item.isCurrent ? 'Current role' : 'Previous role',
+        meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
+        description: item.summary ?? undefined,
       }))}
     >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Role title"
-          value={title}
-        />
-        <input
-          onChange={(event) => setCompanyName(event.target.value)}
-          placeholder="Company"
-          value={companyName}
-        />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add experience
-        </button>
+      <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
+        <div className="career-field-grid">
+          <label>
+            <span>Role title</span>
+            <input onChange={(event) => setTitle(event.target.value)} value={title} />
+          </label>
+          <label>
+            <span>Company</span>
+            <input onChange={(event) => setCompanyName(event.target.value)} value={companyName} />
+          </label>
+          <label>
+            <span>Employment type</span>
+            <select onChange={(event) => setEmploymentType(event.target.value)} value={employmentType}>
+              <option value="">Not specified</option>
+              <option value="FULL_TIME">Full-time</option>
+              <option value="PART_TIME">Part-time</option>
+              <option value="CONTRACT">Contract</option>
+              <option value="INTERNSHIP">Internship</option>
+              <option value="FREELANCE">Freelance</option>
+            </select>
+          </label>
+          <label>
+            <span>Work mode</span>
+            <select
+              onChange={(event) => setWorkMode(event.target.value as CandidateWorkMode | '')}
+              value={workMode}
+            >
+              <option value="">Not specified</option>
+              <option value="REMOTE">Remote</option>
+              <option value="HYBRID">Hybrid</option>
+              <option value="ONSITE">On-site</option>
+              <option value="FLEXIBLE">Flexible</option>
+            </select>
+          </label>
+          <label>
+            <span>Location</span>
+            <input
+              onChange={(event) => setLocation(event.target.value)}
+              placeholder="Lahore, Pakistan"
+              value={location}
+            />
+          </label>
+          <label>
+            <span>Start month</span>
+            <input onChange={(event) => setStartMonth(event.target.value)} type="month" value={startMonth} />
+          </label>
+          <label>
+            <span>End month</span>
+            <input
+              disabled={isCurrent}
+              onChange={(event) => setEndMonth(event.target.value)}
+              type="month"
+              value={isCurrent ? '' : endMonth}
+            />
+          </label>
+          <label className="career-check-label">
+            <input
+              checked={isCurrent}
+              onChange={(event) => {
+                setIsCurrent(event.target.checked);
+                if (event.target.checked) setEndMonth('');
+              }}
+              type="checkbox"
+            />
+            <span>I currently work here</span>
+          </label>
+        </div>
+        <label>
+          <span>What did you work on?</span>
+          <textarea
+            maxLength={4000}
+            onChange={(event) => setSummary(event.target.value)}
+            placeholder="Responsibilities, systems, outcomes, major features, and your contribution."
+            rows={5}
+            value={summary}
+          />
+        </label>
+        <SaveButton pending={pending} label="Add experience" />
       </form>
     </SimpleRecordSection>
   );
@@ -399,6 +492,13 @@ function EducationSection({
   const existing = passport.currentProfileVersion!.education;
   const [institutionName, setInstitutionName] = useState('');
   const [degree, setDegree] = useState('');
+  const [fieldOfStudy, setFieldOfStudy] = useState('');
+  const [location, setLocation] = useState('');
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
+  const [isCurrent, setIsCurrent] = useState(false);
+  const [description, setDescription] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!institutionName.trim()) return;
@@ -424,39 +524,99 @@ function EducationSection({
           description,
         }),
       ),
-      { institutionName: institutionName.trim(), degree: degree.trim() || null },
+      {
+        institutionName: institutionName.trim(),
+        degree: degree.trim() || null,
+        fieldOfStudy: fieldOfStudy.trim() || null,
+        location: location.trim() || null,
+        startDate: monthToIso(startMonth),
+        endDate: isCurrent ? null : monthToIso(endMonth),
+        isCurrent,
+        description: description.trim() || null,
+      },
     ]);
     setInstitutionName('');
     setDegree('');
+    setFieldOfStudy('');
+    setLocation('');
+    setStartMonth('');
+    setEndMonth('');
+    setIsCurrent(false);
+    setDescription('');
   }
+
   return (
     <SimpleRecordSection
       id="education"
       index="03"
       title="Education"
-      note="Add formal education without forcing it into hiring signal where it is irrelevant."
+      note="Add degree dates and study context without forcing education into roles where it is irrelevant."
       empty="No education added yet."
       records={existing.map((item) => ({
         id: item.id,
         title: item.degree || 'Education',
         subtitle: item.institutionName,
-        meta: item.fieldOfStudy || 'Field not specified',
+        meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
+        description: [item.fieldOfStudy, item.description].filter(Boolean).join(' · ') || undefined,
       }))}
     >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setInstitutionName(event.target.value)}
-          placeholder="Institution"
-          value={institutionName}
-        />
-        <input
-          onChange={(event) => setDegree(event.target.value)}
-          placeholder="Degree"
-          value={degree}
-        />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add education
-        </button>
+      <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
+        <div className="career-field-grid">
+          <label>
+            <span>Institution</span>
+            <input
+              onChange={(event) => setInstitutionName(event.target.value)}
+              value={institutionName}
+            />
+          </label>
+          <label>
+            <span>Degree</span>
+            <input onChange={(event) => setDegree(event.target.value)} value={degree} />
+          </label>
+          <label>
+            <span>Field of study</span>
+            <input onChange={(event) => setFieldOfStudy(event.target.value)} value={fieldOfStudy} />
+          </label>
+          <label>
+            <span>Location</span>
+            <input onChange={(event) => setLocation(event.target.value)} value={location} />
+          </label>
+          <label>
+            <span>Start month</span>
+            <input onChange={(event) => setStartMonth(event.target.value)} type="month" value={startMonth} />
+          </label>
+          <label>
+            <span>End / graduation month</span>
+            <input
+              disabled={isCurrent}
+              onChange={(event) => setEndMonth(event.target.value)}
+              type="month"
+              value={isCurrent ? '' : endMonth}
+            />
+          </label>
+          <label className="career-check-label">
+            <input
+              checked={isCurrent}
+              onChange={(event) => {
+                setIsCurrent(event.target.checked);
+                if (event.target.checked) setEndMonth('');
+              }}
+              type="checkbox"
+            />
+            <span>Currently studying here</span>
+          </label>
+        </div>
+        <label>
+          <span>Education details</span>
+          <textarea
+            maxLength={4000}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Relevant coursework, thesis, honors, activities, or other useful context."
+            rows={4}
+            value={description}
+          />
+        </label>
+        <SaveButton pending={pending} label="Add education" />
       </form>
     </SimpleRecordSection>
   );
@@ -474,6 +634,7 @@ function SkillsSection({
   const [value, setValue] = useState(
     passport.currentProfileVersion!.skills.map((skill) => skill.name).join(', '),
   );
+
   return (
     <section className="career-section" id="skills">
       <SectionHeader
@@ -523,7 +684,12 @@ function ProjectsSection({
   const existing = passport.currentProfileVersion!.projects;
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
+  const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
+  const [repositoryUrl, setRepositoryUrl] = useState('');
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) return;
@@ -537,46 +703,92 @@ function ProjectsSection({
         startDate,
         endDate,
       })),
-      { name: name.trim(), role: role.trim() || null, url: url.trim() || null },
+      {
+        name: name.trim(),
+        role: role.trim() || null,
+        description: description.trim() || null,
+        url: url.trim() || null,
+        repositoryUrl: repositoryUrl.trim() || null,
+        startDate: monthToIso(startMonth),
+        endDate: monthToIso(endMonth),
+      },
     ]);
     setName('');
     setRole('');
+    setDescription('');
     setUrl('');
+    setRepositoryUrl('');
+    setStartMonth('');
+    setEndMonth('');
   }
+
   return (
     <SimpleRecordSection
       id="projects"
       index="05"
       title="Projects"
-      note="Show work that demonstrates capability beyond job titles."
+      note="Show what you actually built, the role you played, and when you worked on it."
       empty="No projects added yet."
       records={existing.map((item) => ({
         id: item.id,
         title: item.name,
         subtitle: item.role || 'Project',
-        meta: item.url || item.repositoryUrl || 'No link added',
+        meta: formatDateRange(item.startDate, item.endDate),
+        description: item.description ?? undefined,
       }))}
     >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Project name"
-          value={name}
-        />
-        <input
-          onChange={(event) => setRole(event.target.value)}
-          placeholder="Your role"
-          value={role}
-        />
-        <input
-          onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://project.example"
-          type="url"
-          value={url}
-        />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add project
-        </button>
+      <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
+        <div className="career-field-grid">
+          <label>
+            <span>Project name</span>
+            <input onChange={(event) => setName(event.target.value)} value={name} />
+          </label>
+          <label>
+            <span>Your role</span>
+            <input
+              onChange={(event) => setRole(event.target.value)}
+              placeholder="Full-stack developer, team lead…"
+              value={role}
+            />
+          </label>
+          <label>
+            <span>Start month</span>
+            <input onChange={(event) => setStartMonth(event.target.value)} type="month" value={startMonth} />
+          </label>
+          <label>
+            <span>End month</span>
+            <input onChange={(event) => setEndMonth(event.target.value)} type="month" value={endMonth} />
+          </label>
+          <label>
+            <span>Project URL</span>
+            <input
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://project.example"
+              type="url"
+              value={url}
+            />
+          </label>
+          <label>
+            <span>Repository URL</span>
+            <input
+              onChange={(event) => setRepositoryUrl(event.target.value)}
+              placeholder="https://github.com/..."
+              type="url"
+              value={repositoryUrl}
+            />
+          </label>
+        </div>
+        <label>
+          <span>What did you work on in this project?</span>
+          <textarea
+            maxLength={4000}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Describe what you built, your responsibilities, major features, technologies, and your contribution."
+            rows={6}
+            value={description}
+          />
+        </label>
+        <SaveButton pending={pending} label="Add project" />
       </form>
     </SimpleRecordSection>
   );
@@ -594,6 +806,7 @@ function CertificationsSection({
   const existing = passport.currentProfileVersion!.certifications;
   const [name, setName] = useState('');
   const [issuer, setIssuer] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim() || !issuer.trim()) return;
@@ -611,6 +824,7 @@ function CertificationsSection({
     setName('');
     setIssuer('');
   }
+
   return (
     <SimpleRecordSection
       id="certifications"
@@ -656,6 +870,7 @@ function LanguagesSection({
   const existing = passport.currentProfileVersion!.languages;
   const [name, setName] = useState('');
   const [proficiency, setProficiency] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) return;
@@ -666,6 +881,7 @@ function LanguagesSection({
     setName('');
     setProficiency('');
   }
+
   return (
     <SimpleRecordSection
       id="languages"
@@ -710,6 +926,7 @@ function LinksSection({
   const existing = passport.currentProfileVersion!.links;
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!label.trim() || !url.trim()) return;
@@ -720,6 +937,7 @@ function LinksSection({
     setLabel('');
     setUrl('');
   }
+
   return (
     <SimpleRecordSection
       id="links"
@@ -766,6 +984,7 @@ function LocationsSection({
   const existing = passport.currentProfileVersion!.locationPreferences;
   const [countryCode, setCountryCode] = useState('');
   const [city, setCity] = useState('');
+
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const country = countryCode.trim().toUpperCase();
@@ -788,6 +1007,7 @@ function LocationsSection({
     setCountryCode('');
     setCity('');
   }
+
   return (
     <SimpleRecordSection
       id="locations"
@@ -829,6 +1049,7 @@ function PrivacySection({
 }) {
   const [visibility, setVisibility] = useState(passport.visibility);
   const [discoverability, setDiscoverability] = useState(passport.discoverability);
+
   return (
     <section className="career-section" id="privacy">
       <SectionHeader
@@ -890,8 +1111,14 @@ function SimpleRecordSection({
   title: string;
   note: string;
   empty: string;
-  records: Array<{ id: string; title: string; subtitle: string; meta?: string }>;
-  children: React.ReactNode;
+  records: Array<{
+    id: string;
+    title: string;
+    subtitle: string;
+    meta?: string;
+    description?: string;
+  }>;
+  children: ReactNode;
 }) {
   return (
     <section className="career-section" id={id}>
@@ -903,6 +1130,7 @@ function SimpleRecordSection({
               <strong>{item.title}</strong>
               <span>{item.subtitle}</span>
               {item.meta ? <small>{item.meta}</small> : null}
+              {item.description ? <p className="career-record-description">{item.description}</p> : null}
             </article>
           ))
         ) : (
@@ -913,6 +1141,7 @@ function SimpleRecordSection({
     </section>
   );
 }
+
 function SectionHeader({ index, title, note }: { index: string; title: string; note: string }) {
   return (
     <header className="career-section-header">
@@ -924,6 +1153,7 @@ function SectionHeader({ index, title, note }: { index: string; title: string; n
     </header>
   );
 }
+
 function SaveButton({ pending, label }: { pending: boolean; label: string }) {
   return (
     <button className="primary-action" disabled={pending} type="submit">
@@ -931,6 +1161,7 @@ function SaveButton({ pending, label }: { pending: boolean; label: string }) {
     </button>
   );
 }
+
 function CareerState({ title, detail }: { title: string; detail?: string }) {
   return (
     <main className="workspace-loading">
@@ -940,6 +1171,29 @@ function CareerState({ title, detail }: { title: string; detail?: string }) {
     </main>
   );
 }
+
+function monthToIso(value: string): string | null {
+  return value ? `${value}-01T00:00:00.000Z` : null;
+}
+
+function formatDateRange(startDate: string | null, endDate: string | null, isCurrent = false): string {
+  const start = formatMonth(startDate);
+  const end = isCurrent ? 'Present' : formatMonth(endDate);
+  if (start && end) return `${start} – ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return 'Dates not specified';
+}
+
+function formatMonth(value: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(
+    date,
+  );
+}
+
 function calculateCompleteness(passport: CandidatePassportResponse | null): number {
   const profile = passport?.currentProfileVersion;
   if (!profile) return 0;
