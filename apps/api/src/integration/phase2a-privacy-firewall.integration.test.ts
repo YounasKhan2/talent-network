@@ -63,7 +63,7 @@ void test('Phase 2A privacy firewall keeps Career and Organization contexts isol
       preferredWorkModes: ['REMOTE'],
     });
 
-    await t.test('organization ownership does not grant access to another user Career Passport', async () => {
+    await t.test('Career Passport lookup is bound to the authenticated user identity', async () => {
       await assert.rejects(
         () => candidates.getPassport(ownerSignup.session.user.id),
         (error: unknown) => error instanceof NotFoundException,
@@ -115,6 +115,11 @@ void test('Phase 2A privacy firewall keeps Career and Organization contexts isol
       assert.equal(context.organizations.length, 1);
       assert.equal(context.organizations[0]?.organizationId, organization.id);
       assert.equal(context.organizations[0]?.roleKey, 'RECRUITER');
+
+      await assert.rejects(
+        () => candidates.getPassport(ownerSignup.session.user.id),
+        (error: unknown) => error instanceof NotFoundException,
+      );
     });
 
     await t.test('creating Career for an organization member preserves memberships and permissions', async () => {
