@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { parseApiEnv } from '@talent-network/config';
 import { z } from 'zod';
+import { AuthRateLimitService } from './auth-rate-limit.service.js';
 import { AuthService } from './auth.service.js';
 import {
   assertCsrf,
@@ -33,7 +34,10 @@ const credentialsSchema = z.object({
 export class AuthController {
   private readonly production = parseApiEnv().NODE_ENV === 'production';
 
-  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Inject(AuthRateLimitService) private readonly authRateLimitService: AuthRateLimitService,
+  ) {}
 
   @Post('signup')
   async signup(
@@ -42,11 +46,9 @@ export class AuthController {
     @Res({ passthrough: true }) response: ResponseLike,
   ) {
     const credentials = parseCredentials(body);
-    const result = await this.authService.signup(
-      credentials.email,
-      credentials.password,
-      sessionContextFromRequest(request),
-    );
+    const context = sessionContextFromRequest(request);
+    await this.authRateLimitService.assertSignupAllowed(credentials.email, context.ip);
+    const result = await this.authService.signup(credentials.email, credentials.password, context);
     setAuthCookies(response, result.sessionToken, this.production);
     return result.session;
   }
@@ -59,11 +61,9 @@ export class AuthController {
     @Res({ passthrough: true }) response: ResponseLike,
   ) {
     const credentials = parseCredentials(body);
-    const result = await this.authService.login(
-      credentials.email,
-      credentials.password,
-      sessionContextFromRequest(request),
-    );
+    const context = sessionContextFromRequest(request);
+    await this.authRateLimitService.assertLoginAllowed(credentials.email, context.ip);
+    const result = await this.authService.login(credentials.email, credentials.password, context);
     setAuthCookies(response, result.sessionToken, this.production);
     return result.session;
   }
