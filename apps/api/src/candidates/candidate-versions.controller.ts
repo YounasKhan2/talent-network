@@ -41,7 +41,10 @@ export class CandidateVersionsController {
   }
 }
 
-function parseOptionalPositiveInteger(value: string | undefined, field: string): number | undefined {
+function parseOptionalPositiveInteger(
+  value: string | undefined,
+  field: string,
+): number | undefined {
   if (value === undefined) return undefined;
   return parsePositiveInteger(value, field);
 }

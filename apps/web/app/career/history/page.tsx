@@ -272,7 +272,12 @@ function SnapshotView({ snapshot }: { snapshot: CandidateProfileVersionSnapshot 
 
       <SnapshotSection title="Professional links" empty={!snapshot.links.length}>
         {snapshot.links.map((item) => (
-          <SnapshotRecord href={item.url} key={item.id} subtitle={readable(item.kind)} title={item.label} />
+          <SnapshotRecord
+            href={item.url}
+            key={item.id}
+            subtitle={readable(item.kind)}
+            title={item.label}
+          />
         ))}
       </SnapshotSection>
 
@@ -292,7 +297,9 @@ function SnapshotView({ snapshot }: { snapshot: CandidateProfileVersionSnapshot 
 
       {snapshot.customSections.map((section) => (
         <SnapshotSection key={section.id} title={section.title} empty={!section.items.length}>
-          {section.description ? <p className={styles.sectionDescription}>{section.description}</p> : null}
+          {section.description ? (
+            <p className={styles.sectionDescription}>{section.description}</p>
+          ) : null}
           {section.items.map((item) => (
             <SnapshotRecord
               description={item.description}

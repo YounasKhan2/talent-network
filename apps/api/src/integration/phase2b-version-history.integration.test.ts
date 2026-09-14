@@ -7,7 +7,8 @@ import { CandidateVersionsService } from '../candidates/candidate-versions.servi
 import { CandidatesService } from '../candidates/candidates.service.js';
 
 const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error('DATABASE_URL is required for Phase 2B version-history tests.');
+if (!connectionString)
+  throw new Error('DATABASE_URL is required for Phase 2B version-history tests.');
 
 const database = createDatabaseClient(connectionString);
 
@@ -20,9 +21,13 @@ void test('Phase 2B Career Passport version history is candidate-owned and immut
   const createdCandidateIds: string[] = [];
 
   try {
-    const primary = await auth.signup(`history-primary-${runId}@integration.local`, 'IntegrationPass!2026', {
-      ip: '127.0.0.1',
-    });
+    const primary = await auth.signup(
+      `history-primary-${runId}@integration.local`,
+      'IntegrationPass!2026',
+      {
+        ip: '127.0.0.1',
+      },
+    );
     createdUserIds.push(primary.session.user.id);
     const initialized = await candidates.initialize(primary.session.user.id);
     createdCandidateIds.push(initialized.id);
@@ -79,9 +84,13 @@ void test('Phase 2B Career Passport version history is candidate-owned and immut
     });
 
     await t.test('does not expose another candidate version by version number', async () => {
-      const other = await auth.signup(`history-other-${runId}@integration.local`, 'IntegrationPass!2026', {
-        ip: '127.0.0.2',
-      });
+      const other = await auth.signup(
+        `history-other-${runId}@integration.local`,
+        'IntegrationPass!2026',
+        {
+          ip: '127.0.0.2',
+        },
+      );
       createdUserIds.push(other.session.user.id);
       const otherCandidate = await candidates.initialize(other.session.user.id);
       createdCandidateIds.push(otherCandidate.id);

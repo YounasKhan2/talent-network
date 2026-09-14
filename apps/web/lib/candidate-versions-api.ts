@@ -24,10 +24,12 @@ export type CandidateProfileVersionSnapshot = NonNullable<
   createdAt: string;
 };
 
-export function listCandidateProfileVersions(input: {
-  before?: number;
-  limit?: number;
-} = {}): Promise<CandidateProfileVersionListResponse> {
+export function listCandidateProfileVersions(
+  input: {
+    before?: number;
+    limit?: number;
+  } = {},
+): Promise<CandidateProfileVersionListResponse> {
   const query = new URLSearchParams();
   if (input.before !== undefined) query.set('before', input.before.toString());
   if (input.limit !== undefined) query.set('limit', input.limit.toString());
@@ -38,5 +40,7 @@ export function listCandidateProfileVersions(input: {
 export function getCandidateProfileVersion(
   versionNumber: number,
 ): Promise<CandidateProfileVersionSnapshot> {
-  return apiRequest<CandidateProfileVersionSnapshot>(`/candidate/passport/versions/${versionNumber}`);
+  return apiRequest<CandidateProfileVersionSnapshot>(
+    `/candidate/passport/versions/${versionNumber}`,
+  );
 }

@@ -54,7 +54,7 @@ export class CandidateVersionsService {
 
     const hasMore = versions.length > options.limit;
     const page = hasMore ? versions.slice(0, options.limit) : versions;
-    const nextCursor = hasMore ? page.at(-1)?.versionNumber ?? null : null;
+    const nextCursor = hasMore ? (page.at(-1)?.versionNumber ?? null) : null;
 
     return {
       currentProfileVersionId: candidate.currentProfileVersionId,
