@@ -324,19 +324,19 @@ No MVP implementation required yet, but avoid schema/product assumptions that bl
 
 ## Test Matrix
 
-| Scenario | Expected destination/capability | Status |
-| --- | --- | --- |
-| No Candidate, no org | onboarding | implemented |
-| Candidate only | Career | implemented |
-| One org only | employer workspace | implemented |
-| Candidate + one org | last valid context | implemented; browser revalidation pending |
-| Candidate + many orgs | switcher + last valid context | implemented; browser revalidation pending |
-| Many orgs, no Candidate | employer workspace + switcher | implemented |
-| Removed last-active org | safe fallback | implemented; browser revalidation pending |
-| Candidate accepts org invite | both contexts preserved | integration verified |
-| Org user explicitly starts Career | Candidate added, org preserved | integration verified |
-| Org user merely opens Career URL | no silent Candidate creation | browser verified |
-| Org membership vs private Career data | no implicit Candidate access | integration verified |
+| Scenario                              | Expected destination/capability | Status                                    |
+| ------------------------------------- | ------------------------------- | ----------------------------------------- |
+| No Candidate, no org                  | onboarding                      | implemented                               |
+| Candidate only                        | Career                          | implemented                               |
+| One org only                          | employer workspace              | implemented                               |
+| Candidate + one org                   | last valid context              | implemented; browser revalidation pending |
+| Candidate + many orgs                 | switcher + last valid context   | implemented; browser revalidation pending |
+| Many orgs, no Candidate               | employer workspace + switcher   | implemented                               |
+| Removed last-active org               | safe fallback                   | implemented; browser revalidation pending |
+| Candidate accepts org invite          | both contexts preserved         | integration verified                      |
+| Org user explicitly starts Career     | Candidate added, org preserved  | integration verified                      |
+| Org user merely opens Career URL      | no silent Candidate creation    | browser verified                          |
+| Org membership vs private Career data | no implicit Candidate access    | integration verified                      |
 
 ## Quality Gate
 
