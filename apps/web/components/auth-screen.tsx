@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { ApiError, login, signup } from '../lib/api';
 
 type Mode = 'login' | 'signup';
@@ -62,7 +62,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
             </p>
           </div>
 
-          <form className="auth-form" onSubmit={submit}>
+          <form className="auth-form" onSubmit={(event) => void submit(event)}>
             <label>
               <span>Email address</span>
               <input
