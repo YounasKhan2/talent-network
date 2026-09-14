@@ -145,19 +145,46 @@ function parseOverview(body: unknown): CandidateProfileOverviewInput {
   const parsed = overviewSchema.safeParse(body);
   if (!parsed.success) throw invalidPayload('INVALID_CANDIDATE_OVERVIEW', parsed.error.flatten());
 
-  const { availableFrom, ...rest } = parsed.data;
-  return {
-    ...rest,
-    ...(availableFrom !== undefined
-      ? { availableFrom: availableFrom ? new Date(availableFrom) : null }
-      : {}),
-  };
+  const input: CandidateProfileOverviewInput = {};
+  if (parsed.data.headline !== undefined) input.headline = parsed.data.headline;
+  if (parsed.data.summary !== undefined) input.summary = parsed.data.summary;
+  if (parsed.data.availabilityStatus !== undefined) {
+    input.availabilityStatus = parsed.data.availabilityStatus;
+  }
+  if (parsed.data.availableFrom !== undefined) {
+    input.availableFrom = parsed.data.availableFrom ? new Date(parsed.data.availableFrom) : null;
+  }
+  if (parsed.data.compensationCurrency !== undefined) {
+    input.compensationCurrency = parsed.data.compensationCurrency;
+  }
+  if (parsed.data.compensationMinimum !== undefined) {
+    input.compensationMinimum = parsed.data.compensationMinimum;
+  }
+  if (parsed.data.compensationTarget !== undefined) {
+    input.compensationTarget = parsed.data.compensationTarget;
+  }
+  if (parsed.data.compensationPeriod !== undefined) {
+    input.compensationPeriod = parsed.data.compensationPeriod;
+  }
+  if (parsed.data.preferredWorkModes !== undefined) {
+    input.preferredWorkModes = parsed.data.preferredWorkModes;
+  }
+  if (parsed.data.preferredEmploymentTypes !== undefined) {
+    input.preferredEmploymentTypes = parsed.data.preferredEmploymentTypes;
+  }
+  return input;
 }
 
 function parseSettings(body: unknown): CandidateSettingsInput {
   const parsed = settingsSchema.safeParse(body);
   if (!parsed.success) throw invalidPayload('INVALID_CANDIDATE_SETTINGS', parsed.error.flatten());
-  return parsed.data;
+
+  const input: CandidateSettingsInput = {};
+  if (parsed.data.visibility !== undefined) input.visibility = parsed.data.visibility;
+  if (parsed.data.discoverability !== undefined) input.discoverability = parsed.data.discoverability;
+  if (parsed.data.primaryLocale !== undefined) input.primaryLocale = parsed.data.primaryLocale;
+  if (parsed.data.timezone !== undefined) input.timezone = parsed.data.timezone;
+  return input;
 }
 
 function parseSkills(body: unknown): CandidateSkillInput[] {
