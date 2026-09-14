@@ -216,7 +216,10 @@ export class CandidatesService {
     return this.createNextVersion(userId, { links });
   }
 
-  replaceLocationPreferences(userId: string, locationPreferences: CandidateLocationPreferenceInput[]) {
+  replaceLocationPreferences(
+    userId: string,
+    locationPreferences: CandidateLocationPreferenceInput[],
+  ) {
     return this.createNextVersion(userId, { locationPreferences });
   }
 

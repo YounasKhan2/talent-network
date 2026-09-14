@@ -169,19 +169,19 @@ No MVP implementation is required yet, but future work must avoid assumptions th
 
 ## Closure test matrix
 
-| Scenario | Expected behavior | Status |
-| --- | --- | --- |
-| No Candidate, no org | onboarding | ✅ verified |
-| Candidate only | Career | ✅ verified |
-| One org only | employer workspace | ✅ verified |
-| Candidate + one org | restore last valid context | ✅ browser verified |
-| Candidate + many orgs | switcher + restore last valid context | ✅ browser verified |
-| Many orgs, no Candidate | employer workspace + switcher | ✅ verified |
-| Removed last-active org | safe authoritative fallback | ✅ browser verified |
-| Candidate accepts org invite | both contexts preserved | ✅ integration verified |
-| Org user explicitly starts Career | Candidate added, org preserved | ✅ integration verified |
-| Org user merely opens Career URL | no silent Candidate creation | ✅ browser verified |
-| Org membership vs private Career | no implicit Candidate access | ✅ integration verified |
+| Scenario                          | Expected behavior                     | Status                  |
+| --------------------------------- | ------------------------------------- | ----------------------- |
+| No Candidate, no org              | onboarding                            | ✅ verified             |
+| Candidate only                    | Career                                | ✅ verified             |
+| One org only                      | employer workspace                    | ✅ verified             |
+| Candidate + one org               | restore last valid context            | ✅ browser verified     |
+| Candidate + many orgs             | switcher + restore last valid context | ✅ browser verified     |
+| Many orgs, no Candidate           | employer workspace + switcher         | ✅ verified             |
+| Removed last-active org           | safe authoritative fallback           | ✅ browser verified     |
+| Candidate accepts org invite      | both contexts preserved               | ✅ integration verified |
+| Org user explicitly starts Career | Candidate added, org preserved        | ✅ integration verified |
+| Org user merely opens Career URL  | no silent Candidate creation          | ✅ browser verified     |
+| Org membership vs private Career  | no implicit Candidate access          | ✅ integration verified |
 
 ## Quality gate
 

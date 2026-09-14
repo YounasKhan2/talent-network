@@ -240,14 +240,22 @@ function parseOverview(body: unknown): CandidateProfileOverviewInput {
   const input: CandidateProfileOverviewInput = {};
   if (parsed.data.headline !== undefined) input.headline = parsed.data.headline;
   if (parsed.data.summary !== undefined) input.summary = parsed.data.summary;
-  if (parsed.data.availabilityStatus !== undefined) input.availabilityStatus = parsed.data.availabilityStatus;
-  if (parsed.data.availableFrom !== undefined) input.availableFrom = toDate(parsed.data.availableFrom);
-  if (parsed.data.compensationCurrency !== undefined) input.compensationCurrency = parsed.data.compensationCurrency;
-  if (parsed.data.compensationMinimum !== undefined) input.compensationMinimum = parsed.data.compensationMinimum;
-  if (parsed.data.compensationTarget !== undefined) input.compensationTarget = parsed.data.compensationTarget;
-  if (parsed.data.compensationPeriod !== undefined) input.compensationPeriod = parsed.data.compensationPeriod;
-  if (parsed.data.preferredWorkModes !== undefined) input.preferredWorkModes = parsed.data.preferredWorkModes;
-  if (parsed.data.preferredEmploymentTypes !== undefined) input.preferredEmploymentTypes = parsed.data.preferredEmploymentTypes;
+  if (parsed.data.availabilityStatus !== undefined)
+    input.availabilityStatus = parsed.data.availabilityStatus;
+  if (parsed.data.availableFrom !== undefined)
+    input.availableFrom = toDate(parsed.data.availableFrom);
+  if (parsed.data.compensationCurrency !== undefined)
+    input.compensationCurrency = parsed.data.compensationCurrency;
+  if (parsed.data.compensationMinimum !== undefined)
+    input.compensationMinimum = parsed.data.compensationMinimum;
+  if (parsed.data.compensationTarget !== undefined)
+    input.compensationTarget = parsed.data.compensationTarget;
+  if (parsed.data.compensationPeriod !== undefined)
+    input.compensationPeriod = parsed.data.compensationPeriod;
+  if (parsed.data.preferredWorkModes !== undefined)
+    input.preferredWorkModes = parsed.data.preferredWorkModes;
+  if (parsed.data.preferredEmploymentTypes !== undefined)
+    input.preferredEmploymentTypes = parsed.data.preferredEmploymentTypes;
   return input;
 }
 
@@ -257,7 +265,8 @@ function parseSettings(body: unknown): CandidateSettingsInput {
 
   const input: CandidateSettingsInput = {};
   if (parsed.data.visibility !== undefined) input.visibility = parsed.data.visibility;
-  if (parsed.data.discoverability !== undefined) input.discoverability = parsed.data.discoverability;
+  if (parsed.data.discoverability !== undefined)
+    input.discoverability = parsed.data.discoverability;
   if (parsed.data.primaryLocale !== undefined) input.primaryLocale = parsed.data.primaryLocale;
   if (parsed.data.timezone !== undefined) input.timezone = parsed.data.timezone;
   return input;
@@ -269,7 +278,8 @@ function parseSkills(body: unknown): CandidateSkillInput[] {
   const seen = new Set<string>();
   return parsed.data.skills.map((skill) => {
     const normalized = normalizeLabel(skill.name);
-    if (seen.has(normalized)) throw invalidPayload('DUPLICATE_CANDIDATE_SKILL', { skill: skill.name });
+    if (seen.has(normalized))
+      throw invalidPayload('DUPLICATE_CANDIDATE_SKILL', { skill: skill.name });
     seen.add(normalized);
     return {
       name: skill.name,
@@ -327,7 +337,8 @@ function parseProjects(body: unknown): CandidateProjectInput[] {
 
 function parseCertifications(body: unknown): CandidateCertificationInput[] {
   const parsed = certificationsPayloadSchema.safeParse(body);
-  if (!parsed.success) throw invalidPayload('INVALID_CANDIDATE_CERTIFICATIONS', parsed.error.flatten());
+  if (!parsed.success)
+    throw invalidPayload('INVALID_CANDIDATE_CERTIFICATIONS', parsed.error.flatten());
   return parsed.data.certifications.map((item) => ({
     name: item.name,
     issuer: item.issuer ?? null,
@@ -344,7 +355,8 @@ function parseLanguages(body: unknown): CandidateLanguageInput[] {
   const seen = new Set<string>();
   return parsed.data.languages.map((item) => {
     const normalized = normalizeLabel(item.name);
-    if (seen.has(normalized)) throw invalidPayload('DUPLICATE_CANDIDATE_LANGUAGE', { language: item.name });
+    if (seen.has(normalized))
+      throw invalidPayload('DUPLICATE_CANDIDATE_LANGUAGE', { language: item.name });
     seen.add(normalized);
     return { name: item.name, proficiency: item.proficiency ?? null };
   });
