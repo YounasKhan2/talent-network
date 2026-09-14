@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 2B in implementation — record management + custom sections are verified; version history is code complete / local gate and browser verification pending.**
+**Phase 2B in implementation — Career editor, custom sections, and version history are verified; evidence indicators are code complete / local gate and browser verification pending.**
 
 Phase 2 turns authentication identity into a candidate-owned, reusable professional identity that later resume parsing, matching, applications, assessments, and Career Copilot workflows can reference without mutating historical submissions.
 
@@ -34,6 +34,7 @@ The Career Passport currently includes:
 - edit / remove / reorder behavior backed by ordered replacement semantics
 - candidate-owned read-only profile version history
 - bounded version-history pagination
+- derived evidence indicators for candidate claims and supporting material
 - profile completeness guidance without hiring-rank gamification
 - PostgreSQL integration coverage for version preservation and history ownership
 
@@ -100,6 +101,39 @@ The web interaction layer deliberately uses the same replacement endpoints for a
 
 Historical versions are exposed through a candidate-only read model. The history UI is read-only and does not provide restore or mutation actions.
 
+## Evidence semantics
+
+Phase 2B introduces explicit evidence language without pretending that a URL is independent verification.
+
+```text
+DECLARED
+Candidate-provided claim with no independent supporting artifact attached.
+
+SUPPORTED
+Candidate-provided claim with a repository, project URL, credential, professional link,
+or custom-entry URL attached.
+
+VERIFIED
+Reserved for future independent verification workflows. Phase 2B does not manufacture
+verified status from profile data alone.
+```
+
+Evidence indicators are currently derived from the immutable Career Passport snapshot rather than persisted as a second source of truth. This prevents evidence state from drifting away from the underlying project, certification, link, skill, experience, or custom-entry data.
+
+Current derivation rules:
+
+- skills and experience are `DECLARED`
+- projects become `SUPPORTED` when a repository URL or project URL exists
+- certifications become `SUPPORTED` when a credential URL or credential ID exists
+- professional links are supporting evidence
+- custom-section entries become `SUPPORTED` when an evidence URL exists
+- missing supporting material is not negative evidence
+- `VERIFIED` remains zero until a real verification workflow exists
+
+Matching must preserve these levels separately. `SUPPORTED` must not be silently upgraded to `VERIFIED`, and missing evidence must not automatically reduce a candidate's eligibility score.
+
+Evidence inspection itself is read-only and must not create a new professional profile version.
+
 ## Privacy invariant
 
 Candidate visibility is separate from organization authorization.
@@ -117,7 +151,7 @@ Canonical cross-context policy:
 
 - [`../06-security/candidate-organization-privacy-firewall.md`](../06-security/candidate-organization-privacy-firewall.md)
 
-Custom sections and version history remain inside the same Candidate privacy boundary. Organization membership never grants access to them.
+Custom sections, version history, and evidence indicators remain inside the same Candidate privacy boundary. Organization membership never grants access to them.
 
 Version-history authorization always resolves from the authenticated `User` to that user's own `Candidate`, then scopes every version query by `candidateId`. The client never supplies a Candidate ID.
 
@@ -147,6 +181,8 @@ The replacement endpoints intentionally accept ordered arrays. Array order becom
 
 Version-history list reads are bounded: default page size 30, maximum 50. Descending pagination uses candidate-local `versionNumber` as the stable cursor.
 
+The Phase 2B evidence workspace derives indicators from `GET /candidate/passport`; no evidence write endpoint is introduced in this phase.
+
 ## Phase 2B validation boundaries
 
 Validation boundaries include:
@@ -164,11 +200,11 @@ Validation boundaries include:
 - positive-integer history cursors and version numbers
 - history page size capped at 50
 
-The original Phase 2B structured sections required no migration because their tables were included in the initial Phase 2 schema. Custom sections add a dedicated Phase 2B migration because they introduce two new version-owned tables. Version history itself requires no schema migration because it reads the existing immutable profile-version model.
+The original Phase 2B structured sections required no migration because their tables were included in the initial Phase 2 schema. Custom sections add a dedicated Phase 2B migration because they introduce two new version-owned tables. Version history and evidence indicators require no additional schema migration because they read the existing immutable profile-version model.
 
 ## Integration coverage
 
-The Phase 2 PostgreSQL suites now cover:
+The Phase 2 PostgreSQL suites cover:
 
 1. Candidate initialization is private by default
 2. first approved profile version is created atomically
@@ -191,7 +227,7 @@ The Phase 2 PostgreSQL suites now cover:
 19. current snapshot exposes the latest ordered state
 20. one candidate cannot fetch another candidate's version by guessing a version number
 
-The repository quality gate must be run locally before the version-history slice is marked verified.
+The Career editor and version-history browser flows are user-verified. The repository quality gate and browser pass must be rerun after the evidence-indicator slice before Phase 2B closure.
 
 ## Candidate web surface
 
@@ -200,6 +236,7 @@ Current routes:
 ```text
 /career
 /career/history
+/career/evidence
 ```
 
 The visual model remains calm, editorial, section-based, and document-like rather than an employer dashboard.
@@ -249,6 +286,17 @@ The Version History workspace provides:
 - bounded “load older versions” pagination
 - responsive/mobile layout
 
+The Evidence workspace provides:
+
+- counts for declared, supported, and verified indicators
+- per-signal evidence level
+- subject type and source type
+- plain-language explanation of why the level was assigned
+- direct links to supporting evidence where available
+- explicit warning that supporting evidence is not independent verification
+- filtering by evidence level
+- current Passport version reference
+
 As defense in depth, the Career page does not contain an implicit `initializeCandidatePassport()` fallback. If Candidate state is absent, it routes back to explicit Career onboarding. The Phase 2A layout guard remains the primary context boundary.
 
 Profile completeness remains guidance rather than a hiring score and must never be exposed as an employer ranking signal.
@@ -262,17 +310,17 @@ Edit / remove / reorder UX                       ✅ verified
 Custom sections + nested entries                 ✅ verified
 Database migration + integration coverage        ✅ verified
 Browser verification of Career editor            ✅ verified
-Profile version history + read-only inspection   ✅ code complete / gate + browser pending
+Profile version history + read-only inspection   ✅ verified
+Evidence indicators                              ✅ code complete / gate + browser pending
         ↓
-Verification/evidence indicators
-        ↓
-Formal Phase 2B closure
+Formal Phase 2B closure audit
         ↓
 Resume-import handoff into Phase 3
 ```
 
-Detailed version-history implementation notes:
+Detailed implementation notes:
 
 - [`phase-2b-version-history.md`](./phase-2b-version-history.md)
+- [`phase-2b-evidence-indicators.md`](./phase-2b-evidence-indicators.md)
 
 Do not collapse Career Passport into a resume editor. The Passport remains structured professional source data; resumes are later presentation artifacts and application-specific evidence.
