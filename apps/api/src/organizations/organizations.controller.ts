@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
@@ -22,9 +22,9 @@ const organizationIdSchema = z.string().uuid();
 @Controller('organizations')
 export class OrganizationsController {
   constructor(
-    private readonly authService: AuthService,
-    private readonly authorizationService: AuthorizationService,
-    private readonly organizationsService: OrganizationsService,
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Inject(AuthorizationService) private readonly authorizationService: AuthorizationService,
+    @Inject(OrganizationsService) private readonly organizationsService: OrganizationsService,
   ) {}
 
   @Post()
