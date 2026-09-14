@@ -74,7 +74,9 @@
 
 .menuTop {
   top: auto;
+  right: auto;
   bottom: calc(100% + 7px);
+  left: 0;
 }
 
 .account {
