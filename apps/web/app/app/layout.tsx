@@ -1,6 +1,5 @@
 'use client';
 
-import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError } from '../../lib/api';
@@ -75,9 +74,7 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
           <button
             className={styles.button}
             onClick={() =>
-              router.push(
-                (context?.hasCandidate ? '/career' : '/onboarding?intent=career') as Route,
-              )
+              router.push(context?.hasCandidate ? '/career' : '/onboarding?intent=career')
             }
             type="button"
           >
