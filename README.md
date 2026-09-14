@@ -6,22 +6,22 @@ Talent Network is a documentation-led, production-oriented employment operating 
 
 ## Project Status
 
-| Area                                   | Status              |
-| -------------------------------------- | ------------------- |
-| Product blueprint                      | ✅ Complete         |
-| Architecture baseline                  | ✅ Complete         |
-| Security / scale / data specifications | ✅ Complete         |
-| UX / information architecture          | ✅ Complete         |
-| Monorepo bootstrap                     | ✅ Complete         |
-| Engineering foundation                 | ✅ Complete         |
-| Phase 1 backend foundation             | ✅ Verified         |
-| Phase 1 authenticated web experience   | ✅ Verified         |
-| Career Passport initial foundation     | ✅ Verified         |
-| Identity / workspace context hardening | ✅ Phase 2A closed  |
-| Career Passport expansion              | 🟡 Phase 2B current |
-| Resume Intelligence                    | ⏳ Next major phase |
+| Area                                   | Status                |
+| -------------------------------------- | --------------------- |
+| Product blueprint                      | ✅ Complete           |
+| Architecture baseline                  | ✅ Complete           |
+| Security / scale / data specifications | ✅ Complete           |
+| UX / information architecture          | ✅ Complete           |
+| Monorepo bootstrap                     | ✅ Complete           |
+| Engineering foundation                 | ✅ Complete           |
+| Phase 1 backend foundation             | ✅ Verified           |
+| Phase 1 authenticated web experience   | ✅ Verified           |
+| Career Passport initial foundation     | ✅ Verified           |
+| Identity / workspace context hardening | ✅ Phase 2A closed    |
+| Career Passport expansion              | ✅ Phase 2B verified  |
+| Resume Intelligence                    | 🟡 Phase 3 current    |
 
-**Current implementation phase:** Phase 2B — Candidate Career Passport expansion.
+**Current implementation phase:** Phase 3 — Resume Intelligence.
 
 Phase 1 is closed after repository quality-gate verification plus browser-tested signup/login, organization onboarding, email verification, password recovery, invitation acceptance/revocation, multi-workspace switching, and permission-aware owner/recruiter behavior.
 
@@ -29,7 +29,9 @@ The initial Career Passport foundation is verified with database-backed integrat
 
 Phase 2A Identity & Workspace Context Hardening is closed after explicit Career activation, account-context discovery, reusable Career/Organization switching, last-active context restoration, stale-workspace fallback, mixed-context browser verification, and Candidate/Organization privacy-firewall regression coverage. A single human may safely hold a private Career identity and memberships in one or more hiring organizations without turning UI context into an authorization boundary.
 
-Phase 2B now expands the reusable Career Passport with projects, certifications, languages, links, location/preferences, richer record editing/removal/reordering, and version-history UX while preserving Phase 2A privacy boundaries.
+Phase 2B Candidate Career Passport Expansion is **CLOSED / VERIFIED** after the complete local quality gate and final browser acceptance pass. It includes canonical and custom Passport sections, ordered edit/remove/reorder behavior, immutable-style professional versions, candidate-owned version history, derived evidence indicators, the reusable Candidate Workspace shell, preserved Organization/Career context switching, and responsive navigation while maintaining the Phase 2A privacy firewall.
+
+Phase 3 now begins Resume Intelligence: secure resume upload, object storage, malware scanning, text extraction with OCR fallback, structured parsing, provenance/confidence handling, and candidate-reviewed proposed Career Passport changes. Resume parsing must never silently mutate the Career Passport.
 
 The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
 
@@ -228,5 +230,3 @@ GET /api/v1/health/ready
 ```
 
 `live` proves that the process is alive. `ready` verifies dependencies required to serve traffic, currently PostgreSQL and Redis.
-
----
