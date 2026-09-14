@@ -26,6 +26,6 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   const logger = createLogger({ service: 'worker-bootstrap' });
-  logger.fatal({ error }, 'Worker failed to start');
+  logger.fatal({ err: error }, 'Worker failed to start');
   process.exitCode = 1;
 });
