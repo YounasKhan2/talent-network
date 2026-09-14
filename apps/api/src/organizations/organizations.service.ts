@@ -1,6 +1,7 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import type { DatabaseClient } from '@talent-network/database';
 import { DATABASE_CLIENT } from '../database/database.module.js';
+import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
 
 export interface CreateOrganizationInput {
   displayName: string;
@@ -37,26 +38,22 @@ export class OrganizationsService {
           },
         });
 
-        await transaction.auditEvent.create({
-          data: {
-            organizationId: organization.id,
-            actorType: 'USER',
-            actorId: userId,
-            action: 'organization.created',
-            resourceType: 'Organization',
-            resourceId: organization.id,
-            metadata: { slug: organization.slug },
-          },
+        await writeAuditEvent(transaction, {
+          organizationId: organization.id,
+          actorType: 'USER',
+          actorId: userId,
+          action: 'organization.created',
+          resourceType: 'Organization',
+          resourceId: organization.id,
+          metadata: { slug: organization.slug },
         });
 
-        await transaction.outboxEvent.create({
-          data: {
-            organizationId: organization.id,
-            aggregateType: 'Organization',
-            aggregateId: organization.id,
-            eventType: 'organization.created',
-            payload: { organizationId: organization.id },
-          },
+        await writeOutboxEvent(transaction, {
+          organizationId: organization.id,
+          aggregateType: 'Organization',
+          aggregateId: organization.id,
+          eventType: 'organization.created',
+          payload: { organizationId: organization.id },
         });
 
         return organization;
