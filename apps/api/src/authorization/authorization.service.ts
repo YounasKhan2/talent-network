@@ -1,6 +1,15 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
-import type { Permission, SessionResponse } from '@talent-network/contracts';
+import type {
+  OrganizationMembershipSummary,
+  Permission,
+  SessionResponse,
+} from '@talent-network/contracts';
 import { AuthService } from '../auth/auth.service.js';
+
+export interface AuthorizedOrganizationContext {
+  session: SessionResponse;
+  membership: OrganizationMembershipSummary;
+}
 
 @Injectable()
 export class AuthorizationService {
@@ -11,6 +20,14 @@ export class AuthorizationService {
     organizationId: string,
     permission: Permission,
   ): Promise<SessionResponse> {
+    return (await this.authorizeOrganizationContext(sessionToken, organizationId, permission)).session;
+  }
+
+  async authorizeOrganizationContext(
+    sessionToken: string,
+    organizationId: string,
+    permission: Permission,
+  ): Promise<AuthorizedOrganizationContext> {
     const session = await this.authService.getSession(sessionToken);
     const membership = session.memberships.find(
       (candidate) => candidate.organizationId === organizationId,
@@ -20,6 +37,6 @@ export class AuthorizationService {
       throw new ForbiddenException('You do not have permission to perform this action.');
     }
 
-    return session;
+    return { session, membership };
   }
 }
