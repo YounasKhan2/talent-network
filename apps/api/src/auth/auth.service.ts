@@ -13,6 +13,7 @@ import {
 } from '@talent-network/contracts';
 import type { DatabaseClient } from '@talent-network/database';
 import { DATABASE_CLIENT } from '../database/database.module.js';
+import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
 import {
   createOpaqueToken,
   hashContextValue,
@@ -75,23 +76,19 @@ export class AuthService {
           },
         });
 
-        await transaction.auditEvent.create({
-          data: {
-            actorType: 'USER',
-            actorId: createdUser.id,
-            action: 'auth.user.created',
-            resourceType: 'User',
-            resourceId: createdUser.id,
-          },
+        await writeAuditEvent(transaction, {
+          actorType: 'USER',
+          actorId: createdUser.id,
+          action: 'auth.user.created',
+          resourceType: 'User',
+          resourceId: createdUser.id,
         });
 
-        await transaction.outboxEvent.create({
-          data: {
-            aggregateType: 'User',
-            aggregateId: createdUser.id,
-            eventType: 'identity.user.created',
-            payload: { userId: createdUser.id },
-          },
+        await writeOutboxEvent(transaction, {
+          aggregateType: 'User',
+          aggregateId: createdUser.id,
+          eventType: 'identity.user.created',
+          payload: { userId: createdUser.id },
         });
 
         return createdUser;
@@ -127,8 +124,8 @@ export class AuthService {
     const sessionToken = createOpaqueToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-    await this.database.$transaction([
-      this.database.session.create({
+    await this.database.$transaction(async (transaction) => {
+      await transaction.session.create({
         data: {
           userId: user.id,
           tokenHash: hashOpaqueToken(sessionToken),
@@ -136,17 +133,15 @@ export class AuthService {
           userAgentHash: hashContextValue(context.userAgent),
           ipHash: hashContextValue(context.ip),
         },
-      }),
-      this.database.auditEvent.create({
-        data: {
-          actorType: 'USER',
-          actorId: user.id,
-          action: 'auth.session.created',
-          resourceType: 'User',
-          resourceId: user.id,
-        },
-      }),
-    ]);
+      });
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: user.id,
+        action: 'auth.session.created',
+        resourceType: 'User',
+        resourceId: user.id,
+      });
+    });
 
     return { sessionToken, session: await this.getSession(sessionToken) };
   }
@@ -174,14 +169,12 @@ export class AuthService {
           expiresAt: new Date(now.getTime() + EMAIL_VERIFICATION_TTL_MS),
         },
       });
-      await transaction.auditEvent.create({
-        data: {
-          actorType: 'USER',
-          actorId: userId,
-          action: 'auth.email_verification.requested',
-          resourceType: 'User',
-          resourceId: userId,
-        },
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: userId,
+        action: 'auth.email_verification.requested',
+        resourceType: 'User',
+        resourceId: userId,
       });
     });
 
@@ -216,22 +209,18 @@ export class AuthService {
         where: { id: record.userId },
         data: { emailVerifiedAt: now },
       });
-      await transaction.auditEvent.create({
-        data: {
-          actorType: 'USER',
-          actorId: record.userId,
-          action: 'auth.email.verified',
-          resourceType: 'User',
-          resourceId: record.userId,
-        },
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: record.userId,
+        action: 'auth.email.verified',
+        resourceType: 'User',
+        resourceId: record.userId,
       });
-      await transaction.outboxEvent.create({
-        data: {
-          aggregateType: 'User',
-          aggregateId: record.userId,
-          eventType: 'identity.email.verified',
-          payload: { userId: record.userId },
-        },
+      await writeOutboxEvent(transaction, {
+        aggregateType: 'User',
+        aggregateId: record.userId,
+        eventType: 'identity.email.verified',
+        payload: { userId: record.userId },
       });
     });
   }
@@ -258,14 +247,12 @@ export class AuthService {
           expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
         },
       });
-      await transaction.auditEvent.create({
-        data: {
-          actorType: 'USER',
-          actorId: user.id,
-          action: 'auth.password_reset.requested',
-          resourceType: 'User',
-          resourceId: user.id,
-        },
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: user.id,
+        action: 'auth.password_reset.requested',
+        resourceType: 'User',
+        resourceId: user.id,
       });
     });
 
@@ -306,22 +293,18 @@ export class AuthService {
         where: { userId: record.userId, revokedAt: null },
         data: { revokedAt: now },
       });
-      await transaction.auditEvent.create({
-        data: {
-          actorType: 'USER',
-          actorId: record.userId,
-          action: 'auth.password.reset',
-          resourceType: 'User',
-          resourceId: record.userId,
-        },
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: record.userId,
+        action: 'auth.password.reset',
+        resourceType: 'User',
+        resourceId: record.userId,
       });
-      await transaction.outboxEvent.create({
-        data: {
-          aggregateType: 'User',
-          aggregateId: record.userId,
-          eventType: 'identity.password.reset',
-          payload: { userId: record.userId },
-        },
+      await writeOutboxEvent(transaction, {
+        aggregateType: 'User',
+        aggregateId: record.userId,
+        eventType: 'identity.password.reset',
+        payload: { userId: record.userId },
       });
     });
   }
@@ -335,21 +318,19 @@ export class AuthService {
 
     if (!session || session.revokedAt) return;
 
-    await this.database.$transaction([
-      this.database.session.update({
+    await this.database.$transaction(async (transaction) => {
+      await transaction.session.update({
         where: { id: session.id },
         data: { revokedAt: new Date() },
-      }),
-      this.database.auditEvent.create({
-        data: {
-          actorType: 'USER',
-          actorId: session.userId,
-          action: 'auth.session.revoked',
-          resourceType: 'User',
-          resourceId: session.userId,
-        },
-      }),
-    ]);
+      });
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: session.userId,
+        action: 'auth.session.revoked',
+        resourceType: 'User',
+        resourceId: session.userId,
+      });
+    });
   }
 
   async refresh(sessionToken: string, context: SessionContext): Promise<AuthResult> {
