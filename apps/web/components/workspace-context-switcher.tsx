@@ -7,9 +7,7 @@ import { rememberCareerContext, rememberOrganizationContext } from '../lib/works
 import styles from './workspace-context-switcher.module.css';
 
 type ActiveContext =
-  | { kind: 'career' }
-  | { kind: 'organization'; organizationId: string }
-  | { kind: 'hiring-setup' };
+  { kind: 'career' } | { kind: 'organization'; organizationId: string } | { kind: 'hiring-setup' };
 
 type MenuPlacement = 'top' | 'bottom';
 
@@ -81,8 +79,7 @@ export function WorkspaceContextSwitcher({
     router.push('/onboarding?intent=hire');
   }
 
-  const menuClassName =
-    menuPlacement === 'top' ? `${styles.menu} ${styles.menuTop}` : styles.menu;
+  const menuClassName = menuPlacement === 'top' ? `${styles.menu} ${styles.menuTop}` : styles.menu;
 
   return (
     <div className={styles.root} ref={rootRef}>
