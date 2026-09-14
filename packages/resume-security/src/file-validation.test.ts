@@ -15,7 +15,7 @@ function validate(bytes: Buffer, mimeType: string) {
   });
 }
 
-test('accepts a structurally plausible unencrypted PDF', () => {
+void test('accepts a structurally plausible unencrypted PDF', () => {
   const bytes = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\nstartxref\n0\n%%EOF\n', 'latin1');
   const result = validate(bytes, RESUME_PDF_MIME_TYPE);
   assert.equal(result.ok, true);
@@ -25,7 +25,7 @@ test('accepts a structurally plausible unencrypted PDF', () => {
   assert.match(result.checksumSha256, /^[a-f0-9]{64}$/);
 });
 
-test('rejects a spoofed PDF signature', () => {
+void test('rejects a spoofed PDF signature', () => {
   const bytes = Buffer.from('not-a-pdf%%EOF', 'latin1');
   const result = validate(bytes, RESUME_PDF_MIME_TYPE);
   assert.deepEqual(result, {
@@ -35,7 +35,7 @@ test('rejects a spoofed PDF signature', () => {
   });
 });
 
-test('rejects encrypted PDFs', () => {
+void test('rejects encrypted PDFs', () => {
   const bytes = Buffer.from('%PDF-1.7\n/Encrypt 4 0 R\n%%EOF', 'latin1');
   const result = validate(bytes, RESUME_PDF_MIME_TYPE);
   assert.equal(result.ok, false);
@@ -43,7 +43,7 @@ test('rejects encrypted PDFs', () => {
   assert.equal(result.code, 'ENCRYPTED_DOCUMENT');
 });
 
-test('accepts a structurally valid DOCX OOXML ZIP container', () => {
+void test('accepts a structurally valid DOCX OOXML ZIP container', () => {
   const bytes = createStoredZip(['[Content_Types].xml', 'word/document.xml']);
   const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
   assert.equal(result.ok, true);
@@ -52,7 +52,7 @@ test('accepts a structurally valid DOCX OOXML ZIP container', () => {
   assert.equal(result.detectedMimeType, RESUME_DOCX_MIME_TYPE);
 });
 
-test('rejects truncated DOCX containers even when required names are present', () => {
+void test('rejects truncated DOCX containers even when required names are present', () => {
   const valid = createStoredZip(['[Content_Types].xml', 'word/document.xml']);
   const bytes = valid.subarray(0, valid.length - 10);
   const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
@@ -61,7 +61,7 @@ test('rejects truncated DOCX containers even when required names are present', (
   assert.equal(result.code, 'CORRUPT_DOCUMENT');
 });
 
-test('rejects DOCX containers missing the Word document part', () => {
+void test('rejects DOCX containers missing the Word document part', () => {
   const bytes = createStoredZip(['[Content_Types].xml', 'custom/data.xml']);
   const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
   assert.equal(result.ok, false);
@@ -69,7 +69,7 @@ test('rejects DOCX containers missing the Word document part', () => {
   assert.equal(result.code, 'CORRUPT_DOCUMENT');
 });
 
-test('rejects encrypted ZIP entries presented as DOCX', () => {
+void test('rejects encrypted ZIP entries presented as DOCX', () => {
   const bytes = createStoredZip(['[Content_Types].xml', 'word/document.xml'], true);
   const result = validate(bytes, RESUME_DOCX_MIME_TYPE);
   assert.equal(result.ok, false);
@@ -77,7 +77,7 @@ test('rejects encrypted ZIP entries presented as DOCX', () => {
   assert.equal(result.code, 'ENCRYPTED_DOCUMENT');
 });
 
-test('rejects encrypted Office compound documents presented as DOCX', () => {
+void test('rejects encrypted Office compound documents presented as DOCX', () => {
   const bytes = Buffer.concat([
     Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]),
     Buffer.from('encrypted-office-document', 'latin1'),
@@ -88,7 +88,7 @@ test('rejects encrypted Office compound documents presented as DOCX', () => {
   assert.equal(result.code, 'ENCRYPTED_DOCUMENT');
 });
 
-test('rejects recorded-size mismatches before processing', () => {
+void test('rejects recorded-size mismatches before processing', () => {
   const bytes = Buffer.from('%PDF-1.7\n%%EOF\n', 'latin1');
   const result = validateResumeDocument({
     bytes,
