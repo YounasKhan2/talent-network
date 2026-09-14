@@ -78,38 +78,41 @@ void test('Phase 1 identity, tenancy, invitations, audit and outbox flows persis
     });
     organizationIds.push(organization.id);
 
-    await t.test('organization creation atomically establishes owner membership and events', async () => {
-      const [membership, auditEvent, outboxEvent] = await Promise.all([
-        database.organizationMember.findUnique({
-          where: {
-            organizationId_userId: {
-              organizationId: organization.id,
-              userId: ownerSignup.session.user.id,
+    await t.test(
+      'organization creation atomically establishes owner membership and events',
+      async () => {
+        const [membership, auditEvent, outboxEvent] = await Promise.all([
+          database.organizationMember.findUnique({
+            where: {
+              organizationId_userId: {
+                organizationId: organization.id,
+                userId: ownerSignup.session.user.id,
+              },
             },
-          },
-        }),
-        database.auditEvent.findFirst({
-          where: {
-            organizationId: organization.id,
-            action: 'organization.created',
-            resourceId: organization.id,
-          },
-        }),
-        database.outboxEvent.findFirst({
-          where: {
-            organizationId: organization.id,
-            aggregateType: 'Organization',
-            aggregateId: organization.id,
-            eventType: 'organization.created',
-          },
-        }),
-      ]);
+          }),
+          database.auditEvent.findFirst({
+            where: {
+              organizationId: organization.id,
+              action: 'organization.created',
+              resourceId: organization.id,
+            },
+          }),
+          database.outboxEvent.findFirst({
+            where: {
+              organizationId: organization.id,
+              aggregateType: 'Organization',
+              aggregateId: organization.id,
+              eventType: 'organization.created',
+            },
+          }),
+        ]);
 
-      assert.equal(membership?.roleKey, 'ORG_OWNER');
-      assert.equal(membership?.status, 'ACTIVE');
-      assert.ok(auditEvent);
-      assert.ok(outboxEvent);
-    });
+        assert.equal(membership?.roleKey, 'ORG_OWNER');
+        assert.equal(membership?.status, 'ACTIVE');
+        assert.ok(auditEvent);
+        assert.ok(outboxEvent);
+      },
+    );
 
     const recruiterSignup = await auth.signup(recruiterEmail, password, {});
     userIds.push(recruiterSignup.session.user.id);
@@ -126,41 +129,44 @@ void test('Phase 1 identity, tenancy, invitations, audit and outbox flows persis
       deliveredInvitationToken,
     );
 
-    await t.test('invitation acceptance creates membership, verifies email and emits events', async () => {
-      assert.equal(accepted.organization.id, organization.id);
-      assert.equal(accepted.roleKey, 'RECRUITER');
+    await t.test(
+      'invitation acceptance creates membership, verifies email and emits events',
+      async () => {
+        assert.equal(accepted.organization.id, organization.id);
+        assert.equal(accepted.roleKey, 'RECRUITER');
 
-      const [recruiter, membership, auditEvent, outboxEvent] = await Promise.all([
-        database.user.findUnique({ where: { id: recruiterSignup.session.user.id } }),
-        database.organizationMember.findUnique({
-          where: {
-            organizationId_userId: {
-              organizationId: organization.id,
-              userId: recruiterSignup.session.user.id,
+        const [recruiter, membership, auditEvent, outboxEvent] = await Promise.all([
+          database.user.findUnique({ where: { id: recruiterSignup.session.user.id } }),
+          database.organizationMember.findUnique({
+            where: {
+              organizationId_userId: {
+                organizationId: organization.id,
+                userId: recruiterSignup.session.user.id,
+              },
             },
-          },
-        }),
-        database.auditEvent.findFirst({
-          where: {
-            organizationId: organization.id,
-            actorId: recruiterSignup.session.user.id,
-            action: 'organization.invitation.accepted',
-          },
-        }),
-        database.outboxEvent.findFirst({
-          where: {
-            organizationId: organization.id,
-            eventType: 'organization.member.joined',
-          },
-        }),
-      ]);
+          }),
+          database.auditEvent.findFirst({
+            where: {
+              organizationId: organization.id,
+              actorId: recruiterSignup.session.user.id,
+              action: 'organization.invitation.accepted',
+            },
+          }),
+          database.outboxEvent.findFirst({
+            where: {
+              organizationId: organization.id,
+              eventType: 'organization.member.joined',
+            },
+          }),
+        ]);
 
-      assert.ok(recruiter?.emailVerifiedAt);
-      assert.equal(membership?.roleKey, 'RECRUITER');
-      assert.equal(membership?.status, 'ACTIVE');
-      assert.ok(auditEvent);
-      assert.ok(outboxEvent);
-    });
+        assert.ok(recruiter?.emailVerifiedAt);
+        assert.equal(membership?.roleKey, 'RECRUITER');
+        assert.equal(membership?.status, 'ACTIVE');
+        assert.ok(auditEvent);
+        assert.ok(outboxEvent);
+      },
+    );
 
     await t.test('permission bundles enforce tenant-aware recruiter boundaries', async () => {
       await authorization.authorizeOrganization(
@@ -203,56 +209,70 @@ void test('Phase 1 identity, tenancy, invitations, audit and outbox flows persis
         userAgent: 'phase1-integration-rotated',
       });
 
-      await assert.rejects(() => auth.getSession(recruiterSignup.sessionToken), UnauthorizedException);
+      await assert.rejects(
+        () => auth.getSession(recruiterSignup.sessionToken),
+        UnauthorizedException,
+      );
       const current = await auth.getSession(rotated.sessionToken);
       assert.equal(current.user.id, recruiterSignup.session.user.id);
     });
 
-    await t.test('password reset revokes active sessions and accepts the new password', async () => {
-      const resetDelivery = await auth.requestPasswordReset(ownerEmail);
-      assert.ok(resetDelivery);
+    await t.test(
+      'password reset revokes active sessions and accepts the new password',
+      async () => {
+        const resetDelivery = await auth.requestPasswordReset(ownerEmail);
+        assert.ok(resetDelivery);
 
-      await auth.resetPassword(resetDelivery.token, nextPassword);
-      await assert.rejects(() => auth.getSession(ownerSignup.sessionToken), UnauthorizedException);
+        await auth.resetPassword(resetDelivery.token, nextPassword);
+        await assert.rejects(
+          () => auth.getSession(ownerSignup.sessionToken),
+          UnauthorizedException,
+        );
 
-      const login = await auth.login(ownerEmail, nextPassword, {});
-      assert.equal(login.session.user.id, ownerSignup.session.user.id);
-    });
+        const login = await auth.login(ownerEmail, nextPassword, {});
+        assert.equal(login.session.user.id, ownerSignup.session.user.id);
+      },
+    );
 
-    await t.test('transactional event writers roll back with a failed domain transaction', async () => {
-      const resourceId = randomUUID();
+    await t.test(
+      'transactional event writers roll back with a failed domain transaction',
+      async () => {
+        const resourceId = randomUUID();
 
-      await assert.rejects(
-        () =>
-          database.$transaction(async (transaction) => {
-            await writeAuditEvent(transaction, {
-              actorType: 'USER',
-              actorId: ownerSignup.session.user.id,
-              action: 'integration.rollback.audit',
-              resourceType: 'IntegrationProbe',
-              resourceId,
-            });
-            await writeOutboxEvent(transaction, {
-              aggregateType: 'IntegrationProbe',
-              aggregateId: resourceId,
-              eventType: 'integration.rollback.outbox',
-              payload: { resourceId },
-            });
-            throw new Error('force rollback');
+        await assert.rejects(
+          () =>
+            database.$transaction(async (transaction) => {
+              await writeAuditEvent(transaction, {
+                actorType: 'USER',
+                actorId: ownerSignup.session.user.id,
+                action: 'integration.rollback.audit',
+                resourceType: 'IntegrationProbe',
+                resourceId,
+              });
+              await writeOutboxEvent(transaction, {
+                aggregateType: 'IntegrationProbe',
+                aggregateId: resourceId,
+                eventType: 'integration.rollback.outbox',
+                payload: { resourceId },
+              });
+              throw new Error('force rollback');
+            }),
+          /force rollback/,
+        );
+
+        const [auditCount, outboxCount] = await Promise.all([
+          database.auditEvent.count({
+            where: { resourceId, action: 'integration.rollback.audit' },
           }),
-        /force rollback/,
-      );
+          database.outboxEvent.count({
+            where: { aggregateId: resourceId, eventType: 'integration.rollback.outbox' },
+          }),
+        ]);
 
-      const [auditCount, outboxCount] = await Promise.all([
-        database.auditEvent.count({ where: { resourceId, action: 'integration.rollback.audit' } }),
-        database.outboxEvent.count({
-          where: { aggregateId: resourceId, eventType: 'integration.rollback.outbox' },
-        }),
-      ]);
-
-      assert.equal(auditCount, 0);
-      assert.equal(outboxCount, 0);
-    });
+        assert.equal(auditCount, 0);
+        assert.equal(outboxCount, 0);
+      },
+    );
   } finally {
     if (userIds.length || organizationIds.length) {
       await database.auditEvent.deleteMany({
