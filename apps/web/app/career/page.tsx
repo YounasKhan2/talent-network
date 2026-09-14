@@ -66,8 +66,10 @@ export default function CareerPassportPage() {
 
   if (loadState === 'loading') return <CareerState title="Loading your Career Passport…" />;
   if (loadState === 'error' || !passport?.currentProfileVersion) {
-    return (
-      <CareerState title="We could not load your Career Passport." detail={error ?? undefined} />
+    return error ? (
+      <CareerState title="We could not load your Career Passport." detail={error} />
+    ) : (
+      <CareerState title="We could not load your Career Passport." />
     );
   }
 
@@ -209,13 +211,11 @@ function OverviewSection({
   const [currency, setCurrency] = useState(profile.compensationCurrency ?? 'USD');
   const [target, setTarget] = useState(profile.compensationTarget?.toString() ?? '');
   const [workModes, setWorkModes] = useState<CandidateWorkMode[]>(profile.preferredWorkModes);
-
   function toggleWorkMode(mode: CandidateWorkMode) {
     setWorkModes((current) =>
       current.includes(mode) ? current.filter((item) => item !== mode) : [...current, mode],
     );
   }
-
   return (
     <section className="career-section" id="overview">
       <SectionHeader
@@ -322,7 +322,6 @@ function ExperienceSection({
   const existing = passport.currentProfileVersion!.employments;
   const [companyName, setCompanyName] = useState('');
   const [title, setTitle] = useState('');
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!companyName.trim() || !title.trim()) return;
@@ -355,7 +354,6 @@ function ExperienceSection({
     setCompanyName('');
     setTitle('');
   }
-
   return (
     <SimpleRecordSection
       id="experience"
@@ -401,7 +399,6 @@ function EducationSection({
   const existing = passport.currentProfileVersion!.education;
   const [institutionName, setInstitutionName] = useState('');
   const [degree, setDegree] = useState('');
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!institutionName.trim()) return;
@@ -432,7 +429,6 @@ function EducationSection({
     setInstitutionName('');
     setDegree('');
   }
-
   return (
     <SimpleRecordSection
       id="education"
@@ -528,7 +524,6 @@ function ProjectsSection({
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [url, setUrl] = useState('');
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) return;
@@ -548,7 +543,6 @@ function ProjectsSection({
     setRole('');
     setUrl('');
   }
-
   return (
     <SimpleRecordSection
       id="projects"
@@ -576,7 +570,7 @@ function ProjectsSection({
         />
         <input
           onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://…"
+          placeholder="https://project.example"
           type="url"
           value={url}
         />
@@ -600,10 +594,9 @@ function CertificationsSection({
   const existing = passport.currentProfileVersion!.certifications;
   const [name, setName] = useState('');
   const [issuer, setIssuer] = useState('');
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !issuer.trim()) return;
     await onSave([
       ...existing.map(({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt }) => ({
         name,
@@ -613,23 +606,22 @@ function CertificationsSection({
         issuedAt,
         expiresAt,
       })),
-      { name: name.trim(), issuer: issuer.trim() || null },
+      { name: name.trim(), issuer: issuer.trim() },
     ]);
     setName('');
     setIssuer('');
   }
-
   return (
     <SimpleRecordSection
       id="certifications"
       index="06"
       title="Certifications"
-      note="Keep credentials structured so later verification can attach evidence without rewriting history."
+      note="Credentials stay structured so verification can attach later."
       empty="No certifications added yet."
       records={existing.map((item) => ({
         id: item.id,
         title: item.name,
-        subtitle: item.issuer || 'Issuer not specified',
+        subtitle: item.issuer,
         meta: item.credentialId || 'Credential ID not added',
       }))}
     >
@@ -664,7 +656,6 @@ function LanguagesSection({
   const existing = passport.currentProfileVersion!.languages;
   const [name, setName] = useState('');
   const [proficiency, setProficiency] = useState('');
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) return;
@@ -675,13 +666,12 @@ function LanguagesSection({
     setName('');
     setProficiency('');
   }
-
   return (
     <SimpleRecordSection
       id="languages"
       index="07"
       title="Languages"
-      note="Language ability is professional context, not an automatic hiring requirement."
+      note="Language capability is useful context, not a universal hiring requirement."
       empty="No languages added yet."
       records={existing.map((item) => ({
         id: item.id,
@@ -697,7 +687,7 @@ function LanguagesSection({
         />
         <input
           onChange={(event) => setProficiency(event.target.value)}
-          placeholder="Proficiency"
+          placeholder="Professional, native…"
           value={proficiency}
         />
         <button className="compact-action" disabled={pending} type="submit">
@@ -720,48 +710,39 @@ function LinksSection({
   const existing = passport.currentProfileVersion!.links;
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
-  const [kind, setKind] = useState('');
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!label.trim() || !url.trim()) return;
     await onSave([
-      ...existing.map(({ label, url, kind }) => ({ label, url, kind })),
-      { label: label.trim(), url: url.trim(), kind: kind.trim() || null },
+      ...existing.map(({ kind, label, url }) => ({ kind, label, url })),
+      { kind: 'OTHER', label: label.trim(), url: url.trim() },
     ]);
     setLabel('');
     setUrl('');
-    setKind('');
   }
-
   return (
     <SimpleRecordSection
       id="links"
       index="08"
       title="Professional links"
-      note="Portfolio, GitHub, LinkedIn and other evidence stay reusable across applications."
+      note="Keep portfolio, GitHub, LinkedIn, and other evidence attached to one identity."
       empty="No professional links added yet."
       records={existing.map((item) => ({
         id: item.id,
-        title: item.label,
-        subtitle: item.kind || 'Link',
+        title: item.label || item.kind,
+        subtitle: item.kind,
         meta: item.url,
       }))}
     >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
         <input
           onChange={(event) => setLabel(event.target.value)}
-          placeholder="Label"
+          placeholder="Portfolio, GitHub…"
           value={label}
         />
         <input
-          onChange={(event) => setKind(event.target.value)}
-          placeholder="Kind, e.g. GitHub"
-          value={kind}
-        />
-        <input
           onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://…"
+          placeholder="https://"
           type="url"
           value={url}
         />
@@ -783,57 +764,40 @@ function LocationsSection({
   onSave: (input: Parameters<typeof replaceCandidateLocations>[0]) => Promise<void>;
 }) {
   const existing = passport.currentProfileVersion!.locationPreferences;
-  const [label, setLabel] = useState('');
   const [countryCode, setCountryCode] = useState('');
   const [city, setCity] = useState('');
-  const [remoteOnly, setRemoteOnly] = useState(false);
-
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!label.trim()) return;
+    const country = countryCode.trim().toUpperCase();
+    if (country.length !== 2) return;
     await onSave([
-      ...existing.map(({ label, countryCode, region, city, remoteOnly }) => ({
-        label,
+      ...existing.map(({ countryCode, region, city, remoteOnly, relocationOpen }) => ({
         countryCode,
         region,
         city,
         remoteOnly,
+        relocationOpen,
       })),
-      {
-        label: label.trim(),
-        countryCode: countryCode.trim().toUpperCase() || null,
-        city: city.trim() || null,
-        remoteOnly,
-      },
+      { countryCode: country, city: city.trim() || null, remoteOnly: false, relocationOpen: false },
     ]);
-    setLabel('');
     setCountryCode('');
     setCity('');
-    setRemoteOnly(false);
   }
-
   return (
     <SimpleRecordSection
       id="locations"
       index="09"
       title="Location preferences"
-      note="Describe where you can work without exposing more location detail than necessary."
+      note="Location and mobility preferences stay explicit instead of being inferred."
       empty="No location preferences added yet."
       records={existing.map((item) => ({
         id: item.id,
-        title: item.label,
-        subtitle:
-          [item.city, item.region, item.countryCode].filter(Boolean).join(', ') ||
-          'Location not specified',
-        meta: item.remoteOnly ? 'Remote only' : 'Open to local/hybrid roles',
+        title: [item.city, item.region, item.countryCode].filter(Boolean).join(', '),
+        subtitle: item.remoteOnly ? 'Remote only' : 'Location preference',
+        meta: item.relocationOpen ? 'Open to relocation' : 'Relocation not selected',
       }))}
     >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setLabel(event.target.value)}
-          placeholder="Preference label"
-          value={label}
-        />
         <input
           maxLength={2}
           onChange={(event) => setCountryCode(event.target.value.toUpperCase())}
@@ -841,14 +805,6 @@ function LocationsSection({
           value={countryCode}
         />
         <input onChange={(event) => setCity(event.target.value)} placeholder="City" value={city} />
-        <label>
-          <input
-            checked={remoteOnly}
-            onChange={(event) => setRemoteOnly(event.target.checked)}
-            type="checkbox"
-          />{' '}
-          Remote only
-        </label>
         <button className="compact-action" disabled={pending} type="submit">
           Add location
         </button>
@@ -868,7 +824,6 @@ function PrivacySection({
 }) {
   const [visibility, setVisibility] = useState(passport.visibility);
   const [discoverability, setDiscoverability] = useState(passport.discoverability);
-
   return (
     <section className="career-section" id="privacy">
       <SectionHeader
@@ -907,9 +862,8 @@ function PrivacySection({
           </label>
         </div>
         <p className="career-privacy-note">
-          Joining an organization never gives that organization direct access to this private Career
-          workspace. Employers receive only information intentionally shared through allowed product
-          flows.
+          Your career identity is personal. Joining a company workspace never gives that company
+          access to your private career activity.
         </p>
         <SaveButton pending={pending} label="Save privacy settings" />
       </form>
@@ -931,7 +885,7 @@ function SimpleRecordSection({
   title: string;
   note: string;
   empty: string;
-  records: Array<{ id: string; title: string; subtitle?: string; meta?: string }>;
+  records: Array<{ id: string; title: string; subtitle: string; meta?: string }>;
   children: React.ReactNode;
 }) {
   return (
@@ -939,11 +893,11 @@ function SimpleRecordSection({
       <SectionHeader index={index} title={title} note={note} />
       <div className="career-record-list">
         {records.length ? (
-          records.map((record) => (
-            <article key={record.id}>
-              <strong>{record.title}</strong>
-              {record.subtitle ? <span>{record.subtitle}</span> : null}
-              {record.meta ? <small>{record.meta}</small> : null}
+          records.map((item) => (
+            <article key={item.id}>
+              <strong>{item.title}</strong>
+              <span>{item.subtitle}</span>
+              {item.meta ? <small>{item.meta}</small> : null}
             </article>
           ))
         ) : (
@@ -954,15 +908,6 @@ function SimpleRecordSection({
     </section>
   );
 }
-
-function SaveButton({ pending, label }: { pending: boolean; label: string }) {
-  return (
-    <button className="primary-action" disabled={pending} type="submit">
-      {pending ? 'Saving…' : label}
-    </button>
-  );
-}
-
 function SectionHeader({ index, title, note }: { index: string; title: string; note: string }) {
   return (
     <header className="career-section-header">
@@ -974,7 +919,13 @@ function SectionHeader({ index, title, note }: { index: string; title: string; n
     </header>
   );
 }
-
+function SaveButton({ pending, label }: { pending: boolean; label: string }) {
+  return (
+    <button className="primary-action" disabled={pending} type="submit">
+      {pending ? 'Saving…' : label}
+    </button>
+  );
+}
 function CareerState({ title, detail }: { title: string; detail?: string }) {
   return (
     <main className="workspace-loading">
@@ -984,7 +935,6 @@ function CareerState({ title, detail }: { title: string; detail?: string }) {
     </main>
   );
 }
-
 function calculateCompleteness(passport: CandidatePassportResponse | null): number {
   const profile = passport?.currentProfileVersion;
   if (!profile) return 0;
@@ -995,13 +945,10 @@ function calculateCompleteness(passport: CandidatePassportResponse | null): numb
     profile.education.length > 0,
     profile.skills.length > 0,
     profile.projects.length > 0,
-    profile.certifications.length > 0,
-    profile.languages.length > 0,
     profile.links.length > 0,
     profile.locationPreferences.length > 0,
     profile.preferredWorkModes.length > 0,
     Boolean(profile.availabilityStatus),
-    Boolean(profile.compensationTarget),
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
