@@ -48,9 +48,10 @@ void test('Phase 2B Career Passport version history is candidate-owned and immut
       assert.equal(firstPage.versions[0]?.isCurrent, true);
       assert.equal(firstPage.currentProfileVersionId, firstPage.versions[0]?.id);
       assert.equal(firstPage.nextCursor, 2);
+      assert.notEqual(firstPage.nextCursor, null);
 
       const secondPage = await versions.list(primary.session.user.id, {
-        beforeVersionNumber: firstPage.nextCursor ?? undefined,
+        beforeVersionNumber: firstPage.nextCursor as number,
         limit: 2,
       });
       assert.deepEqual(
