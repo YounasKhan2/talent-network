@@ -8,6 +8,11 @@ import {
 
 export const MAX_RESUME_SIZE_BYTES = 10 * 1024 * 1024;
 
+const SECURITY_RETRYABLE_FAILURE_CODES = [
+  'RESUME_OBJECT_READ_FAILED',
+  'MALWARE_SCANNER_UNAVAILABLE',
+] as const;
+
 export interface ResumeSecurityProcessorDependencies {
   database: DatabaseClient;
   storage: S3Client;
@@ -15,16 +20,31 @@ export interface ResumeSecurityProcessorDependencies {
   scanner: MalwareScanner;
 }
 
+export interface ResumeSecurityExecutionContext {
+  finalAttempt?: boolean;
+}
+
 export async function processResumeSecurityJob(
   input: ResumeSecurityJobData,
   dependencies: ResumeSecurityProcessorDependencies,
+  execution: ResumeSecurityExecutionContext = {},
 ): Promise<void> {
   const { database, storage, bucket, scanner } = dependencies;
   const claimed = await database.resumeVersion.updateMany({
-    where: { id: input.resumeVersionId, processingState: 'UPLOADED' },
+    where: {
+      id: input.resumeVersionId,
+      OR: [
+        { processingState: 'UPLOADED' },
+        {
+          processingState: 'FAILED_RETRYABLE',
+          failureCode: { in: [...SECURITY_RETRYABLE_FAILURE_CODES] },
+        },
+      ],
+    },
     data: {
       processingState: 'VALIDATING',
       failureCode: null,
+      failureMetadata: null,
     },
   });
 
@@ -67,10 +87,16 @@ export async function processResumeSecurityJob(
   try {
     bytes = await readPrivateObject(storage, bucket, version.objectKey);
   } catch (error: unknown) {
-    await markRetryable(database, version.id, 'RESUME_OBJECT_READ_FAILED', {
-      stage: 'VALIDATING',
-      reason: safeErrorMessage(error),
-    });
+    await markProcessingFailure(
+      database,
+      version,
+      'RESUME_OBJECT_READ_FAILED',
+      {
+        stage: 'VALIDATING',
+        reason: safeErrorMessage(error),
+      },
+      execution.finalAttempt === true,
+    );
     throw error;
   }
 
@@ -96,17 +122,24 @@ export async function processResumeSecurityJob(
       processingState: 'SCANNING',
       checksumSha256: validation.checksumSha256,
       failureCode: null,
+      failureMetadata: null,
     },
   });
 
   const scan = await scanner.scan(bytes);
   if (scan.status === 'ERROR') {
-    await markRetryable(database, version.id, 'MALWARE_SCANNER_UNAVAILABLE', {
-      stage: 'SCANNING',
-      engine: scan.engine,
-      engineVersion: scan.engineVersion,
-      durationMs: scan.durationMs,
-    });
+    await markProcessingFailure(
+      database,
+      version,
+      'MALWARE_SCANNER_UNAVAILABLE',
+      {
+        stage: 'SCANNING',
+        engine: scan.engine,
+        engineVersion: scan.engineVersion,
+        durationMs: scan.durationMs,
+      },
+      execution.finalAttempt === true,
+    );
     throw new Error('Malware scanner failed to produce a trustworthy result.');
   }
 
@@ -127,21 +160,7 @@ export async function processResumeSecurityJob(
       data: {
         processingState: 'EXTRACTING',
         failureCode: null,
-        failureMetadata: {
-          security: {
-            validation: {
-              detectedMimeType: validation.detectedMimeType,
-              documentKind: validation.kind,
-              checksumSha256: validation.checksumSha256,
-            },
-            malwareScan: {
-              engine: scan.engine,
-              engineVersion: scan.engineVersion,
-              status: scan.status,
-              durationMs: scan.durationMs,
-            },
-          },
-        },
+        failureMetadata: null,
       },
     });
 
@@ -154,8 +173,12 @@ export async function processResumeSecurityJob(
         metadata: {
           resumeId: version.resumeId,
           processingPipelineVersion: version.processingPipelineVersion,
+          detectedMimeType: validation.detectedMimeType,
+          documentKind: validation.kind,
+          checksumSha256: validation.checksumSha256,
           scannerEngine: scan.engine,
           scannerEngineVersion: scan.engineVersion,
+          scanDurationMs: scan.durationMs,
         },
       },
     });
@@ -224,15 +247,51 @@ async function rejectResume(
   });
 }
 
-async function markRetryable(
+async function markProcessingFailure(
   database: DatabaseClient,
-  resumeVersionId: string,
+  version: { id: string; resumeId: string; processingPipelineVersion: string },
   failureCode: string,
   failureMetadata: Record<string, unknown>,
+  finalAttempt: boolean,
 ): Promise<void> {
-  await database.resumeVersion.update({
-    where: { id: resumeVersionId },
-    data: { processingState: 'FAILED_RETRYABLE', failureCode, failureMetadata },
+  if (!finalAttempt) {
+    await database.resumeVersion.update({
+      where: { id: version.id },
+      data: { processingState: 'FAILED_RETRYABLE', failureCode, failureMetadata },
+    });
+    return;
+  }
+
+  await database.$transaction(async (transaction) => {
+    await transaction.resumeVersion.update({
+      where: { id: version.id },
+      data: { processingState: 'FAILED_TERMINAL', failureCode, failureMetadata },
+    });
+    await transaction.auditEvent.create({
+      data: {
+        actorType: 'SYSTEM',
+        action: 'candidate.resume.security_failed_terminal',
+        resourceType: 'ResumeVersion',
+        resourceId: version.id,
+        metadata: {
+          resumeId: version.resumeId,
+          failureCode,
+          processingPipelineVersion: version.processingPipelineVersion,
+        },
+      },
+    });
+    await transaction.outboxEvent.create({
+      data: {
+        aggregateType: 'ResumeVersion',
+        aggregateId: version.id,
+        eventType: 'candidate.resume.security_failed_terminal',
+        payload: {
+          resumeId: version.resumeId,
+          resumeVersionId: version.id,
+          failureCode,
+        },
+      },
+    });
   });
 }
 
