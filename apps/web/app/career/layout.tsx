@@ -11,21 +11,9 @@ import styles from './context-bar.module.css';
 type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
 
 const CAREER_NAVIGATION = [
-  {
-    href: '/career',
-    label: 'Career Passport',
-    description: 'Your reusable professional identity',
-  },
-  {
-    href: '/career/evidence',
-    label: 'Evidence',
-    description: 'Declared and supported signals',
-  },
-  {
-    href: '/career/history',
-    label: 'Version history',
-    description: 'Read-only Passport snapshots',
-  },
+  { href: '/career', label: 'Career Passport' },
+  { href: '/career/evidence', label: 'Evidence' },
+  { href: '/career/history', label: 'Version history' },
 ] as const;
 
 export default function CareerWorkspaceLayout({ children }: { children: ReactNode }) {
@@ -93,64 +81,37 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
   return (
     <div className={styles.workspace}>
       <aside className={styles.sidebar} aria-label="Candidate workspace navigation">
-        <div className={styles.sidebarTop}>
-          <Link className={styles.brand} href="/career" aria-label="Talent Network Career">
-            <span className={styles.brandMark}>TN</span>
-            <span>
-              <strong>Talent Network</strong>
-              <small>Personal workspace</small>
-            </span>
-          </Link>
+        <Link className={styles.brandMark} href="/career" aria-label="Talent Network Career">
+          TN
+        </Link>
 
-          <div className={styles.navGroup}>
-            <p className={styles.navLabel}>Career</p>
-            <nav className={styles.navigation}>
-              {CAREER_NAVIGATION.map((item) => {
-                const active =
-                  item.href === '/career' ? pathname === '/career' : pathname.startsWith(item.href);
-
-                return (
-                  <Link
-                    aria-current={active ? 'page' : undefined}
-                    className={active ? styles.navItemActive : styles.navItem}
-                    href={item.href}
-                    key={item.href}
-                  >
-                    <span>{item.label}</span>
-                    <small>{item.description}</small>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+        <div className={styles.workspaceLabel}>
+          <span>Workspace</span>
+          <strong>Career</strong>
         </div>
 
+        <nav className={styles.navigation}>
+          {CAREER_NAVIGATION.map((item) => {
+            const active = item.href === '/career' ? pathname === '/career' : pathname.startsWith(item.href);
+            return (
+              <Link
+                aria-current={active ? 'page' : undefined}
+                className={active ? styles.navItemActive : styles.navItem}
+                href={item.href}
+                key={item.href}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
         <div className={styles.sidebarFooter}>
-          <div className={styles.nextModule}>
-            <span>Next module</span>
-            <strong>Resume Intelligence</strong>
-            <small>Activates after Phase 2B closes.</small>
-          </div>
           <WorkspaceContextSwitcher activeContext={{ kind: 'career' }} contexts={contexts} />
         </div>
       </aside>
 
-      <div className={styles.stage}>
-        <header className={styles.contextBar}>
-          <div>
-            <span>Candidate workspace</span>
-            <strong>{activePageLabel(pathname)}</strong>
-          </div>
-          <span className={styles.privacyNote}>Private by default · candidate controlled</span>
-        </header>
-        <div className={styles.content}>{children}</div>
-      </div>
+      <div className={styles.stage}>{children}</div>
     </div>
   );
-}
-
-function activePageLabel(pathname: string): string {
-  if (pathname.startsWith('/career/evidence')) return 'Evidence';
-  if (pathname.startsWith('/career/history')) return 'Version history';
-  return 'Career Passport';
 }
