@@ -69,8 +69,10 @@ export default function CareerPassportPage() {
   }
 
   if (loadState === 'error' || !passport?.currentProfileVersion) {
-    return (
-      <CareerState title="We could not load your Career Passport." detail={error ?? undefined} />
+    return error ? (
+      <CareerState title="We could not load your Career Passport." detail={error} />
+    ) : (
+      <CareerState title="We could not load your Career Passport." />
     );
   }
 
