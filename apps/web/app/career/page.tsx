@@ -621,7 +621,7 @@ function CertificationsSection({
       records={existing.map((item) => ({
         id: item.id,
         title: item.name,
-        subtitle: item.issuer,
+        subtitle: item.issuer ?? 'Issuer not specified',
         meta: item.credentialId || 'Credential ID not added',
       }))}
     >
@@ -729,8 +729,8 @@ function LinksSection({
       empty="No professional links added yet."
       records={existing.map((item) => ({
         id: item.id,
-        title: item.label || item.kind,
-        subtitle: item.kind,
+        title: item.label || item.kind || 'Professional link',
+        subtitle: item.kind ?? 'Professional link',
         meta: item.url,
       }))}
     >
@@ -771,14 +771,19 @@ function LocationsSection({
     const country = countryCode.trim().toUpperCase();
     if (country.length !== 2) return;
     await onSave([
-      ...existing.map(({ countryCode, region, city, remoteOnly, relocationOpen }) => ({
+      ...existing.map(({ label, countryCode, region, city, remoteOnly }) => ({
+        label,
         countryCode,
         region,
         city,
         remoteOnly,
-        relocationOpen,
       })),
-      { countryCode: country, city: city.trim() || null, remoteOnly: false, relocationOpen: false },
+      {
+        label: city.trim() ? `${city.trim()}, ${country}` : country,
+        countryCode: country,
+        city: city.trim() || null,
+        remoteOnly: false,
+      },
     ]);
     setCountryCode('');
     setCity('');
@@ -794,7 +799,7 @@ function LocationsSection({
         id: item.id,
         title: [item.city, item.region, item.countryCode].filter(Boolean).join(', '),
         subtitle: item.remoteOnly ? 'Remote only' : 'Location preference',
-        meta: item.relocationOpen ? 'Open to relocation' : 'Relocation not selected',
+        meta: item.remoteOnly ? 'Remote only' : 'Location preference',
       }))}
     >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
