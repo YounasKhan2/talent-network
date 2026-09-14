@@ -74,70 +74,79 @@ void test('Phase 2A privacy firewall keeps Career and Organization contexts isol
       assert.equal(privatePassport.currentProfileVersion?.compensationTarget, 90000);
     });
 
-    await t.test('account context discovery exposes capability metadata but no professional data', async () => {
-      const context = await accountContexts.resolve(candidateSignup.sessionToken);
-      assert.equal(context.career.available, true);
-      assert.equal(context.career.candidateId, candidate.id);
-      assert.deepEqual(Object.keys(context.career).sort(), ['available', 'candidateId']);
-      assert.equal('headline' in context.career, false);
-      assert.equal('compensationTarget' in context.career, false);
-      assert.equal('availabilityStatus' in context.career, false);
-    });
+    await t.test(
+      'account context discovery exposes capability metadata but no professional data',
+      async () => {
+        const context = await accountContexts.resolve(candidateSignup.sessionToken);
+        assert.equal(context.career.available, true);
+        assert.equal(context.career.candidateId, candidate.id);
+        assert.deepEqual(Object.keys(context.career).sort(), ['available', 'candidateId']);
+        assert.equal('headline' in context.career, false);
+        assert.equal('compensationTarget' in context.career, false);
+        assert.equal('availabilityStatus' in context.career, false);
+      },
+    );
 
-    await t.test('candidate accepting an organization invitation preserves private Career state', async () => {
-      const before = await candidates.getPassport(candidateSignup.session.user.id);
-      const beforeVersionId = before.currentProfileVersionId;
-      const beforeVisibility = before.visibility;
-      const beforeDiscoverability = before.discoverability;
+    await t.test(
+      'candidate accepting an organization invitation preserves private Career state',
+      async () => {
+        const before = await candidates.getPassport(candidateSignup.session.user.id);
+        const beforeVersionId = before.currentProfileVersionId;
+        const beforeVisibility = before.visibility;
+        const beforeDiscoverability = before.discoverability;
 
-      await invitations.create(organization.id, ownerSignup.session.user.id, {
-        email: candidateEmail,
-        roleKey: 'RECRUITER',
-      });
-      assert.ok(deliveredInvitationToken);
+        await invitations.create(organization.id, ownerSignup.session.user.id, {
+          email: candidateEmail,
+          roleKey: 'RECRUITER',
+        });
+        assert.ok(deliveredInvitationToken);
 
-      await invitations.accept(
-        candidateSignup.session.user.id,
-        candidateSignup.session.user.primaryEmail,
-        deliveredInvitationToken,
-      );
+        await invitations.accept(
+          candidateSignup.session.user.id,
+          candidateSignup.session.user.primaryEmail,
+          deliveredInvitationToken,
+        );
 
-      const after = await candidates.getPassport(candidateSignup.session.user.id);
-      assert.equal(after.id, before.id);
-      assert.equal(after.currentProfileVersionId, beforeVersionId);
-      assert.equal(after.visibility, beforeVisibility);
-      assert.equal(after.discoverability, beforeDiscoverability);
-      assert.equal(after.currentProfileVersion?.headline, 'Private Candidate Headline');
-      assert.equal(after.currentProfileVersion?.compensationTarget, 90000);
+        const after = await candidates.getPassport(candidateSignup.session.user.id);
+        assert.equal(after.id, before.id);
+        assert.equal(after.currentProfileVersionId, beforeVersionId);
+        assert.equal(after.visibility, beforeVisibility);
+        assert.equal(after.discoverability, beforeDiscoverability);
+        assert.equal(after.currentProfileVersion?.headline, 'Private Candidate Headline');
+        assert.equal(after.currentProfileVersion?.compensationTarget, 90000);
 
-      const context = await accountContexts.resolve(candidateSignup.sessionToken);
-      assert.equal(context.career.available, true);
-      assert.equal(context.organizations.length, 1);
-      assert.equal(context.organizations[0]?.organizationId, organization.id);
-      assert.equal(context.organizations[0]?.roleKey, 'RECRUITER');
+        const context = await accountContexts.resolve(candidateSignup.sessionToken);
+        assert.equal(context.career.available, true);
+        assert.equal(context.organizations.length, 1);
+        assert.equal(context.organizations[0]?.organizationId, organization.id);
+        assert.equal(context.organizations[0]?.roleKey, 'RECRUITER');
 
-      await assert.rejects(
-        () => candidates.getPassport(ownerSignup.session.user.id),
-        (error: unknown) => error instanceof NotFoundException,
-      );
-    });
+        await assert.rejects(
+          () => candidates.getPassport(ownerSignup.session.user.id),
+          (error: unknown) => error instanceof NotFoundException,
+        );
+      },
+    );
 
-    await t.test('creating Career for an organization member preserves memberships and permissions', async () => {
-      const beforeSession = await auth.getSession(ownerSignup.sessionToken);
-      assert.equal(beforeSession.memberships.length, 1);
-      assert.equal(beforeSession.memberships[0]?.roleKey, 'ORG_OWNER');
+    await t.test(
+      'creating Career for an organization member preserves memberships and permissions',
+      async () => {
+        const beforeSession = await auth.getSession(ownerSignup.sessionToken);
+        assert.equal(beforeSession.memberships.length, 1);
+        assert.equal(beforeSession.memberships[0]?.roleKey, 'ORG_OWNER');
 
-      const ownerCandidate = await candidates.initialize(ownerSignup.session.user.id);
-      candidateIds.push(ownerCandidate.id);
+        const ownerCandidate = await candidates.initialize(ownerSignup.session.user.id);
+        candidateIds.push(ownerCandidate.id);
 
-      const afterSession = await auth.getSession(ownerSignup.sessionToken);
-      assert.deepEqual(afterSession.memberships, beforeSession.memberships);
+        const afterSession = await auth.getSession(ownerSignup.sessionToken);
+        assert.deepEqual(afterSession.memberships, beforeSession.memberships);
 
-      const context = await accountContexts.resolve(ownerSignup.sessionToken);
-      assert.equal(context.career.available, true);
-      assert.equal(context.career.candidateId, ownerCandidate.id);
-      assert.deepEqual(context.organizations, beforeSession.memberships);
-    });
+        const context = await accountContexts.resolve(ownerSignup.sessionToken);
+        assert.equal(context.career.available, true);
+        assert.equal(context.career.candidateId, ownerCandidate.id);
+        assert.deepEqual(context.organizations, beforeSession.memberships);
+      },
+    );
 
     await t.test('candidate privacy changes do not alter organization membership', async () => {
       const beforeSession = await auth.getSession(candidateSignup.sessionToken);
