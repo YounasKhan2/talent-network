@@ -5,7 +5,7 @@ import type { ResumeSecurityJobData } from '@talent-network/resume-security';
 import type { Queue } from 'bullmq';
 import { dispatchResumeUploadEvents } from './resume-outbox-dispatcher.js';
 
-test('dispatches an upload-completed event with a stable BullMQ job id and marks it published', async () => {
+void test('dispatches an upload-completed event with a stable BullMQ job id and marks it published', async () => {
   const fixture = createFixture([
     {
       id: 'event-1',
@@ -34,7 +34,7 @@ test('dispatches an upload-completed event with a stable BullMQ job id and marks
   assert.equal(fixture.events[0]?.attemptCount, 1);
 });
 
-test('invalid outbox payload is not published and increments the attempt count', async () => {
+void test('invalid outbox payload is not published and increments the attempt count', async () => {
   const fixture = createFixture([
     { id: 'event-invalid', payload: {}, publishedAt: null, attemptCount: 0 },
   ]);
@@ -47,7 +47,7 @@ test('invalid outbox payload is not published and increments the attempt count',
   assert.equal(fixture.events[0]?.attemptCount, 1);
 });
 
-test('queue failure leaves the event unpublished so the scheduler can retry it', async () => {
+void test('queue failure leaves the event unpublished so the scheduler can retry it', async () => {
   const fixture = createFixture(
     [
       {
