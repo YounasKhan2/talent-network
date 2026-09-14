@@ -7,8 +7,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "prisma generate && tsc -p tsconfig.json",
-    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
-    "lint": "prisma generate && eslint src prisma.config.ts --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src prisma.config.ts --max-warnings=0",
     "test": "node --test",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
