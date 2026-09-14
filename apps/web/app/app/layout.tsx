@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
 import { ApiError, getAccountContexts, type AccountContextResponse } from '../../lib/api';
+import { rememberOrganizationContext } from '../../lib/workspace-preference';
 import styles from '../career/context-bar.module.css';
 
 const workspaceStorageKey = 'tn_active_organization';
@@ -32,7 +33,7 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
           ) ?? nextContexts.organizations[0];
 
         if (selectedOrganization) {
-          window.localStorage.setItem(workspaceStorageKey, selectedOrganization.organizationId);
+          rememberOrganizationContext(selectedOrganization.organizationId);
           setActiveOrganizationId(selectedOrganization.organizationId);
         } else {
           window.localStorage.removeItem(workspaceStorageKey);
