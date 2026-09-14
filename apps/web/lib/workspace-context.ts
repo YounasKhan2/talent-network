@@ -1,28 +1,22 @@
 import type { Route } from 'next';
-import { ApiError, getCandidatePassport, type SessionResponse } from './api';
+import { getAccountContexts, type AccountContextResponse } from './api';
 
 export interface WorkspaceContextState {
   hasCandidate: boolean;
   organizationCount: number;
 }
 
-export async function getWorkspaceContextState(
-  session: SessionResponse,
-): Promise<WorkspaceContextState> {
-  let hasCandidate = false;
+export async function getWorkspaceContextState(): Promise<WorkspaceContextState> {
+  const contexts = await getAccountContexts();
+  return workspaceContextStateFromAccountContexts(contexts);
+}
 
-  try {
-    await getCandidatePassport();
-    hasCandidate = true;
-  } catch (error) {
-    if (!(error instanceof ApiError && error.code === 'CANDIDATE_PASSPORT_NOT_INITIALIZED')) {
-      throw error;
-    }
-  }
-
+export function workspaceContextStateFromAccountContexts(
+  contexts: AccountContextResponse,
+): WorkspaceContextState {
   return {
-    hasCandidate,
-    organizationCount: session.memberships.length,
+    hasCandidate: contexts.career.available,
+    organizationCount: contexts.organizations.length,
   };
 }
 
