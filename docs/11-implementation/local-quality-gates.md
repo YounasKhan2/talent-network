@@ -19,7 +19,8 @@ pnpm check
 format check
 lint
 typecheck
-tests
+unit tests
+Phase 1 database-backed integration tests
 build
 ```
 
@@ -39,22 +40,34 @@ Local verification preserves:
 
 ## Required Developer Workflow
 
-Before pushing implementation changes:
-
-```bash
-pnpm install
-pnpm check
-```
-
-For infrastructure-backed flows:
+Before pushing implementation changes, start the local infrastructure and then run the repository gate:
 
 ```bash
 cp .env.example .env
 docker compose up -d
+pnpm install
 pnpm check
 ```
 
-When product integration tests are introduced, the quality command must remain the single top-level entry point and delegate to the appropriate package test suites.
+The Phase 1 integration suite is exposed independently when focused execution is useful:
+
+```bash
+pnpm test:integration:phase1
+```
+
+That command builds the database package, deploys committed Prisma migrations, and runs the real PostgreSQL Phase 1 integration suite. The suite uses unique per-run users and organizations and cleans up the records it creates.
+
+`pnpm check` remains the single authoritative top-level quality entry point; package-specific commands are implementation details and focused developer tools.
+
+## Database-backed integration requirements
+
+The integration gate requires:
+
+- `DATABASE_URL` configured in the root `.env`
+- PostgreSQL reachable at that URL
+- committed Prisma migrations deployable against that database
+
+The integration suite must not truncate or reset a developer database. Tests must isolate their own records, use unique identifiers, and clean up only data created by the test run.
 
 ## CI Later
 
@@ -79,4 +92,4 @@ Code-review discipline and local `pnpm check` verification are the current gate.
 
 When a contributor or AI agent completes a substantial implementation phase, the completion summary should state which commands were actually executed and their results.
 
-Never claim a build, test, lint, or typecheck passed unless it was actually executed.
+Never claim a build, test, lint, typecheck, migration, or integration suite passed unless it was actually executed.
