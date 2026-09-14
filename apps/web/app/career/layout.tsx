@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
@@ -74,7 +75,12 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
     <>
       <div className={styles.bar} aria-label="Workspace context">
         <span className={styles.contextHint}>Talent Network workspace</span>
-        <WorkspaceContextSwitcher activeContext={{ kind: 'career' }} contexts={contexts} />
+        <div className={styles.actions}>
+          <Link className={styles.historyLink} href="/career/history">
+            Version history
+          </Link>
+          <WorkspaceContextSwitcher activeContext={{ kind: 'career' }} contexts={contexts} />
+        </div>
       </div>
       {children}
     </>
