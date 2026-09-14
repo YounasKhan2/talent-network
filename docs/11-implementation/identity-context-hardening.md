@@ -26,48 +26,51 @@ Already available:
 - role-to-permission bundles
 - tenant-aware server authorization
 - multi-organization switching foundation
+- explicit `/onboarding` intent selection
+- explicit Candidate creation from onboarding
+- `/career` route guard that never creates Candidate state implicitly
+- authenticated browser verification for employer-only `/career` redirect behavior
+- account context discovery contract at `GET /api/v1/account/contexts`
 
-Temporary Phase 2 behavior still requiring hardening:
-
-```text
-authenticated user
-→ visits /career
-→ Career Passport may initialize automatically
-```
-
-Production target:
-
-```text
-authenticated user without Candidate
-→ visits career surface
-→ explicit career onboarding
-→ Create my Career Passport
-→ Candidate created
-```
+Current hardening work is focused on making context discovery and navigation reusable across login, onboarding, Career, and Hiring surfaces without turning UI context into an authorization boundary.
 
 ## Boundary 1 — Context Resolution Contract
 
-Add a single reusable server capability that can answer:
+**Status: implemented; local quality-gate verification pending for latest slice.**
+
+Reusable authenticated capability:
+
+```text
+GET /api/v1/account/contexts
+```
+
+It answers:
 
 ```text
 Who is this authenticated user?
 Does Candidate exist?
 Which ACTIVE organization memberships are available?
 Which permissions apply to each organization?
-What context should the UI open by default?
 ```
 
-Do not encode a permanent `userType`.
+It does not encode a permanent `userType` and does not expose Career Passport professional data.
 
-Possible implementation shape:
+Current response shape:
 
 ```text
-GET /api/v1/account/contexts
+user
+career
+  available
+  candidateId
+organizations[]
+  organizationId
+  displayName
+  slug
+  roleKey
+  permissions[]
 ```
 
-or extend an appropriate authenticated account endpoint if doing so keeps responsibilities clean.
-
-The response should contain only the data needed for context/navigation decisions.
+Frontend context resolution now consumes this contract instead of probing Candidate existence through the Career Passport endpoint.
 
 ### Acceptance criteria
 
@@ -75,12 +78,14 @@ The response should contain only the data needed for context/navigation decision
 - organization-only state represented
 - mixed state represented
 - multiple organizations represented
-- removed/suspended memberships excluded or clearly non-selectable
+- removed/suspended memberships excluded through authoritative ACTIVE session membership resolution
 - no private Candidate professional data included merely to resolve context
 
 ## Boundary 2 — Explicit Onboarding
 
-Add:
+**Status: implemented and browser-tested for core Career activation flow.**
+
+Route:
 
 ```text
 /onboarding
@@ -117,19 +122,20 @@ otherwise → create organization
 
 ## Boundary 3 — Stop Implicit Candidate Creation
 
-Refactor `/career` behavior after onboarding is available.
+**Status: implemented and browser-tested.**
 
-Target behavior:
+Current behavior:
 
 ```text
 Candidate exists
 → open Career workspace
 
 Candidate absent
-→ career onboarding / explicit creation CTA
+→ /onboarding?intent=career
+→ explicit creation action required
 ```
 
-The API initialization endpoint may remain idempotent, but frontend navigation must not call it just because the route was opened.
+The API initialization endpoint remains idempotent, but frontend navigation no longer calls it merely because `/career` was opened.
 
 ### Acceptance criteria
 
@@ -139,6 +145,8 @@ The API initialization endpoint may remain idempotent, but frontend navigation m
 
 ## Boundary 4 — Context-Aware Post-Login Routing
 
+**Status: implemented for deterministic first-use routing; last-active preference remains pending.**
+
 Resolve destination after authentication:
 
 ```text
@@ -146,37 +154,33 @@ no contexts
 → /onboarding
 
 candidate only
-→ Career/candidate home
+→ /career
 
-one organization only
-→ employer workspace
-
-mixed or multiple
-→ last valid context
+one or more organizations
+→ /app
 ```
 
-If last-active context is invalid, fall back safely.
+Mixed/multiple context accounts currently default to Hiring until last-active context persistence is added.
 
 Do not use last-active state as authorization.
 
 ## Boundary 5 — Reusable Context Switcher
 
-Replace any organization-only mental model with a context switcher capable of showing:
+**Status: foundation implemented; full multi-context switcher UX still pending.**
+
+Current Career/Hiring surfaces can move between:
 
 ```text
 Personal
   Career
 
 Organizations
-  Org A
-  Org B
-
-+ Create organization
+  one or more memberships
 ```
 
-For organization-only users, expose an explicit action to build a Career Passport.
+For organization-only users, an explicit action is shown to build a Career Passport.
 
-For candidate-only users, expose organization creation/join flows.
+For candidate-only users, an explicit action is shown to add a Hiring workspace.
 
 ### Acceptance criteria
 
@@ -293,7 +297,13 @@ Recommended immediate sequence:
 ```text
 Phase 2 initial Career Passport foundation      ✅ implemented / quality gate green
         ↓
-Identity & workspace context hardening          ← next
+Identity & workspace context hardening
+  explicit onboarding                          ✅
+  no implicit Candidate creation               ✅
+  account context API                          ✅ code complete / gate pending
+  reusable multi-context switcher               ← next
+  last-active context + stale fallback
+  privacy / mixed-context tests
         ↓
 Phase 2 Career Passport expansion
   projects
