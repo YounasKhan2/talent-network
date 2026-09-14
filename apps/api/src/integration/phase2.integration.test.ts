@@ -129,6 +129,80 @@ void test('Phase 2 Career Passport versions candidate-owned professional state',
     );
 
     await t.test(
+      'projects certifications languages links and locations are versioned without losing prior sections',
+      async () => {
+        const withProjects = await candidates.replaceProjects(signup.session.user.id, [
+          {
+            name: 'Talent Network',
+            description: 'Employment operating system.',
+            role: 'Full Stack Engineer',
+            url: 'https://example.com/talent-network',
+            repositoryUrl: 'https://github.com/example/talent-network',
+            startDate: new Date('2026-01-01T00:00:00.000Z'),
+            endDate: null,
+          },
+        ]);
+        assert.equal(withProjects.currentProfileVersion?.versionNumber, 6);
+        assert.equal(withProjects.currentProfileVersion?.projects[0]?.name, 'Talent Network');
+
+        const withCertifications = await candidates.replaceCertifications(signup.session.user.id, [
+          {
+            name: 'Integration Certification',
+            issuer: 'Integration Authority',
+            credentialId: 'CERT-2026',
+            credentialUrl: 'https://example.com/credentials/CERT-2026',
+            issuedAt: new Date('2026-02-01T00:00:00.000Z'),
+            expiresAt: null,
+          },
+        ]);
+        assert.equal(withCertifications.currentProfileVersion?.versionNumber, 7);
+        assert.equal(withCertifications.currentProfileVersion?.projects.length, 1);
+        assert.equal(withCertifications.currentProfileVersion?.certifications.length, 1);
+
+        const withLanguages = await candidates.replaceLanguages(signup.session.user.id, [
+          { name: 'English', proficiency: 'PROFESSIONAL' },
+          { name: 'Urdu', proficiency: 'NATIVE' },
+        ]);
+        assert.equal(withLanguages.currentProfileVersion?.versionNumber, 8);
+        assert.deepEqual(
+          withLanguages.currentProfileVersion?.languages.map((language) => language.name),
+          ['English', 'Urdu'],
+        );
+
+        const withLinks = await candidates.replaceLinks(signup.session.user.id, [
+          { label: 'GitHub', url: 'https://github.com/integration', kind: 'GITHUB' },
+          { label: 'Portfolio', url: 'https://example.com', kind: 'PORTFOLIO' },
+        ]);
+        assert.equal(withLinks.currentProfileVersion?.versionNumber, 9);
+        assert.equal(withLinks.currentProfileVersion?.links.length, 2);
+        assert.equal(withLinks.currentProfileVersion?.certifications.length, 1);
+
+        const withLocations = await candidates.replaceLocationPreferences(signup.session.user.id, [
+          {
+            label: 'Pakistan remote',
+            countryCode: 'PK',
+            region: null,
+            city: null,
+            remoteOnly: true,
+          },
+          {
+            label: 'Dubai',
+            countryCode: 'AE',
+            region: 'Dubai',
+            city: 'Dubai',
+            remoteOnly: false,
+          },
+        ]);
+        assert.equal(withLocations.currentProfileVersion?.versionNumber, 10);
+        assert.equal(withLocations.currentProfileVersion?.locationPreferences.length, 2);
+        assert.equal(withLocations.currentProfileVersion?.projects.length, 1);
+        assert.equal(withLocations.currentProfileVersion?.employments.length, 1);
+        assert.equal(withLocations.currentProfileVersion?.education.length, 1);
+        assert.equal(withLocations.currentProfileVersion?.skills.length, 2);
+      },
+    );
+
+    await t.test(
       'privacy settings remain separate from professional profile versions',
       async () => {
         const before = await candidates.getPassport(signup.session.user.id);
