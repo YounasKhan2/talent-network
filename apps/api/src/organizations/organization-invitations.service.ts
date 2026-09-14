@@ -10,6 +10,7 @@ import { ORGANIZATION_ROLE_KEYS, type OrganizationRoleKey } from '@talent-networ
 import type { DatabaseClient } from '@talent-network/database';
 import { createOpaqueToken, hashOpaqueToken } from '../auth/auth.crypto.js';
 import { DATABASE_CLIENT } from '../database/database.module.js';
+import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
 import { OrganizationInvitationDeliveryService } from './organization-invitation-delivery.service.js';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -84,30 +85,26 @@ export class OrganizationInvitationsService {
         },
       });
 
-      await transaction.auditEvent.create({
-        data: {
-          organizationId,
-          actorType: 'USER',
-          actorId: invitedByUserId,
-          action: 'organization.invitation.created',
-          resourceType: 'OrganizationInvitation',
-          resourceId: created.id,
-          metadata: { email, roleKey: input.roleKey },
-        },
+      await writeAuditEvent(transaction, {
+        organizationId,
+        actorType: 'USER',
+        actorId: invitedByUserId,
+        action: 'organization.invitation.created',
+        resourceType: 'OrganizationInvitation',
+        resourceId: created.id,
+        metadata: { email, roleKey: input.roleKey },
       });
 
-      await transaction.outboxEvent.create({
-        data: {
+      await writeOutboxEvent(transaction, {
+        organizationId,
+        aggregateType: 'OrganizationInvitation',
+        aggregateId: created.id,
+        eventType: 'organization.invitation.created',
+        payload: {
+          invitationId: created.id,
           organizationId,
-          aggregateType: 'OrganizationInvitation',
-          aggregateId: created.id,
-          eventType: 'organization.invitation.created',
-          payload: {
-            invitationId: created.id,
-            organizationId,
-            email,
-            roleKey: input.roleKey,
-          },
+          email,
+          roleKey: input.roleKey,
         },
       });
 
@@ -118,22 +115,20 @@ export class OrganizationInvitationsService {
       await this.deliveryService.sendInvitation(email, rawToken);
       return invitation;
     } catch (error: unknown) {
-      await this.database.$transaction([
-        this.database.organizationInvitation.updateMany({
+      await this.database.$transaction(async (transaction) => {
+        await transaction.organizationInvitation.updateMany({
           where: { id: invitation.id, status: 'PENDING' },
           data: { status: 'REVOKED', revokedAt: new Date() },
-        }),
-        this.database.auditEvent.create({
-          data: {
-            organizationId,
-            actorType: 'USER',
-            actorId: invitedByUserId,
-            action: 'organization.invitation.delivery_failed',
-            resourceType: 'OrganizationInvitation',
-            resourceId: invitation.id,
-          },
-        }),
-      ]);
+        });
+        await writeAuditEvent(transaction, {
+          organizationId,
+          actorType: 'USER',
+          actorId: invitedByUserId,
+          action: 'organization.invitation.delivery_failed',
+          resourceType: 'OrganizationInvitation',
+          resourceId: invitation.id,
+        });
+      });
       throw error;
     }
   }
@@ -209,30 +204,26 @@ export class OrganizationInvitationsService {
         data: { emailVerifiedAt: now },
       });
 
-      await transaction.auditEvent.create({
-        data: {
-          organizationId: invitation.organizationId,
-          actorType: 'USER',
-          actorId: sessionUserId,
-          action: 'organization.invitation.accepted',
-          resourceType: 'OrganizationInvitation',
-          resourceId: invitation.id,
-          metadata: { roleKey: invitation.roleKey },
-        },
+      await writeAuditEvent(transaction, {
+        organizationId: invitation.organizationId,
+        actorType: 'USER',
+        actorId: sessionUserId,
+        action: 'organization.invitation.accepted',
+        resourceType: 'OrganizationInvitation',
+        resourceId: invitation.id,
+        metadata: { roleKey: invitation.roleKey },
       });
 
-      await transaction.outboxEvent.create({
-        data: {
+      await writeOutboxEvent(transaction, {
+        organizationId: invitation.organizationId,
+        aggregateType: 'OrganizationMember',
+        aggregateId: membership.id,
+        eventType: 'organization.member.joined',
+        payload: {
+          membershipId: membership.id,
           organizationId: invitation.organizationId,
-          aggregateType: 'OrganizationMember',
-          aggregateId: membership.id,
-          eventType: 'organization.member.joined',
-          payload: {
-            membershipId: membership.id,
-            organizationId: invitation.organizationId,
-            userId: sessionUserId,
-            roleKey: invitation.roleKey,
-          },
+          userId: sessionUserId,
+          roleKey: invitation.roleKey,
         },
       });
 
@@ -274,22 +265,20 @@ export class OrganizationInvitationsService {
       throw new ConflictException('Only pending invitations can be revoked.');
     }
 
-    await this.database.$transaction([
-      this.database.organizationInvitation.update({
+    await this.database.$transaction(async (transaction) => {
+      await transaction.organizationInvitation.update({
         where: { id: invitationId },
         data: { status: 'REVOKED', revokedAt: new Date() },
-      }),
-      this.database.auditEvent.create({
-        data: {
-          organizationId,
-          actorType: 'USER',
-          actorId: actorUserId,
-          action: 'organization.invitation.revoked',
-          resourceType: 'OrganizationInvitation',
-          resourceId: invitationId,
-        },
-      }),
-    ]);
+      });
+      await writeAuditEvent(transaction, {
+        organizationId,
+        actorType: 'USER',
+        actorId: actorUserId,
+        action: 'organization.invitation.revoked',
+        resourceType: 'OrganizationInvitation',
+        resourceId: invitationId,
+      });
+    });
   }
 }
 
