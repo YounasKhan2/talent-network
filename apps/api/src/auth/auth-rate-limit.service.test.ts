@@ -16,7 +16,7 @@ function createCountingRedis(): Redis {
   } as unknown as Redis;
 }
 
-test('login account policy allows ten attempts and rate limits the eleventh', async () => {
+void test('login account policy allows ten attempts and rate limits the eleventh', async () => {
   const service = new AuthRateLimitService(createCountingRedis());
 
   for (let attempt = 1; attempt <= 10; attempt += 1) {
@@ -38,17 +38,20 @@ test('login account policy allows ten attempts and rate limits the eleventh', as
   );
 });
 
-test('signup applies an independent email limit', async () => {
+void test('signup applies an independent email limit', async () => {
   const service = new AuthRateLimitService(createCountingRedis());
 
   await service.assertSignupAllowed('new@example.com', '203.0.113.1');
   await service.assertSignupAllowed('new@example.com', '203.0.113.2');
   await service.assertSignupAllowed('new@example.com', '203.0.113.3');
 
-  await assert.rejects(() => service.assertSignupAllowed('new@example.com', '203.0.113.4'), HttpException);
+  await assert.rejects(
+    () => service.assertSignupAllowed('new@example.com', '203.0.113.4'),
+    HttpException,
+  );
 });
 
-test('fails closed when redis is unavailable', async () => {
+void test('fails closed when redis is unavailable', async () => {
   const redis = {
     eval: () => Promise.reject(new Error('redis unavailable')),
   } as unknown as Redis;
@@ -67,7 +70,7 @@ test('fails closed when redis is unavailable', async () => {
   );
 });
 
-test('fails closed when redis returns an invalid rate-limit result', async () => {
+void test('fails closed when redis returns an invalid rate-limit result', async () => {
   const redis = {
     eval: () => Promise.resolve(['invalid']),
   } as unknown as Redis;
