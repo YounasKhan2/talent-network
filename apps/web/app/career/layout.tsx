@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
 import { ApiError, getAccountContexts, type AccountContextResponse } from '../../lib/api';
+import { rememberCareerContext } from '../../lib/workspace-preference';
 import styles from './context-bar.module.css';
 
 type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
@@ -28,6 +29,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
           return;
         }
 
+        rememberCareerContext();
         setContexts(nextContexts);
         setState('ready');
       } catch (caught) {
