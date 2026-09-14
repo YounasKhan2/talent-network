@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError } from '../../../lib/api';
 import {
   getCandidateProfileVersion,
@@ -16,18 +16,21 @@ type LoadState = 'loading' | 'ready' | 'error';
 export default function CareerVersionHistoryPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [versions, setVersions] = useState<CandidateProfileVersionSummary[]>([]);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [snapshot, setSnapshot] = useState<CandidateProfileVersionSnapshot | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     async function load() {
       try {
-        const result = await listCandidateProfileVersions();
+        const result = await listCandidateProfileVersions({ limit: 30 });
         if (!active) return;
         setVersions(result.versions);
+        setNextCursor(result.nextCursor);
         const initial = result.versions.find((version) => version.isCurrent) ?? result.versions[0];
         if (!initial) {
           setState('ready');
@@ -63,6 +66,21 @@ export default function CareerVersionHistoryPage() {
     }
   }
 
+  async function loadOlder() {
+    if (nextCursor === null || historyLoading) return;
+    setHistoryLoading(true);
+    setError(null);
+    try {
+      const result = await listCandidateProfileVersions({ before: nextCursor, limit: 30 });
+      setVersions((current) => [...current, ...result.versions]);
+      setNextCursor(result.nextCursor);
+    } catch (caught) {
+      setError(readError(caught));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
   if (state === 'loading') {
     return <HistoryState title="Loading Career Passport history…" />;
   }
@@ -92,7 +110,7 @@ export default function CareerVersionHistoryPage() {
         <aside className={styles.timeline} aria-label="Career Passport versions">
           <div className={styles.timelineHeading}>
             <strong>{versions.length}</strong>
-            <span>saved versions</span>
+            <span>loaded versions</span>
           </div>
           <div className={styles.versionList}>
             {versions.map((version) => (
@@ -116,6 +134,16 @@ export default function CareerVersionHistoryPage() {
               </button>
             ))}
           </div>
+          {nextCursor !== null ? (
+            <button
+              className={styles.loadMore}
+              disabled={historyLoading}
+              onClick={() => void loadOlder()}
+              type="button"
+            >
+              {historyLoading ? 'Loading older versions…' : 'Load older versions'}
+            </button>
+          ) : null}
         </aside>
 
         <section className={styles.snapshot} aria-live="polite">
@@ -154,7 +182,7 @@ function SnapshotView({ snapshot }: { snapshot: CandidateProfileVersionSnapshot 
       <SnapshotSection title="Professional preferences">
         <DefinitionGrid
           items={[
-            ['Availability', readable(snapshot.availabilityStatus)],
+            ['Availability', readable(snapshot.availabilityStatus) || 'Not specified'],
             ['Work modes', snapshot.preferredWorkModes.map(readable).join(', ') || 'Not specified'],
             [
               'Target compensation',
@@ -252,7 +280,11 @@ function SnapshotView({ snapshot }: { snapshot: CandidateProfileVersionSnapshot 
         {snapshot.locationPreferences.map((item) => (
           <SnapshotRecord
             key={item.id}
-            subtitle={item.remoteOnly ? 'Remote only' : [item.city, item.region, item.countryCode].filter(Boolean).join(', ')}
+            subtitle={
+              item.remoteOnly
+                ? 'Remote only'
+                : [item.city, item.region, item.countryCode].filter(Boolean).join(', ')
+            }
             title={item.label}
           />
         ))}
@@ -284,7 +316,7 @@ function SnapshotSection({
 }: {
   title: string;
   empty?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className={styles.section}>
@@ -366,7 +398,11 @@ function formatDateRange(start: string | null, end: string | null, current = fal
 function formatMonth(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date);
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
 }
 
 function formatSource(value: string): string {
