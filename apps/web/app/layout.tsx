@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './account-workflows.css';
 import './team-workflows.css';
+import './career-passport.css';
 
 export const metadata: Metadata = {
   title: 'Talent Network',
