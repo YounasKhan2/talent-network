@@ -8,6 +8,7 @@ import {
   getCandidatePassport,
   getSession,
   replaceCandidateCertifications,
+  replaceCandidateCustomSections,
   replaceCandidateEducation,
   replaceCandidateEmployment,
   replaceCandidateLanguages,
@@ -17,12 +18,15 @@ import {
   replaceCandidateSkills,
   updateCandidateOverview,
   updateCandidateSettings,
+  type CandidateCustomSectionResponse,
   type CandidatePassportResponse,
   type CandidateWorkMode,
 } from '../../lib/api';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type SaveOperation = () => Promise<CandidatePassportResponse>;
+type Profile = NonNullable<CandidatePassportResponse['currentProfileVersion']>;
+type Direction = -1 | 1;
 
 export default function CareerPassportPage() {
   const router = useRouter();
@@ -33,7 +37,6 @@ export default function CareerPassportPage() {
 
   useEffect(() => {
     let active = true;
-
     async function load() {
       try {
         await getSession();
@@ -55,7 +58,6 @@ export default function CareerPassportPage() {
         setLoadState('error');
       }
     }
-
     void load();
     return () => {
       active = false;
@@ -106,6 +108,7 @@ export default function CareerPassportPage() {
           <a href="#languages">Languages</a>
           <a href="#links">Links</a>
           <a href="#locations">Locations</a>
+          <a href="#custom-sections">Custom</a>
           <a href="#privacy">Privacy</a>
         </nav>
         <div className="career-rail-foot">
@@ -120,8 +123,8 @@ export default function CareerPassportPage() {
             <p className="eyebrow">Candidate workspace</p>
             <h1>{profile.headline || 'Build the professional identity you reuse everywhere.'}</h1>
             <p>
-              Your Career Passport is versioned. Each approved edit creates a new snapshot so future
-              applications can preserve exactly what you submitted.
+              Your Career Passport is versioned. Every saved edit, removal, or reorder creates a new
+              snapshot so future applications can preserve exactly what you submitted.
             </p>
           </div>
           <div className="career-completeness" aria-label={`Profile completeness ${completeness}%`}>
@@ -137,53 +140,71 @@ export default function CareerPassportPage() {
         ) : null}
 
         <OverviewSection
-          passport={passport}
+          key={`${profile.id}-overview`}
+          profile={profile}
           pending={pendingSection === 'overview'}
           onSave={(input) => runMutation('overview', () => updateCandidateOverview(input))}
         />
         <ExperienceSection
-          passport={passport}
+          key={`${profile.id}-experience`}
+          profile={profile}
           pending={pendingSection === 'experience'}
           onSave={(input) => runMutation('experience', () => replaceCandidateEmployment(input))}
         />
         <EducationSection
-          passport={passport}
+          key={`${profile.id}-education`}
+          profile={profile}
           pending={pendingSection === 'education'}
           onSave={(input) => runMutation('education', () => replaceCandidateEducation(input))}
         />
         <SkillsSection
-          passport={passport}
+          key={`${profile.id}-skills`}
+          profile={profile}
           pending={pendingSection === 'skills'}
           onSave={(input) => runMutation('skills', () => replaceCandidateSkills(input))}
         />
         <ProjectsSection
-          passport={passport}
+          key={`${profile.id}-projects`}
+          profile={profile}
           pending={pendingSection === 'projects'}
           onSave={(input) => runMutation('projects', () => replaceCandidateProjects(input))}
         />
         <CertificationsSection
-          passport={passport}
+          key={`${profile.id}-certifications`}
+          profile={profile}
           pending={pendingSection === 'certifications'}
           onSave={(input) =>
             runMutation('certifications', () => replaceCandidateCertifications(input))
           }
         />
         <LanguagesSection
-          passport={passport}
+          key={`${profile.id}-languages`}
+          profile={profile}
           pending={pendingSection === 'languages'}
           onSave={(input) => runMutation('languages', () => replaceCandidateLanguages(input))}
         />
         <LinksSection
-          passport={passport}
+          key={`${profile.id}-links`}
+          profile={profile}
           pending={pendingSection === 'links'}
           onSave={(input) => runMutation('links', () => replaceCandidateLinks(input))}
         />
         <LocationsSection
-          passport={passport}
+          key={`${profile.id}-locations`}
+          profile={profile}
           pending={pendingSection === 'locations'}
           onSave={(input) => runMutation('locations', () => replaceCandidateLocations(input))}
         />
+        <CustomSectionsSection
+          key={`${profile.id}-custom-sections`}
+          profile={profile}
+          pending={pendingSection === 'custom-sections'}
+          onSave={(input) =>
+            runMutation('custom-sections', () => replaceCandidateCustomSections(input))
+          }
+        />
         <PrivacySection
+          key={`${profile.id}-privacy`}
           passport={passport}
           pending={pendingSection === 'privacy'}
           onSave={(input) => runMutation('privacy', () => updateCandidateSettings(input))}
@@ -194,15 +215,14 @@ export default function CareerPassportPage() {
 }
 
 function OverviewSection({
-  passport,
+  profile,
   pending,
   onSave,
 }: {
-  passport: CandidatePassportResponse;
+  profile: Profile;
   pending: boolean;
   onSave: (input: Parameters<typeof updateCandidateOverview>[0]) => Promise<void>;
 }) {
-  const profile = passport.currentProfileVersion!;
   const [headline, setHeadline] = useState(profile.headline ?? '');
   const [summary, setSummary] = useState(profile.summary ?? '');
   const [availabilityStatus, setAvailabilityStatus] = useState(
@@ -242,11 +262,7 @@ function OverviewSection({
       >
         <label>
           <span>Professional headline</span>
-          <input
-            maxLength={180}
-            onChange={(event) => setHeadline(event.target.value)}
-            value={headline}
-          />
+          <input maxLength={180} onChange={(event) => setHeadline(event.target.value)} value={headline} />
         </label>
         <label>
           <span>Summary</span>
@@ -280,12 +296,7 @@ function OverviewSection({
                 onChange={(event) => setCurrency(event.target.value.toUpperCase())}
                 value={currency}
               />
-              <input
-                min="0"
-                onChange={(event) => setTarget(event.target.value)}
-                type="number"
-                value={target}
-              />
+              <input min="0" onChange={(event) => setTarget(event.target.value)} type="number" value={target} />
             </div>
           </label>
         </div>
@@ -294,9 +305,7 @@ function OverviewSection({
           <div className="career-toggle-row">
             {(['REMOTE', 'HYBRID', 'ONSITE', 'FLEXIBLE'] as CandidateWorkMode[]).map((mode) => (
               <button
-                className={
-                  workModes.includes(mode) ? 'career-toggle career-toggle-active' : 'career-toggle'
-                }
+                className={workModes.includes(mode) ? 'career-toggle career-toggle-active' : 'career-toggle'}
                 key={mode}
                 onClick={() => toggleWorkMode(mode)}
                 type="button"
@@ -313,15 +322,16 @@ function OverviewSection({
 }
 
 function ExperienceSection({
-  passport,
+  profile,
   pending,
   onSave,
 }: {
-  passport: CandidatePassportResponse;
+  profile: Profile;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateEmployment>[0]) => Promise<void>;
 }) {
-  const existing = passport.currentProfileVersion!.employments;
+  const existing = profile.employments;
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [title, setTitle] = useState('');
   const [employmentType, setEmploymentType] = useState('');
@@ -332,45 +342,8 @@ function ExperienceSection({
   const [isCurrent, setIsCurrent] = useState(false);
   const [summary, setSummary] = useState('');
 
-  async function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!companyName.trim() || !title.trim()) return;
-    await onSave([
-      ...existing.map(
-        ({
-          companyName,
-          title,
-          employmentType,
-          location,
-          workMode,
-          startDate,
-          endDate,
-          isCurrent,
-          summary,
-        }) => ({
-          companyName,
-          title,
-          employmentType,
-          location,
-          workMode,
-          startDate,
-          endDate,
-          isCurrent,
-          summary,
-        }),
-      ),
-      {
-        companyName: companyName.trim(),
-        title: title.trim(),
-        employmentType: employmentType.trim() || null,
-        location: location.trim() || null,
-        workMode: workMode || null,
-        startDate: monthToIso(startMonth),
-        endDate: isCurrent ? null : monthToIso(endMonth),
-        isCurrent,
-        summary: summary.trim() || null,
-      },
-    ]);
+  function reset() {
+    setEditingId(null);
     setCompanyName('');
     setTitle('');
     setEmploymentType('');
@@ -382,121 +355,98 @@ function ExperienceSection({
     setSummary('');
   }
 
+  function edit(id: string) {
+    const item = existing.find((entry) => entry.id === id);
+    if (!item) return;
+    setEditingId(id);
+    setCompanyName(item.companyName);
+    setTitle(item.title);
+    setEmploymentType(item.employmentType ?? '');
+    setLocation(item.location ?? '');
+    setWorkMode(item.workMode ?? '');
+    setStartMonth(isoToMonth(item.startDate));
+    setEndMonth(isoToMonth(item.endDate));
+    setIsCurrent(item.isCurrent);
+    setSummary(item.summary ?? '');
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!companyName.trim() || !title.trim()) return;
+    const next = serializeEmployments(existing);
+    const value = {
+      companyName: companyName.trim(),
+      title: title.trim(),
+      employmentType: employmentType.trim() || null,
+      location: location.trim() || null,
+      workMode: workMode || null,
+      startDate: monthToIso(startMonth),
+      endDate: isCurrent ? null : monthToIso(endMonth),
+      isCurrent,
+      summary: summary.trim() || null,
+    };
+    const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1;
+    if (index >= 0) next[index] = value;
+    else next.push(value);
+    await onSave(next);
+    reset();
+  }
+
   return (
-    <SimpleRecordSection
-      id="experience"
-      index="02"
-      title="Experience"
-      note="Capture dates and context so role relevance can be evaluated from evidence, not title alone."
-      empty="No work history added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: item.title,
-        subtitle: item.companyName,
-        meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
-        ...(item.summary ? { description: item.summary } : {}),
-      }))}
-    >
-      <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
-        <div className="career-field-grid">
-          <label>
-            <span>Role title</span>
-            <input onChange={(event) => setTitle(event.target.value)} value={title} />
-          </label>
-          <label>
-            <span>Company</span>
-            <input onChange={(event) => setCompanyName(event.target.value)} value={companyName} />
-          </label>
-          <label>
-            <span>Employment type</span>
-            <select
-              onChange={(event) => setEmploymentType(event.target.value)}
-              value={employmentType}
-            >
-              <option value="">Not specified</option>
-              <option value="FULL_TIME">Full-time</option>
-              <option value="PART_TIME">Part-time</option>
-              <option value="CONTRACT">Contract</option>
-              <option value="INTERNSHIP">Internship</option>
-              <option value="FREELANCE">Freelance</option>
-            </select>
-          </label>
-          <label>
-            <span>Work mode</span>
-            <select
-              onChange={(event) => setWorkMode(event.target.value as CandidateWorkMode | '')}
-              value={workMode}
-            >
-              <option value="">Not specified</option>
-              <option value="REMOTE">Remote</option>
-              <option value="HYBRID">Hybrid</option>
-              <option value="ONSITE">On-site</option>
-              <option value="FLEXIBLE">Flexible</option>
-            </select>
-          </label>
-          <label>
-            <span>Location</span>
-            <input
-              onChange={(event) => setLocation(event.target.value)}
-              placeholder="Lahore, Pakistan"
-              value={location}
-            />
-          </label>
-          <label>
-            <span>Start month</span>
-            <input
-              onChange={(event) => setStartMonth(event.target.value)}
-              type="month"
-              value={startMonth}
-            />
-          </label>
-          <label>
-            <span>End month</span>
-            <input
-              disabled={isCurrent}
-              onChange={(event) => setEndMonth(event.target.value)}
-              type="month"
-              value={isCurrent ? '' : endMonth}
-            />
-          </label>
-          <label className="career-check-label">
-            <input
-              checked={isCurrent}
-              onChange={(event) => {
-                setIsCurrent(event.target.checked);
-                if (event.target.checked) setEndMonth('');
-              }}
-              type="checkbox"
-            />
-            <span>I currently work here</span>
-          </label>
+    <section className="career-section" id="experience">
+      <SectionHeader
+        index="02"
+        title="Experience"
+        note="Edit, remove, and reorder work history while every save remains a versioned snapshot."
+      />
+      <EditableRecordList
+        pending={pending}
+        records={existing.map((item) => ({
+          id: item.id,
+          title: item.title,
+          subtitle: item.companyName,
+          meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
+          description: item.summary,
+        }))}
+        onEdit={edit}
+        onRemove={(id) => void onSave(serializeEmployments(existing.filter((item) => item.id !== id)))}
+        onMove={(id, direction) =>
+          void onSave(serializeEmployments(moveById(existing, id, direction)))
+        }
+      />
+      <form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}>
+        <div className="career-entry-heading">
+          <strong>{editingId ? 'Edit experience' : 'Add experience'}</strong>
+          {editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}
         </div>
-        <label>
-          <span>What did you work on?</span>
-          <textarea
-            maxLength={4000}
-            onChange={(event) => setSummary(event.target.value)}
-            placeholder="Responsibilities, systems, outcomes, major features, and your contribution."
-            rows={5}
-            value={summary}
-          />
-        </label>
-        <SaveButton pending={pending} label="Add experience" />
+        <div className="career-field-grid">
+          <Field label="Role title"><input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+          <Field label="Company"><input value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></Field>
+          <Field label="Employment type">
+            <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
+              <option value="">Not specified</option><option value="FULL_TIME">Full-time</option><option value="PART_TIME">Part-time</option><option value="CONTRACT">Contract</option><option value="INTERNSHIP">Internship</option><option value="FREELANCE">Freelance</option>
+            </select>
+          </Field>
+          <Field label="Work mode">
+            <select value={workMode} onChange={(e) => setWorkMode(e.target.value as CandidateWorkMode | '')}>
+              <option value="">Not specified</option><option value="REMOTE">Remote</option><option value="HYBRID">Hybrid</option><option value="ONSITE">On-site</option><option value="FLEXIBLE">Flexible</option>
+            </select>
+          </Field>
+          <Field label="Location"><input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
+          <Field label="Start month"><input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></Field>
+          <Field label="End month"><input type="month" disabled={isCurrent} value={isCurrent ? '' : endMonth} onChange={(e) => setEndMonth(e.target.value)} /></Field>
+          <label className="career-check-label"><input type="checkbox" checked={isCurrent} onChange={(e) => { setIsCurrent(e.target.checked); if (e.target.checked) setEndMonth(''); }} /><span>I currently work here</span></label>
+        </div>
+        <Field label="What did you work on?"><textarea maxLength={3000} rows={5} value={summary} onChange={(e) => setSummary(e.target.value)} /></Field>
+        <SaveButton pending={pending} label={editingId ? 'Save experience' : 'Add experience'} />
       </form>
-    </SimpleRecordSection>
+    </section>
   );
 }
 
-function EducationSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateEducation>[0]) => Promise<void>;
-}) {
-  const existing = passport.currentProfileVersion!.education;
+function EducationSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateEducation>[0]) => Promise<void> }) {
+  const existing = profile.education;
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [institutionName, setInstitutionName] = useState('');
   const [degree, setDegree] = useState('');
   const [fieldOfStudy, setFieldOfStudy] = useState('');
@@ -506,737 +456,176 @@ function EducationSection({
   const [isCurrent, setIsCurrent] = useState(false);
   const [description, setDescription] = useState('');
 
-  async function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!institutionName.trim()) return;
-    await onSave([
-      ...existing.map(
-        ({
-          institutionName,
-          degree,
-          fieldOfStudy,
-          location,
-          startDate,
-          endDate,
-          isCurrent,
-          description,
-        }) => ({
-          institutionName,
-          degree,
-          fieldOfStudy,
-          location,
-          startDate,
-          endDate,
-          isCurrent,
-          description,
-        }),
-      ),
-      {
-        institutionName: institutionName.trim(),
-        degree: degree.trim() || null,
-        fieldOfStudy: fieldOfStudy.trim() || null,
-        location: location.trim() || null,
-        startDate: monthToIso(startMonth),
-        endDate: isCurrent ? null : monthToIso(endMonth),
-        isCurrent,
-        description: description.trim() || null,
-      },
-    ]);
-    setInstitutionName('');
-    setDegree('');
-    setFieldOfStudy('');
-    setLocation('');
-    setStartMonth('');
-    setEndMonth('');
-    setIsCurrent(false);
-    setDescription('');
-  }
+  function reset() { setEditingId(null); setInstitutionName(''); setDegree(''); setFieldOfStudy(''); setLocation(''); setStartMonth(''); setEndMonth(''); setIsCurrent(false); setDescription(''); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setInstitutionName(item.institutionName); setDegree(item.degree ?? ''); setFieldOfStudy(item.fieldOfStudy ?? ''); setLocation(item.location ?? ''); setStartMonth(isoToMonth(item.startDate)); setEndMonth(isoToMonth(item.endDate)); setIsCurrent(item.isCurrent); setDescription(item.description ?? ''); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!institutionName.trim()) return; const next = serializeEducation(existing); const value = { institutionName: institutionName.trim(), degree: degree.trim() || null, fieldOfStudy: fieldOfStudy.trim() || null, location: location.trim() || null, startDate: monthToIso(startMonth), endDate: isCurrent ? null : monthToIso(endMonth), isCurrent, description: description.trim() || null }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
 
-  return (
-    <SimpleRecordSection
-      id="education"
-      index="03"
-      title="Education"
-      note="Add degree dates and study context without forcing education into roles where it is irrelevant."
-      empty="No education added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: item.degree || 'Education',
-        subtitle: item.institutionName,
-        meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
-        ...([item.fieldOfStudy, item.description].filter(Boolean).join(' · ')
-          ? {
-              description: [item.fieldOfStudy, item.description].filter(Boolean).join(' · '),
-            }
-          : {}),
-      }))}
-    >
-      <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
-        <div className="career-field-grid">
-          <label>
-            <span>Institution</span>
-            <input
-              onChange={(event) => setInstitutionName(event.target.value)}
-              value={institutionName}
-            />
-          </label>
-          <label>
-            <span>Degree</span>
-            <input onChange={(event) => setDegree(event.target.value)} value={degree} />
-          </label>
-          <label>
-            <span>Field of study</span>
-            <input onChange={(event) => setFieldOfStudy(event.target.value)} value={fieldOfStudy} />
-          </label>
-          <label>
-            <span>Location</span>
-            <input onChange={(event) => setLocation(event.target.value)} value={location} />
-          </label>
-          <label>
-            <span>Start month</span>
-            <input
-              onChange={(event) => setStartMonth(event.target.value)}
-              type="month"
-              value={startMonth}
-            />
-          </label>
-          <label>
-            <span>End / graduation month</span>
-            <input
-              disabled={isCurrent}
-              onChange={(event) => setEndMonth(event.target.value)}
-              type="month"
-              value={isCurrent ? '' : endMonth}
-            />
-          </label>
-          <label className="career-check-label">
-            <input
-              checked={isCurrent}
-              onChange={(event) => {
-                setIsCurrent(event.target.checked);
-                if (event.target.checked) setEndMonth('');
-              }}
-              type="checkbox"
-            />
-            <span>Currently studying here</span>
-          </label>
-        </div>
-        <label>
-          <span>Education details</span>
-          <textarea
-            maxLength={4000}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Relevant coursework, thesis, honors, activities, or other useful context."
-            rows={4}
-            value={description}
-          />
-        </label>
-        <SaveButton pending={pending} label="Add education" />
-      </form>
-    </SimpleRecordSection>
-  );
+  return <section className="career-section" id="education">
+    <SectionHeader index="03" title="Education" note="Degree dates and study context stay editable without becoming mandatory hiring signals." />
+    <EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.degree || 'Education', subtitle: item.institutionName, meta: formatDateRange(item.startDate, item.endDate, item.isCurrent), description: [item.fieldOfStudy, item.description].filter(Boolean).join(' · ') || null }))} onEdit={edit} onRemove={(id) => void onSave(serializeEducation(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeEducation(moveById(existing, id, direction)))} />
+    <form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}>
+      <div className="career-entry-heading"><strong>{editingId ? 'Edit education' : 'Add education'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div>
+      <div className="career-field-grid">
+        <Field label="Institution"><input value={institutionName} onChange={(e) => setInstitutionName(e.target.value)} /></Field>
+        <Field label="Degree"><input value={degree} onChange={(e) => setDegree(e.target.value)} /></Field>
+        <Field label="Field of study"><input value={fieldOfStudy} onChange={(e) => setFieldOfStudy(e.target.value)} /></Field>
+        <Field label="Location"><input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
+        <Field label="Start month"><input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></Field>
+        <Field label="End / graduation month"><input type="month" disabled={isCurrent} value={isCurrent ? '' : endMonth} onChange={(e) => setEndMonth(e.target.value)} /></Field>
+        <label className="career-check-label"><input type="checkbox" checked={isCurrent} onChange={(e) => { setIsCurrent(e.target.checked); if (e.target.checked) setEndMonth(''); }} /><span>Currently studying here</span></label>
+      </div>
+      <Field label="Education details"><textarea maxLength={3000} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+      <SaveButton pending={pending} label={editingId ? 'Save education' : 'Add education'} />
+    </form>
+  </section>;
 }
 
-function SkillsSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateSkills>[0]) => Promise<void>;
-}) {
-  const [value, setValue] = useState(
-    passport.currentProfileVersion!.skills.map((skill) => skill.name).join(', '),
-  );
-
-  return (
-    <section className="career-section" id="skills">
-      <SectionHeader
-        index="04"
-        title="Skills"
-        note="Keep skills factual. Evidence and verification attach in later phases."
-      />
-      <form
-        className="career-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const names = value
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean);
-          void onSave(names.map((name) => ({ name })));
-        }}
-      >
-        <label>
-          <span>Skills, separated by commas</span>
-          <textarea onChange={(event) => setValue(event.target.value)} rows={4} value={value} />
-        </label>
-        <div className="career-tag-preview">
-          {value
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean)
-            .map((skill) => (
-              <span key={skill}>{skill}</span>
-            ))}
-        </div>
-        <SaveButton pending={pending} label="Save skills" />
-      </form>
-    </section>
-  );
-}
-
-function ProjectsSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateProjects>[0]) => Promise<void>;
-}) {
-  const existing = passport.currentProfileVersion!.projects;
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [description, setDescription] = useState('');
-  const [url, setUrl] = useState('');
-  const [repositoryUrl, setRepositoryUrl] = useState('');
-  const [startMonth, setStartMonth] = useState('');
-  const [endMonth, setEndMonth] = useState('');
-
-  async function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!name.trim()) return;
-    await onSave([
-      ...existing.map(({ name, description, role, url, repositoryUrl, startDate, endDate }) => ({
-        name,
-        description,
-        role,
-        url,
-        repositoryUrl,
-        startDate,
-        endDate,
-      })),
-      {
-        name: name.trim(),
-        role: role.trim() || null,
-        description: description.trim() || null,
-        url: url.trim() || null,
-        repositoryUrl: repositoryUrl.trim() || null,
-        startDate: monthToIso(startMonth),
-        endDate: monthToIso(endMonth),
-      },
-    ]);
-    setName('');
-    setRole('');
-    setDescription('');
-    setUrl('');
-    setRepositoryUrl('');
-    setStartMonth('');
-    setEndMonth('');
-  }
-
-  return (
-    <SimpleRecordSection
-      id="projects"
-      index="05"
-      title="Projects"
-      note="Show what you actually built, the role you played, and when you worked on it."
-      empty="No projects added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: item.name,
-        subtitle: item.role || 'Project',
-        meta: formatDateRange(item.startDate, item.endDate),
-        ...(item.description ? { description: item.description } : {}),
-      }))}
-    >
-      <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
-        <div className="career-field-grid">
-          <label>
-            <span>Project name</span>
-            <input onChange={(event) => setName(event.target.value)} value={name} />
-          </label>
-          <label>
-            <span>Your role</span>
-            <input
-              onChange={(event) => setRole(event.target.value)}
-              placeholder="Full-stack developer, team lead…"
-              value={role}
-            />
-          </label>
-          <label>
-            <span>Start month</span>
-            <input
-              onChange={(event) => setStartMonth(event.target.value)}
-              type="month"
-              value={startMonth}
-            />
-          </label>
-          <label>
-            <span>End month</span>
-            <input
-              onChange={(event) => setEndMonth(event.target.value)}
-              type="month"
-              value={endMonth}
-            />
-          </label>
-          <label>
-            <span>Project URL</span>
-            <input
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://project.example"
-              type="url"
-              value={url}
-            />
-          </label>
-          <label>
-            <span>Repository URL</span>
-            <input
-              onChange={(event) => setRepositoryUrl(event.target.value)}
-              placeholder="https://github.com/..."
-              type="url"
-              value={repositoryUrl}
-            />
-          </label>
-        </div>
-        <label>
-          <span>What did you work on in this project?</span>
-          <textarea
-            maxLength={4000}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Describe what you built, your responsibilities, major features, technologies, and your contribution."
-            rows={6}
-            value={description}
-          />
-        </label>
-        <SaveButton pending={pending} label="Add project" />
-      </form>
-    </SimpleRecordSection>
-  );
-}
-
-function CertificationsSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateCertifications>[0]) => Promise<void>;
-}) {
-  const existing = passport.currentProfileVersion!.certifications;
-  const [name, setName] = useState('');
-  const [issuer, setIssuer] = useState('');
-
-  async function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!name.trim() || !issuer.trim()) return;
-    await onSave([
-      ...existing.map(({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt }) => ({
-        name,
-        issuer,
-        credentialId,
-        credentialUrl,
-        issuedAt,
-        expiresAt,
-      })),
-      { name: name.trim(), issuer: issuer.trim() },
-    ]);
-    setName('');
-    setIssuer('');
-  }
-
-  return (
-    <SimpleRecordSection
-      id="certifications"
-      index="06"
-      title="Certifications"
-      note="Credentials stay structured so verification can attach later."
-      empty="No certifications added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: item.name,
-        subtitle: item.issuer ?? 'Issuer not specified',
-        meta: item.credentialId || 'Credential ID not added',
-      }))}
-    >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Certification"
-          value={name}
-        />
-        <input
-          onChange={(event) => setIssuer(event.target.value)}
-          placeholder="Issuer"
-          value={issuer}
-        />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add certification
-        </button>
-      </form>
-    </SimpleRecordSection>
-  );
-}
-
-function LanguagesSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateLanguages>[0]) => Promise<void>;
-}) {
-  const existing = passport.currentProfileVersion!.languages;
+function SkillsSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateSkills>[0]) => Promise<void> }) {
+  const existing = profile.skills;
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [proficiency, setProficiency] = useState('');
+  const [experienceMonths, setExperienceMonths] = useState('');
+  function reset() { setEditingId(null); setName(''); setProficiency(''); setExperienceMonths(''); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setName(item.name); setProficiency(item.proficiency ?? ''); setExperienceMonths(item.experienceMonths?.toString() ?? ''); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!name.trim()) return; const next = serializeSkills(existing); const value = { name: name.trim(), proficiency: proficiency.trim() || null, experienceMonths: experienceMonths ? Number(experienceMonths) : null, lastUsedAt: null }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
+  return <section className="career-section" id="skills">
+    <SectionHeader index="04" title="Skills" note="Skills are ordered structured signals; candidates can edit, remove, or prioritize them explicitly." />
+    <EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.proficiency || 'Proficiency not specified', meta: item.experienceMonths == null ? '' : `${item.experienceMonths} months` }))} onEdit={edit} onRemove={(id) => void onSave(serializeSkills(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeSkills(moveById(existing, id, direction)))} />
+    <form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}>
+      <div className="career-entry-heading"><strong>{editingId ? 'Edit skill' : 'Add skill'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div>
+      <div className="career-field-grid"><Field label="Skill"><input value={name} onChange={(e) => setName(e.target.value)} /></Field><Field label="Proficiency"><input value={proficiency} onChange={(e) => setProficiency(e.target.value)} placeholder="Advanced, professional…" /></Field><Field label="Experience months"><input type="number" min="0" max="960" value={experienceMonths} onChange={(e) => setExperienceMonths(e.target.value)} /></Field></div>
+      <SaveButton pending={pending} label={editingId ? 'Save skill' : 'Add skill'} />
+    </form>
+  </section>;
+}
 
-  async function add(event: FormEvent<HTMLFormElement>) {
+function ProjectsSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateProjects>[0]) => Promise<void> }) {
+  const existing = profile.projects;
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState(''); const [role, setRole] = useState(''); const [description, setDescription] = useState(''); const [url, setUrl] = useState(''); const [repositoryUrl, setRepositoryUrl] = useState(''); const [startMonth, setStartMonth] = useState(''); const [endMonth, setEndMonth] = useState('');
+  function reset() { setEditingId(null); setName(''); setRole(''); setDescription(''); setUrl(''); setRepositoryUrl(''); setStartMonth(''); setEndMonth(''); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setName(item.name); setRole(item.role ?? ''); setDescription(item.description ?? ''); setUrl(item.url ?? ''); setRepositoryUrl(item.repositoryUrl ?? ''); setStartMonth(isoToMonth(item.startDate)); setEndMonth(isoToMonth(item.endDate)); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!name.trim()) return; const next = serializeProjects(existing); const value = { name: name.trim(), role: role.trim() || null, description: description.trim() || null, url: url.trim() || null, repositoryUrl: repositoryUrl.trim() || null, startDate: monthToIso(startMonth), endDate: monthToIso(endMonth) }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
+  return <section className="career-section" id="projects">
+    <SectionHeader index="05" title="Projects" note="Projects capture what the candidate actually built, their role, evidence links, and contribution." />
+    <EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.role || 'Project', meta: formatDateRange(item.startDate, item.endDate), description: item.description }))} onEdit={edit} onRemove={(id) => void onSave(serializeProjects(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeProjects(moveById(existing, id, direction)))} />
+    <form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}>
+      <div className="career-entry-heading"><strong>{editingId ? 'Edit project' : 'Add project'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div>
+      <div className="career-field-grid"><Field label="Project name"><input value={name} onChange={(e) => setName(e.target.value)} /></Field><Field label="Your role"><input value={role} onChange={(e) => setRole(e.target.value)} /></Field><Field label="Start month"><input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></Field><Field label="End month"><input type="month" value={endMonth} onChange={(e) => setEndMonth(e.target.value)} /></Field><Field label="Project URL"><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} /></Field><Field label="Repository URL"><input type="url" value={repositoryUrl} onChange={(e) => setRepositoryUrl(e.target.value)} /></Field></div>
+      <Field label="What did you work on in this project?"><textarea maxLength={3000} rows={6} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe what you built, responsibilities, major features, technologies, and your contribution." /></Field>
+      <SaveButton pending={pending} label={editingId ? 'Save project' : 'Add project'} />
+    </form>
+  </section>;
+}
+
+function CertificationsSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateCertifications>[0]) => Promise<void> }) {
+  const existing = profile.certifications;
+  const [editingId, setEditingId] = useState<string | null>(null); const [name, setName] = useState(''); const [issuer, setIssuer] = useState(''); const [credentialId, setCredentialId] = useState(''); const [credentialUrl, setCredentialUrl] = useState(''); const [issuedMonth, setIssuedMonth] = useState(''); const [expiresMonth, setExpiresMonth] = useState('');
+  function reset() { setEditingId(null); setName(''); setIssuer(''); setCredentialId(''); setCredentialUrl(''); setIssuedMonth(''); setExpiresMonth(''); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setName(item.name); setIssuer(item.issuer ?? ''); setCredentialId(item.credentialId ?? ''); setCredentialUrl(item.credentialUrl ?? ''); setIssuedMonth(isoToMonth(item.issuedAt)); setExpiresMonth(isoToMonth(item.expiresAt)); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!name.trim()) return; const next = serializeCertifications(existing); const value = { name: name.trim(), issuer: issuer.trim() || null, credentialId: credentialId.trim() || null, credentialUrl: credentialUrl.trim() || null, issuedAt: monthToIso(issuedMonth), expiresAt: monthToIso(expiresMonth) }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
+  return <section className="career-section" id="certifications"><SectionHeader index="06" title="Certifications" note="Credential evidence stays structured, ordered, and ready for future verification." /><EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.issuer || 'Issuer not specified', meta: item.credentialId || formatDateRange(item.issuedAt, item.expiresAt) }))} onEdit={edit} onRemove={(id) => void onSave(serializeCertifications(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeCertifications(moveById(existing, id, direction)))} /><form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}><div className="career-entry-heading"><strong>{editingId ? 'Edit certification' : 'Add certification'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div><div className="career-field-grid"><Field label="Certification"><input value={name} onChange={(e) => setName(e.target.value)} /></Field><Field label="Issuer"><input value={issuer} onChange={(e) => setIssuer(e.target.value)} /></Field><Field label="Credential ID"><input value={credentialId} onChange={(e) => setCredentialId(e.target.value)} /></Field><Field label="Credential URL"><input type="url" value={credentialUrl} onChange={(e) => setCredentialUrl(e.target.value)} /></Field><Field label="Issued"><input type="month" value={issuedMonth} onChange={(e) => setIssuedMonth(e.target.value)} /></Field><Field label="Expires"><input type="month" value={expiresMonth} onChange={(e) => setExpiresMonth(e.target.value)} /></Field></div><SaveButton pending={pending} label={editingId ? 'Save certification' : 'Add certification'} /></form></section>;
+}
+
+function LanguagesSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateLanguages>[0]) => Promise<void> }) {
+  const existing = profile.languages; const [editingId, setEditingId] = useState<string | null>(null); const [name, setName] = useState(''); const [proficiency, setProficiency] = useState('');
+  function reset() { setEditingId(null); setName(''); setProficiency(''); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setName(item.name); setProficiency(item.proficiency ?? ''); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!name.trim()) return; const next = serializeLanguages(existing); const value = { name: name.trim(), proficiency: proficiency.trim() || null }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
+  return <section className="career-section" id="languages"><SectionHeader index="07" title="Languages" note="Language capability stays explicit and candidate-controlled." /><EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.proficiency || 'Proficiency not specified' }))} onEdit={edit} onRemove={(id) => void onSave(serializeLanguages(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeLanguages(moveById(existing, id, direction)))} /><form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}><div className="career-entry-heading"><strong>{editingId ? 'Edit language' : 'Add language'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div><div className="career-field-grid"><Field label="Language"><input value={name} onChange={(e) => setName(e.target.value)} /></Field><Field label="Proficiency"><input value={proficiency} onChange={(e) => setProficiency(e.target.value)} /></Field></div><SaveButton pending={pending} label={editingId ? 'Save language' : 'Add language'} /></form></section>;
+}
+
+function LinksSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateLinks>[0]) => Promise<void> }) {
+  const existing = profile.links; const [editingId, setEditingId] = useState<string | null>(null); const [label, setLabel] = useState(''); const [kind, setKind] = useState('OTHER'); const [url, setUrl] = useState('');
+  function reset() { setEditingId(null); setLabel(''); setKind('OTHER'); setUrl(''); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setLabel(item.label); setKind(item.kind ?? 'OTHER'); setUrl(item.url); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!label.trim() || !url.trim()) return; const next = serializeLinks(existing); const value = { label: label.trim(), kind: kind.trim() || null, url: url.trim() }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
+  return <section className="career-section" id="links"><SectionHeader index="08" title="Professional links" note="Portfolio, GitHub, LinkedIn, and other evidence remain ordered and editable." /><EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.label, subtitle: item.kind || 'Professional link', meta: item.url }))} onEdit={edit} onRemove={(id) => void onSave(serializeLinks(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeLinks(moveById(existing, id, direction)))} /><form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}><div className="career-entry-heading"><strong>{editingId ? 'Edit link' : 'Add link'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div><div className="career-field-grid"><Field label="Label"><input value={label} onChange={(e) => setLabel(e.target.value)} /></Field><Field label="Kind"><input value={kind} onChange={(e) => setKind(e.target.value)} /></Field><Field label="URL"><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} /></Field></div><SaveButton pending={pending} label={editingId ? 'Save link' : 'Add link'} /></form></section>;
+}
+
+function LocationsSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateLocations>[0]) => Promise<void> }) {
+  const existing = profile.locationPreferences; const [editingId, setEditingId] = useState<string | null>(null); const [label, setLabel] = useState(''); const [countryCode, setCountryCode] = useState(''); const [region, setRegion] = useState(''); const [city, setCity] = useState(''); const [remoteOnly, setRemoteOnly] = useState(false);
+  function reset() { setEditingId(null); setLabel(''); setCountryCode(''); setRegion(''); setCity(''); setRemoteOnly(false); }
+  function edit(id: string) { const item = existing.find((entry) => entry.id === id); if (!item) return; setEditingId(id); setLabel(item.label); setCountryCode(item.countryCode ?? ''); setRegion(item.region ?? ''); setCity(item.city ?? ''); setRemoteOnly(item.remoteOnly); }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const country = countryCode.trim().toUpperCase(); const finalLabel = label.trim() || [city.trim(), region.trim(), country].filter(Boolean).join(', '); if (!finalLabel || (country && country.length !== 2)) return; const next = serializeLocations(existing); const value = { label: finalLabel, countryCode: country || null, region: region.trim() || null, city: city.trim() || null, remoteOnly }; const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onSave(next); reset(); }
+  return <section className="career-section" id="locations"><SectionHeader index="09" title="Location preferences" note="Location and remote preferences stay explicit rather than inferred." /><EditableRecordList pending={pending} records={existing.map((item) => ({ id: item.id, title: item.label, subtitle: item.remoteOnly ? 'Remote only' : 'Location preference', meta: [item.city, item.region, item.countryCode].filter(Boolean).join(', ') }))} onEdit={edit} onRemove={(id) => void onSave(serializeLocations(existing.filter((item) => item.id !== id)))} onMove={(id, direction) => void onSave(serializeLocations(moveById(existing, id, direction)))} /><form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}><div className="career-entry-heading"><strong>{editingId ? 'Edit location' : 'Add location'}</strong>{editingId ? <button type="button" onClick={reset}>Cancel edit</button> : null}</div><div className="career-field-grid"><Field label="Label"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Karachi / UAE / Remote" /></Field><Field label="Country code"><input maxLength={2} value={countryCode} onChange={(e) => setCountryCode(e.target.value.toUpperCase())} /></Field><Field label="Region"><input value={region} onChange={(e) => setRegion(e.target.value)} /></Field><Field label="City"><input value={city} onChange={(e) => setCity(e.target.value)} /></Field><label className="career-check-label"><input type="checkbox" checked={remoteOnly} onChange={(e) => setRemoteOnly(e.target.checked)} /><span>Remote only</span></label></div><SaveButton pending={pending} label={editingId ? 'Save location' : 'Add location'} /></form></section>;
+}
+
+function CustomSectionsSection({ profile, pending, onSave }: { profile: Profile; pending: boolean; onSave: (input: Parameters<typeof replaceCandidateCustomSections>[0]) => Promise<void> }) {
+  const existing = profile.customSections;
+  const [sectionTitle, setSectionTitle] = useState('');
+  const [sectionDescription, setSectionDescription] = useState('');
+
+  async function addSection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
-    await onSave([
-      ...existing.map(({ name, proficiency }) => ({ name, proficiency })),
-      { name: name.trim(), proficiency: proficiency.trim() || null },
-    ]);
-    setName('');
-    setProficiency('');
+    if (!sectionTitle.trim()) return;
+    await onSave([...serializeCustomSections(existing), { title: sectionTitle.trim(), description: sectionDescription.trim() || null, items: [] }]);
+    setSectionTitle(''); setSectionDescription('');
   }
 
-  return (
-    <SimpleRecordSection
-      id="languages"
-      index="07"
-      title="Languages"
-      note="Language capability is useful context, not a universal hiring requirement."
-      empty="No languages added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: item.name,
-        subtitle: item.proficiency || 'Proficiency not specified',
-      }))}
-    >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Language"
-          value={name}
-        />
-        <input
-          onChange={(event) => setProficiency(event.target.value)}
-          placeholder="Professional, native…"
-          value={proficiency}
-        />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add language
-        </button>
-      </form>
-    </SimpleRecordSection>
-  );
+  return <section className="career-section" id="custom-sections">
+    <SectionHeader index="10" title="Custom sections" note="Add awards, publications, volunteering, research, speaking, open-source work, or other career evidence without weakening the canonical structured profile." />
+    <div className="career-custom-sections">
+      {existing.length ? existing.map((section, index) => <CustomSectionEditor key={section.id} section={section} sectionIndex={index} sectionCount={existing.length} pending={pending} onRename={(title, description) => { const next = serializeCustomSections(existing); next[index] = { ...next[index]!, title, description }; return onSave(next); }} onRemove={() => onSave(serializeCustomSections(existing.filter((item) => item.id !== section.id)))} onMove={(direction) => onSave(serializeCustomSections(moveById(existing, section.id, direction)))} onReplaceItems={(items) => { const next = serializeCustomSections(existing); next[index] = { ...next[index]!, items }; return onSave(next); }} />) : <p className="career-empty-copy">No custom sections yet. Use them for evidence that does not fit the canonical profile structure.</p>}
+    </div>
+    <form className="career-form career-entry-form" onSubmit={(event) => void addSection(event)}>
+      <div className="career-entry-heading"><strong>Add custom section</strong></div>
+      <div className="career-field-grid"><Field label="Section title"><input maxLength={160} value={sectionTitle} onChange={(e) => setSectionTitle(e.target.value)} placeholder="Awards, Publications, Volunteering…" /></Field><Field label="Optional introduction"><input maxLength={1000} value={sectionDescription} onChange={(e) => setSectionDescription(e.target.value)} /></Field></div>
+      <SaveButton pending={pending} label="Add custom section" />
+    </form>
+  </section>;
 }
 
-function LinksSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateLinks>[0]) => Promise<void>;
-}) {
-  const existing = passport.currentProfileVersion!.links;
-  const [label, setLabel] = useState('');
-  const [url, setUrl] = useState('');
-
-  async function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!label.trim() || !url.trim()) return;
-    await onSave([
-      ...existing.map(({ kind, label, url }) => ({ kind, label, url })),
-      { kind: 'OTHER', label: label.trim(), url: url.trim() },
-    ]);
-    setLabel('');
-    setUrl('');
-  }
-
-  return (
-    <SimpleRecordSection
-      id="links"
-      index="08"
-      title="Professional links"
-      note="Keep portfolio, GitHub, LinkedIn, and other evidence attached to one identity."
-      empty="No professional links added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: item.label || item.kind || 'Professional link',
-        subtitle: item.kind ?? 'Professional link',
-        meta: item.url,
-      }))}
-    >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          onChange={(event) => setLabel(event.target.value)}
-          placeholder="Portfolio, GitHub…"
-          value={label}
-        />
-        <input
-          onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://"
-          type="url"
-          value={url}
-        />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add link
-        </button>
-      </form>
-    </SimpleRecordSection>
-  );
+function CustomSectionEditor({ section, sectionIndex, sectionCount, pending, onRename, onRemove, onMove, onReplaceItems }: { section: CandidateCustomSectionResponse; sectionIndex: number; sectionCount: number; pending: boolean; onRename: (title: string, description: string | null) => Promise<void>; onRemove: () => Promise<void>; onMove: (direction: Direction) => Promise<void>; onReplaceItems: (items: Parameters<typeof replaceCandidateCustomSections>[0][number]['items']) => Promise<void> }) {
+  const [editingSection, setEditingSection] = useState(false); const [title, setTitle] = useState(section.title); const [description, setDescription] = useState(section.description ?? '');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null); const [itemTitle, setItemTitle] = useState(''); const [itemSubtitle, setItemSubtitle] = useState(''); const [itemDescription, setItemDescription] = useState(''); const [itemStart, setItemStart] = useState(''); const [itemEnd, setItemEnd] = useState(''); const [itemUrl, setItemUrl] = useState('');
+  function resetItem() { setEditingItemId(null); setItemTitle(''); setItemSubtitle(''); setItemDescription(''); setItemStart(''); setItemEnd(''); setItemUrl(''); }
+  function editItem(id: string) { const item = section.items.find((entry) => entry.id === id); if (!item) return; setEditingItemId(id); setItemTitle(item.title); setItemSubtitle(item.subtitle ?? ''); setItemDescription(item.description ?? ''); setItemStart(isoToMonth(item.startDate)); setItemEnd(isoToMonth(item.endDate)); setItemUrl(item.url ?? ''); }
+  async function submitItem(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!itemTitle.trim()) return; const next = serializeCustomItems(section.items); const value = { title: itemTitle.trim(), subtitle: itemSubtitle.trim() || null, description: itemDescription.trim() || null, startDate: monthToIso(itemStart), endDate: monthToIso(itemEnd), url: itemUrl.trim() || null }; const index = editingItemId ? section.items.findIndex((item) => item.id === editingItemId) : -1; if (index >= 0) next[index] = value; else next.push(value); await onReplaceItems(next); resetItem(); }
+  return <article className="career-custom-section-card">
+    <header className="career-custom-section-head"><div><span className="career-custom-index">C{String(sectionIndex + 1).padStart(2, '0')}</span><h3>{section.title}</h3>{section.description ? <p>{section.description}</p> : null}</div><div className="career-record-actions"><button disabled={pending || sectionIndex === 0} onClick={() => void onMove(-1)} type="button">↑</button><button disabled={pending || sectionIndex === sectionCount - 1} onClick={() => void onMove(1)} type="button">↓</button><button disabled={pending} onClick={() => setEditingSection((value) => !value)} type="button">Rename</button><button disabled={pending} onClick={() => void onRemove()} type="button">Delete section</button></div></header>
+    {editingSection ? <form className="career-custom-section-rename" onSubmit={(event) => { event.preventDefault(); if (!title.trim()) return; void onRename(title.trim(), description.trim() || null); setEditingSection(false); }}><input value={title} onChange={(e) => setTitle(e.target.value)} /><input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional introduction" /><button className="compact-action" disabled={pending} type="submit">Save section</button></form> : null}
+    <EditableRecordList compact pending={pending} records={section.items.map((item) => ({ id: item.id, title: item.title, subtitle: item.subtitle || 'Custom entry', meta: formatDateRange(item.startDate, item.endDate), description: item.description }))} onEdit={editItem} onRemove={(id) => void onReplaceItems(serializeCustomItems(section.items.filter((item) => item.id !== id)))} onMove={(id, direction) => void onReplaceItems(serializeCustomItems(moveById(section.items, id, direction)))} />
+    <form className="career-custom-item-form" onSubmit={(event) => void submitItem(event)}><div className="career-entry-heading"><strong>{editingItemId ? 'Edit entry' : 'Add entry'}</strong>{editingItemId ? <button type="button" onClick={resetItem}>Cancel edit</button> : null}</div><div className="career-field-grid"><Field label="Title"><input value={itemTitle} onChange={(e) => setItemTitle(e.target.value)} /></Field><Field label="Subtitle"><input value={itemSubtitle} onChange={(e) => setItemSubtitle(e.target.value)} /></Field><Field label="Start month"><input type="month" value={itemStart} onChange={(e) => setItemStart(e.target.value)} /></Field><Field label="End month"><input type="month" value={itemEnd} onChange={(e) => setItemEnd(e.target.value)} /></Field><Field label="URL"><input type="url" value={itemUrl} onChange={(e) => setItemUrl(e.target.value)} /></Field></div><Field label="Description"><textarea maxLength={4000} rows={4} value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} /></Field><button className="compact-action" disabled={pending} type="submit">{pending ? 'Saving…' : editingItemId ? 'Save entry' : 'Add entry'}</button></form>
+  </article>;
 }
 
-function LocationsSection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof replaceCandidateLocations>[0]) => Promise<void>;
-}) {
-  const existing = passport.currentProfileVersion!.locationPreferences;
-  const [countryCode, setCountryCode] = useState('');
-  const [city, setCity] = useState('');
-
-  async function add(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const country = countryCode.trim().toUpperCase();
-    if (country.length !== 2) return;
-    await onSave([
-      ...existing.map(({ label, countryCode, region, city, remoteOnly }) => ({
-        label,
-        countryCode,
-        region,
-        city,
-        remoteOnly,
-      })),
-      {
-        label: city.trim() ? `${city.trim()}, ${country}` : country,
-        countryCode: country,
-        city: city.trim() || null,
-        remoteOnly: false,
-      },
-    ]);
-    setCountryCode('');
-    setCity('');
-  }
-
-  return (
-    <SimpleRecordSection
-      id="locations"
-      index="09"
-      title="Location preferences"
-      note="Location and mobility preferences stay explicit instead of being inferred."
-      empty="No location preferences added yet."
-      records={existing.map((item) => ({
-        id: item.id,
-        title: [item.city, item.region, item.countryCode].filter(Boolean).join(', '),
-        subtitle: item.remoteOnly ? 'Remote only' : 'Location preference',
-        meta: item.remoteOnly ? 'Remote only' : 'Location preference',
-      }))}
-    >
-      <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input
-          maxLength={2}
-          onChange={(event) => setCountryCode(event.target.value.toUpperCase())}
-          placeholder="PK"
-          value={countryCode}
-        />
-        <input onChange={(event) => setCity(event.target.value)} placeholder="City" value={city} />
-        <button className="compact-action" disabled={pending} type="submit">
-          Add location
-        </button>
-      </form>
-    </SimpleRecordSection>
-  );
+function PrivacySection({ passport, pending, onSave }: { passport: CandidatePassportResponse; pending: boolean; onSave: (input: Parameters<typeof updateCandidateSettings>[0]) => Promise<void> }) {
+  const [visibility, setVisibility] = useState(passport.visibility); const [discoverability, setDiscoverability] = useState(passport.discoverability);
+  return <section className="career-section" id="privacy"><SectionHeader index="11" title="Privacy & discoverability" note="Private by default. Visibility and recruiter discoverability are separate controls." /><form className="career-form" onSubmit={(event) => { event.preventDefault(); void onSave({ visibility, discoverability }); }}><div className="career-field-grid"><Field label="Profile visibility"><select value={visibility} onChange={(e) => setVisibility(e.target.value as typeof visibility)}><option value="PRIVATE">Private</option><option value="NETWORK">Talent Network</option><option value="VERIFIED_RECRUITERS">Verified recruiters</option></select></Field><Field label="Search discoverability"><select value={discoverability} onChange={(e) => setDiscoverability(e.target.value as typeof discoverability)}><option value="HIDDEN">Hidden</option><option value="SEARCHABLE">Searchable</option></select></Field></div><p className="career-privacy-note">Your career identity is personal. Joining a company workspace never gives that company access to your private career activity.</p><SaveButton pending={pending} label="Save privacy settings" /></form></section>;
 }
 
-function PrivacySection({
-  passport,
-  pending,
-  onSave,
-}: {
-  passport: CandidatePassportResponse;
-  pending: boolean;
-  onSave: (input: Parameters<typeof updateCandidateSettings>[0]) => Promise<void>;
-}) {
-  const [visibility, setVisibility] = useState(passport.visibility);
-  const [discoverability, setDiscoverability] = useState(passport.discoverability);
-
-  return (
-    <section className="career-section" id="privacy">
-      <SectionHeader
-        index="10"
-        title="Privacy & discoverability"
-        note="Private by default. Visibility and recruiter discoverability are separate controls."
-      />
-      <form
-        className="career-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void onSave({ visibility, discoverability });
-        }}
-      >
-        <div className="career-field-grid">
-          <label>
-            <span>Profile visibility</span>
-            <select
-              onChange={(event) => setVisibility(event.target.value as typeof visibility)}
-              value={visibility}
-            >
-              <option value="PRIVATE">Private</option>
-              <option value="NETWORK">Talent Network</option>
-              <option value="VERIFIED_RECRUITERS">Verified recruiters</option>
-            </select>
-          </label>
-          <label>
-            <span>Search discoverability</span>
-            <select
-              onChange={(event) => setDiscoverability(event.target.value as typeof discoverability)}
-              value={discoverability}
-            >
-              <option value="HIDDEN">Hidden</option>
-              <option value="SEARCHABLE">Searchable</option>
-            </select>
-          </label>
-        </div>
-        <p className="career-privacy-note">
-          Your career identity is personal. Joining a company workspace never gives that company
-          access to your private career activity.
-        </p>
-        <SaveButton pending={pending} label="Save privacy settings" />
-      </form>
-    </section>
-  );
+function EditableRecordList({ records, pending, onEdit, onRemove, onMove, compact = false }: { records: Array<{ id: string; title: string; subtitle: string; meta?: string | null; description?: string | null }>; pending: boolean; onEdit: (id: string) => void; onRemove: (id: string) => void; onMove: (id: string, direction: Direction) => void; compact?: boolean }) {
+  if (!records.length) return <p className={compact ? 'career-empty-copy career-empty-copy-compact' : 'career-empty-copy'}>No entries added yet.</p>;
+  return <div className={compact ? 'career-record-list career-record-list-compact' : 'career-record-list'}>{records.map((item, index) => <article key={item.id}><div className="career-record-primary"><strong>{item.title}</strong><span>{item.subtitle}</span>{item.meta ? <small>{item.meta}</small> : null}{item.description ? <p className="career-record-description">{item.description}</p> : null}</div><div className="career-record-actions"><button disabled={pending || index === 0} onClick={() => onMove(item.id, -1)} type="button" aria-label={`Move ${item.title} up`}>↑</button><button disabled={pending || index === records.length - 1} onClick={() => onMove(item.id, 1)} type="button" aria-label={`Move ${item.title} down`}>↓</button><button disabled={pending} onClick={() => onEdit(item.id)} type="button">Edit</button><button disabled={pending} onClick={() => onRemove(item.id)} type="button">Remove</button></div></article>)}</div>;
 }
 
-function SimpleRecordSection({
-  id,
-  index,
-  title,
-  note,
-  empty,
-  records,
-  children,
-}: {
-  id: string;
-  index: string;
-  title: string;
-  note: string;
-  empty: string;
-  records: Array<{
-    id: string;
-    title: string;
-    subtitle: string;
-    meta?: string;
-    description?: string;
-  }>;
-  children: ReactNode;
-}) {
-  return (
-    <section className="career-section" id={id}>
-      <SectionHeader index={index} title={title} note={note} />
-      <div className="career-record-list">
-        {records.length ? (
-          records.map((item) => (
-            <article key={item.id}>
-              <strong>{item.title}</strong>
-              <span>{item.subtitle}</span>
-              {item.meta ? <small>{item.meta}</small> : null}
-              {item.description ? (
-                <p className="career-record-description">{item.description}</p>
-              ) : null}
-            </article>
-          ))
-        ) : (
-          <p>{empty}</p>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
+function Field({ label, children }: { label: string; children: ReactNode }) { return <label><span>{label}</span>{children}</label>; }
+function SectionHeader({ index, title, note }: { index: string; title: string; note: string }) { return <header className="career-section-header"><span>{index}</span><div><h2>{title}</h2><p>{note}</p></div></header>; }
+function SaveButton({ pending, label }: { pending: boolean; label: string }) { return <button className="primary-action" disabled={pending} type="submit">{pending ? 'Saving…' : label}</button>; }
+function CareerState({ title, detail }: { title: string; detail?: string }) { return <main className="workspace-loading"><p className="eyebrow">Talent Network</p><h1>{title}</h1>{detail ? <p>{detail}</p> : null}</main>; }
 
-function SectionHeader({ index, title, note }: { index: string; title: string; note: string }) {
-  return (
-    <header className="career-section-header">
-      <span>{index}</span>
-      <div>
-        <h2>{title}</h2>
-        <p>{note}</p>
-      </div>
-    </header>
-  );
-}
+function moveById<T extends { id: string }>(items: T[], id: string, direction: Direction): T[] { const index = items.findIndex((item) => item.id === id); const target = index + direction; if (index < 0 || target < 0 || target >= items.length) return items; const next = [...items]; [next[index], next[target]] = [next[target]!, next[index]!]; return next; }
+function monthToIso(value: string): string | null { return value ? `${value}-01T00:00:00.000Z` : null; }
+function isoToMonth(value: string | null): string { return value ? value.slice(0, 7) : ''; }
+function formatDateRange(start: string | null, end: string | null, current = false): string { const startLabel = formatMonth(start); const endLabel = current ? 'Present' : formatMonth(end); if (!startLabel && !endLabel) return ''; if (!startLabel) return endLabel; if (!endLabel) return startLabel; return `${startLabel} – ${endLabel}`; }
+function formatMonth(value: string | null): string { if (!value) return ''; const date = new Date(value); if (Number.isNaN(date.getTime())) return ''; return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date); }
 
-function SaveButton({ pending, label }: { pending: boolean; label: string }) {
-  return (
-    <button className="primary-action" disabled={pending} type="submit">
-      {pending ? 'Saving…' : label}
-    </button>
-  );
-}
-
-function CareerState({ title, detail }: { title: string; detail?: string }) {
-  return (
-    <main className="workspace-loading">
-      <p className="eyebrow">Talent Network</p>
-      <h1>{title}</h1>
-      {detail ? <p>{detail}</p> : null}
-    </main>
-  );
-}
-
-function monthToIso(value: string): string | null {
-  return value ? `${value}-01T00:00:00.000Z` : null;
-}
-
-function formatDateRange(
-  startDate: string | null,
-  endDate: string | null,
-  isCurrent = false,
-): string {
-  const start = formatMonth(startDate);
-  const end = isCurrent ? 'Present' : formatMonth(endDate);
-  if (start && end) return `${start} – ${end}`;
-  if (start) return start;
-  if (end) return end;
-  return 'Dates not specified';
-}
-
-function formatMonth(value: string | null): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(
-    date,
-  );
-}
+function serializeEmployments(items: Profile['employments']): Parameters<typeof replaceCandidateEmployment>[0] { return items.map(({ companyName, title, employmentType, location, workMode, startDate, endDate, isCurrent, summary }) => ({ companyName, title, employmentType, location, workMode, startDate, endDate, isCurrent, summary })); }
+function serializeEducation(items: Profile['education']): Parameters<typeof replaceCandidateEducation>[0] { return items.map(({ institutionName, degree, fieldOfStudy, location, startDate, endDate, isCurrent, description }) => ({ institutionName, degree, fieldOfStudy, location, startDate, endDate, isCurrent, description })); }
+function serializeSkills(items: Profile['skills']): Parameters<typeof replaceCandidateSkills>[0] { return items.map(({ name, proficiency, experienceMonths, lastUsedAt }) => ({ name, proficiency, experienceMonths, lastUsedAt })); }
+function serializeProjects(items: Profile['projects']): Parameters<typeof replaceCandidateProjects>[0] { return items.map(({ name, description, role, url, repositoryUrl, startDate, endDate }) => ({ name, description, role, url, repositoryUrl, startDate, endDate })); }
+function serializeCertifications(items: Profile['certifications']): Parameters<typeof replaceCandidateCertifications>[0] { return items.map(({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt }) => ({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt })); }
+function serializeLanguages(items: Profile['languages']): Parameters<typeof replaceCandidateLanguages>[0] { return items.map(({ name, proficiency }) => ({ name, proficiency })); }
+function serializeLinks(items: Profile['links']): Parameters<typeof replaceCandidateLinks>[0] { return items.map(({ label, url, kind }) => ({ label, url, kind })); }
+function serializeLocations(items: Profile['locationPreferences']): Parameters<typeof replaceCandidateLocations>[0] { return items.map(({ label, countryCode, region, city, remoteOnly }) => ({ label, countryCode, region, city, remoteOnly })); }
+function serializeCustomItems(items: CandidateCustomSectionResponse['items']): Parameters<typeof replaceCandidateCustomSections>[0][number]['items'] { return items.map(({ title, subtitle, description, startDate, endDate, url }) => ({ title, subtitle, description, startDate, endDate, url })); }
+function serializeCustomSections(items: CandidateCustomSectionResponse[]): Parameters<typeof replaceCandidateCustomSections>[0] { return items.map(({ title, description, items: sectionItems }) => ({ title, description, items: serializeCustomItems(sectionItems) })); }
 
 function calculateCompleteness(passport: CandidatePassportResponse | null): number {
   const profile = passport?.currentProfileVersion;
   if (!profile) return 0;
-  const checks = [
-    Boolean(profile.headline),
-    Boolean(profile.summary),
-    profile.employments.length > 0,
-    profile.education.length > 0,
-    profile.skills.length > 0,
-    profile.projects.length > 0,
-    profile.links.length > 0,
-    profile.locationPreferences.length > 0,
-    profile.preferredWorkModes.length > 0,
-    Boolean(profile.availabilityStatus),
-  ];
+  const checks = [Boolean(profile.headline), Boolean(profile.summary), profile.employments.length > 0, profile.education.length > 0, profile.skills.length > 0, profile.projects.length > 0, profile.links.length > 0, profile.locationPreferences.length > 0, profile.preferredWorkModes.length > 0, Boolean(profile.availabilityStatus)];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
