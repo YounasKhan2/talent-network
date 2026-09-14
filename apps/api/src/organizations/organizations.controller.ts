@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
 import { AuthorizationService } from '../authorization/authorization.service.js';
-import { OrganizationsService } from './organizations.service.js';
+import { OrganizationsService, type CreateOrganizationInput } from './organizations.service.js';
 
 const createOrganizationSchema = z.object({
   displayName: z.string().trim().min(2).max(120),
@@ -47,9 +47,15 @@ export class OrganizationsController {
   }
 }
 
-function parseCreateOrganization(body: unknown): z.infer<typeof createOrganizationSchema> {
+function parseCreateOrganization(body: unknown): CreateOrganizationInput {
   const parsed = createOrganizationSchema.safeParse(body);
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    return {
+      displayName: parsed.data.displayName,
+      ...(parsed.data.legalName ? { legalName: parsed.data.legalName } : {}),
+      ...(parsed.data.slug ? { slug: parsed.data.slug } : {}),
+    };
+  }
 
   throw new BadRequestException({
     code: 'INVALID_ORGANIZATION_PAYLOAD',
