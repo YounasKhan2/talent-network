@@ -1,0 +1,136 @@
+.team-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(520px, 1.2fr);
+  gap: 56px;
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.team-panel-heading h2 {
+  max-width: 520px;
+  margin: 9px 0 0;
+  font-size: 28px;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.team-panel-heading > p:last-child {
+  max-width: 520px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.team-panel-workspace {
+  min-width: 0;
+}
+
+.team-invite-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, 0.55fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.team-invite-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.team-invite-form label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.team-invite-form input,
+.team-invite-form select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.team-invite-form input:focus,
+.team-invite-form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(81, 76, 245, 0.11);
+}
+
+.team-message {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.invitation-table {
+  margin-top: 18px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.invitation-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(130px, 0.8fr) minmax(90px, 0.55fr) 70px;
+  gap: 16px;
+  min-height: 44px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.invitation-row > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invitation-row-head {
+  min-height: 34px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.invitation-empty {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 1080px) {
+  .team-panel {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 760px) {
+  .team-invite-form {
+    grid-template-columns: 1fr;
+  }
+
+  .invitation-table {
+    overflow-x: auto;
+  }
+
+  .invitation-row {
+    min-width: 620px;
+  }
+}
