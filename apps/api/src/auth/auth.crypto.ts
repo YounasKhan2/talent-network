@@ -23,7 +23,7 @@ function scrypt(password: string, salt: Buffer): Promise<Buffer> {
           reject(error);
           return;
         }
-        resolve(derivedKey as Buffer);
+        resolve(derivedKey);
       },
     );
   });
