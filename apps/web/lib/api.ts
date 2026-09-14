@@ -16,19 +16,21 @@ export type Permission =
   | 'scorecards.submit'
   | 'audit.read';
 
+export interface MembershipResponse {
+  organizationId: string;
+  displayName: string;
+  slug: string;
+  roleKey: string;
+  permissions: readonly Permission[];
+}
+
 export interface SessionResponse {
   user: {
     id: string;
     primaryEmail: string;
     emailVerifiedAt: string | null;
   };
-  memberships: Array<{
-    organizationId: string;
-    displayName: string;
-    slug: string;
-    roleKey: string;
-    permissions: readonly Permission[];
-  }>;
+  memberships: MembershipResponse[];
 }
 
 export interface OrganizationResponse {
@@ -38,6 +40,11 @@ export interface OrganizationResponse {
   slug: string;
   status: string;
   verificationStatus: string;
+}
+
+export interface ActiveOrganizationContextResponse {
+  organization: OrganizationResponse;
+  membership: MembershipResponse;
 }
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:4000';
@@ -108,6 +115,33 @@ export function logout(): Promise<void> {
   return apiRequest<void>('/auth/logout', { method: 'POST' });
 }
 
+export function requestEmailVerification(): Promise<{ status: 'accepted' }> {
+  return apiRequest<{ status: 'accepted' }>('/auth/email-verification/request', {
+    method: 'POST',
+  });
+}
+
+export function confirmEmailVerification(token: string): Promise<{ status: 'verified' }> {
+  return apiRequest<{ status: 'verified' }>('/auth/email-verification/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}
+
+export function requestPasswordReset(email: string): Promise<{ status: 'accepted' }> {
+  return apiRequest<{ status: 'accepted' }>('/auth/password-reset/request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function confirmPasswordReset(token: string, password: string): Promise<void> {
+  return apiRequest<void>('/auth/password-reset/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+}
+
 export function createOrganization(input: {
   displayName: string;
   slug?: string;
@@ -115,6 +149,21 @@ export function createOrganization(input: {
   return apiRequest<OrganizationResponse>('/organizations', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function getActiveOrganizationContext(
+  organizationId: string,
+): Promise<ActiveOrganizationContextResponse> {
+  return apiRequest<ActiveOrganizationContextResponse>('/organizations/active-context', {
+    organizationId,
+  });
+}
+
+export function acceptOrganizationInvitation(token: string): Promise<unknown> {
+  return apiRequest<unknown>('/organizations/invitations/accept', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
   });
 }
 
