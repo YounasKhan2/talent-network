@@ -9,7 +9,6 @@ const redisProvider = {
   useFactory: (): Redis => {
     const env = parseApiEnv();
     return new Redis(env.REDIS_URL, {
-      lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
     });
@@ -22,10 +21,6 @@ class RedisLifecycle implements OnApplicationShutdown {
 
   async onApplicationShutdown(): Promise<void> {
     if (this.redis.status === 'end') return;
-    if (this.redis.status === 'wait') {
-      this.redis.disconnect();
-      return;
-    }
     await this.redis.quit();
   }
 }
