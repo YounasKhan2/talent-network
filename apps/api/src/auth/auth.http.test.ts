@@ -14,7 +14,7 @@ import {
   type ResponseLike,
 } from './auth.http.js';
 
-test('reads session cookie and preserves encoded token values', () => {
+void test('reads session cookie and preserves encoded token values', () => {
   const request: RequestLike = {
     headers: { cookie: `other=value; ${SESSION_COOKIE}=token%2Fwith%2Fslashes` },
   };
@@ -23,12 +23,12 @@ test('reads session cookie and preserves encoded token values', () => {
   assert.equal(readOptionalSessionToken(request), 'token/with/slashes');
 });
 
-test('requires authentication when the session cookie is absent', () => {
+void test('requires authentication when the session cookie is absent', () => {
   assert.throws(() => readSessionToken({ headers: {} }), UnauthorizedException);
   assert.equal(readOptionalSessionToken({ headers: {} }), null);
 });
 
-test('accepts csrf only when the cookie and header match', () => {
+void test('accepts csrf only when the cookie and header match', () => {
   const request: RequestLike = {
     headers: {
       cookie: `${CSRF_COOKIE}=csrf-value`,
@@ -39,7 +39,7 @@ test('accepts csrf only when the cookie and header match', () => {
   assert.doesNotThrow(() => assertCsrf(request));
 });
 
-test('rejects missing or mismatched csrf tokens', () => {
+void test('rejects missing or mismatched csrf tokens', () => {
   assert.throws(() => assertCsrf({ headers: {} }), ForbiddenException);
   assert.throws(
     () =>
@@ -53,7 +53,7 @@ test('rejects missing or mismatched csrf tokens', () => {
   );
 });
 
-test('sets secure session and readable csrf cookies with matching lifetime', () => {
+void test('sets secure session and readable csrf cookies with matching lifetime', () => {
   const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
   const response: ResponseLike = {
     cookie(name, value, options) {
@@ -82,7 +82,7 @@ test('sets secure session and readable csrf cookies with matching lifetime', () 
   assert.equal(cookies[1]?.options.secure, true);
 });
 
-test('clears both auth cookies with the same security scope', () => {
+void test('clears both auth cookies with the same security scope', () => {
   const cleared: Array<{ name: string; options: Record<string, unknown> }> = [];
   const response: ResponseLike = {
     cookie() {},
@@ -105,7 +105,7 @@ test('clears both auth cookies with the same security scope', () => {
   ]);
 });
 
-test('derives user agent and first forwarded ip from the request', () => {
+void test('derives user agent and first forwarded ip from the request', () => {
   assert.deepEqual(
     sessionContextFromRequest({
       headers: {
