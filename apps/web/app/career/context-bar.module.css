@@ -104,6 +104,48 @@
   overflow-x: clip;
 }
 
+.workspaceTopbar {
+  min-height: 116px;
+  margin: 24px 32px 0;
+  padding-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #b8b1a5;
+}
+
+.topbarKicker {
+  margin: 0;
+  color: #6d6961;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.workspaceTopbar h1 {
+  margin: 5px 0 0;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.workspaceRole {
+  padding: 6px 8px;
+  border: 1px solid #d9d4ca;
+  border-radius: 3px;
+  color: #6d6961;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.content {
+  min-width: 0;
+}
+
 @media (max-width: 860px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -135,5 +177,19 @@
 
   .sidebarFooter {
     margin-top: 12px;
+  }
+
+  .workspaceTopbar {
+    min-height: 88px;
+    margin: 16px 20px 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .workspaceTopbar {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
   }
 }
