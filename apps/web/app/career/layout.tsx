@@ -3,7 +3,7 @@
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError, getCandidatePassport, getSession, type MembershipResponse } from '../../lib/api';
+import { ApiError, getAccountContexts, type MembershipResponse } from '../../lib/api';
 import styles from './context-bar.module.css';
 
 type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
@@ -19,22 +19,17 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 
     async function resolveCareerContext() {
       try {
-        const session = await getSession();
+        const contexts = await getAccountContexts();
         if (!active) return;
-        setMemberships(session.memberships);
 
-        try {
-          await getCandidatePassport();
-        } catch (caught) {
-          if (caught instanceof ApiError && caught.code === 'CANDIDATE_PASSPORT_NOT_INITIALIZED') {
-            setState('redirecting');
-            router.replace('/onboarding?intent=career');
-            return;
-          }
-          throw caught;
+        if (!contexts.career.available) {
+          setState('redirecting');
+          router.replace('/onboarding?intent=career');
+          return;
         }
 
-        if (active) setState('ready');
+        setMemberships(contexts.organizations);
+        setState('ready');
       } catch (caught) {
         if (!active) return;
         if (caught instanceof ApiError && caught.status === 401) {
