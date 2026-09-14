@@ -2,8 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { WorkspaceContextSwitcher } from '../../components/workspace-context-switcher';
-import { ApiError, getAccountContexts, type AccountContextResponse } from '../../lib/api';
+import { ApiError, getAccountContexts } from '../../lib/api';
 import { rememberOrganizationContext } from '../../lib/workspace-preference';
 import styles from '../career/context-bar.module.css';
 
@@ -14,8 +13,6 @@ type LoadState = 'loading' | 'ready' | 'redirecting' | 'error';
 export default function HiringWorkspaceLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<LoadState>('loading');
-  const [contexts, setContexts] = useState<AccountContextResponse | null>(null);
-  const [activeOrganizationId, setActiveOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,13 +31,10 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
 
         if (selectedOrganization) {
           rememberOrganizationContext(selectedOrganization.organizationId);
-          setActiveOrganizationId(selectedOrganization.organizationId);
         } else {
           window.localStorage.removeItem(workspaceStorageKey);
-          setActiveOrganizationId(null);
         }
 
-        setContexts(nextContexts);
         setState('ready');
       } catch (caught) {
         if (!active) return;
@@ -70,7 +64,7 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
     );
   }
 
-  if (state === 'error' || !contexts) {
+  if (state === 'error') {
     return (
       <main className={styles.gate}>
         <p className="eyebrow">Talent Network</p>
@@ -80,20 +74,5 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
     );
   }
 
-  return (
-    <>
-      <div className={styles.bar} aria-label="Workspace context">
-        <span className={styles.contextHint}>Talent Network workspace</span>
-        <WorkspaceContextSwitcher
-          activeContext={
-            activeOrganizationId
-              ? { kind: 'organization', organizationId: activeOrganizationId }
-              : { kind: 'hiring-setup' }
-          }
-          contexts={contexts}
-        />
-      </div>
-      {children}
-    </>
-  );
+  return children;
 }
