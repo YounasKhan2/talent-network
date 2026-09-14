@@ -18,6 +18,7 @@ import {
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
+import { RequireOrganizationPermission } from '../authorization/organization-permission.decorator.js';
 import { AuthorizationService } from '../authorization/authorization.service.js';
 import {
   OrganizationInvitationsService,
@@ -98,17 +99,13 @@ export class OrganizationsController {
   }
 
   @Get(':organizationId')
-  async getById(@Param('organizationId') organizationIdValue: string, @Req() request: RequestLike) {
-    const organizationId = parseOrganizationId(organizationIdValue);
-    await this.authorizationService.authorizeOrganization(
-      readSessionToken(request),
-      organizationId,
-      'organization.read',
-    );
-    return this.organizationsService.getById(organizationId);
+  @RequireOrganizationPermission('organization.read')
+  async getById(@Param('organizationId') organizationIdValue: string) {
+    return this.organizationsService.getById(parseOrganizationId(organizationIdValue));
   }
 
   @Post(':organizationId/invitations')
+  @RequireOrganizationPermission('organization.members.manage')
   async createInvitation(
     @Param('organizationId') organizationIdValue: string,
     @Body() body: unknown,
@@ -117,31 +114,20 @@ export class OrganizationsController {
     assertCsrf(request);
     const organizationId = parseOrganizationId(organizationIdValue);
     const input = parseCreateInvitation(body);
-    const session = await this.authorizationService.authorizeOrganization(
-      readSessionToken(request),
-      organizationId,
-      'organization.members.manage',
-    );
+    const session = await this.authService.getSession(readSessionToken(request));
 
     return this.organizationInvitationsService.create(organizationId, session.user.id, input);
   }
 
   @Get(':organizationId/invitations')
-  async listInvitations(
-    @Param('organizationId') organizationIdValue: string,
-    @Req() request: RequestLike,
-  ) {
-    const organizationId = parseOrganizationId(organizationIdValue);
-    await this.authorizationService.authorizeOrganization(
-      readSessionToken(request),
-      organizationId,
-      'organization.members.read',
-    );
-    return this.organizationInvitationsService.list(organizationId);
+  @RequireOrganizationPermission('organization.members.read')
+  async listInvitations(@Param('organizationId') organizationIdValue: string) {
+    return this.organizationInvitationsService.list(parseOrganizationId(organizationIdValue));
   }
 
   @Delete(':organizationId/invitations/:invitationId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireOrganizationPermission('organization.members.manage')
   async revokeInvitation(
     @Param('organizationId') organizationIdValue: string,
     @Param('invitationId') invitationIdValue: string,
@@ -150,11 +136,7 @@ export class OrganizationsController {
     assertCsrf(request);
     const organizationId = parseOrganizationId(organizationIdValue);
     const invitationId = parseInvitationId(invitationIdValue);
-    const session = await this.authorizationService.authorizeOrganization(
-      readSessionToken(request),
-      organizationId,
-      'organization.members.manage',
-    );
+    const session = await this.authService.getSession(readSessionToken(request));
     await this.organizationInvitationsService.revoke(
       organizationId,
       invitationId,
