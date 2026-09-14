@@ -24,6 +24,12 @@ const storageSchema = z.object({
   S3_FORCE_PATH_STYLE: booleanFromEnv.default(true),
 });
 
+const malwareScannerSchema = z.object({
+  CLAMAV_HOST: z.string().min(1).default('127.0.0.1'),
+  CLAMAV_PORT: z.coerce.number().int().positive().max(65_535).default(3310),
+  CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+});
+
 const apiEnvSchema = commonSchema
   .merge(databaseSchema)
   .merge(redisSchema)
@@ -33,7 +39,11 @@ const apiEnvSchema = commonSchema
     WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
   });
 
-const workerEnvSchema = commonSchema.merge(databaseSchema).merge(redisSchema).merge(storageSchema);
+const workerEnvSchema = commonSchema
+  .merge(databaseSchema)
+  .merge(redisSchema)
+  .merge(storageSchema)
+  .merge(malwareScannerSchema);
 const schedulerEnvSchema = commonSchema.merge(databaseSchema).merge(redisSchema);
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
