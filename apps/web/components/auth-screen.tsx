@@ -4,8 +4,8 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { ApiError, login, signup } from '../lib/api';
-import { getWorkspaceContextState, resolveWorkspaceLanding } from '../lib/workspace-context';
+import { ApiError, getAccountContexts, login, signup } from '../lib/api';
+import { resolvePreferredWorkspaceLanding } from '../lib/workspace-preference';
 
 type Mode = 'login' | 'signup';
 
@@ -32,8 +32,8 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       if (nextPath) {
         router.replace(nextPath as Route);
       } else {
-        const context = await getWorkspaceContextState();
-        router.replace(resolveWorkspaceLanding(context));
+        const contexts = await getAccountContexts();
+        router.replace(resolvePreferredWorkspaceLanding(contexts));
       }
       router.refresh();
     } catch (caught) {
