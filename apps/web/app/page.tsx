@@ -1,21 +1,44 @@
+import Link from 'next/link';
+
 export default function HomePage() {
   return (
     <main className="foundation-shell">
       <section className="foundation-panel">
-        <p className="eyebrow">Talent Network</p>
+        <div className="landing-topline">
+          <p className="eyebrow">Talent Network</p>
+          <div className="landing-actions">
+            <Link className="text-action" href="/login">
+              Sign in
+            </Link>
+            <Link className="compact-action" href="/signup">
+              Create account
+            </Link>
+          </div>
+        </div>
+
         <h1>Employment infrastructure, not another job board.</h1>
         <p className="lede">
-          The product shell is live. Candidate, employer, and admin surfaces will now be implemented
-          against the repository architecture and UX specifications.
+          A hiring network built around reusable career identity, explainable matching, verified
+          organizations, and recruiter workflows designed for signal instead of application volume.
         </p>
+
+        <div className="landing-cta-row">
+          <Link className="primary-link" href="/signup">
+            Build your network profile
+          </Link>
+          <Link className="secondary-link" href="/login">
+            Open your workspace
+          </Link>
+        </div>
+
         <dl className="status-grid">
           <div>
             <dt>Architecture</dt>
             <dd>Modular monolith + scalable workers</dd>
           </div>
           <div>
-            <dt>Data</dt>
-            <dd>PostgreSQL transactional truth</dd>
+            <dt>Identity</dt>
+            <dd>Secure sessions, tenancy and permission bundles</dd>
           </div>
           <div>
             <dt>Processing</dt>
