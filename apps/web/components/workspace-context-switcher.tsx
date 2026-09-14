@@ -3,10 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { AccountContextResponse } from '../lib/api';
-import {
-  rememberCareerContext,
-  rememberOrganizationContext,
-} from '../lib/workspace-preference';
+import { rememberCareerContext, rememberOrganizationContext } from '../lib/workspace-preference';
 import styles from './workspace-context-switcher.module.css';
 
 type ActiveContext =

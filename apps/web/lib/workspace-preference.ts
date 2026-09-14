@@ -5,8 +5,7 @@ const lastContextStorageKey = 'tn_last_context_v1';
 const activeOrganizationStorageKey = 'tn_active_organization';
 
 export type WorkspacePreference =
-  | { kind: 'career' }
-  | { kind: 'organization'; organizationId: string };
+  { kind: 'career' } | { kind: 'organization'; organizationId: string };
 
 export function readWorkspacePreference(): WorkspacePreference | null {
   if (typeof window === 'undefined') return null;
