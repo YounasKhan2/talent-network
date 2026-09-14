@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AccountModule } from './account/account.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AuthorizationModule } from './authorization/authorization.module.js';
 import { CandidatesModule } from './candidates/candidates.module.js';
@@ -13,6 +14,7 @@ import { RedisModule } from './redis/redis.module.js';
     DatabaseModule,
     RedisModule,
     AuthModule,
+    AccountModule,
     AuthorizationModule,
     OrganizationsModule,
     CandidatesModule,
