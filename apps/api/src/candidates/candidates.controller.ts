@@ -181,7 +181,8 @@ function parseSettings(body: unknown): CandidateSettingsInput {
 
   const input: CandidateSettingsInput = {};
   if (parsed.data.visibility !== undefined) input.visibility = parsed.data.visibility;
-  if (parsed.data.discoverability !== undefined) input.discoverability = parsed.data.discoverability;
+  if (parsed.data.discoverability !== undefined)
+    input.discoverability = parsed.data.discoverability;
   if (parsed.data.primaryLocale !== undefined) input.primaryLocale = parsed.data.primaryLocale;
   if (parsed.data.timezone !== undefined) input.timezone = parsed.data.timezone;
   return input;
