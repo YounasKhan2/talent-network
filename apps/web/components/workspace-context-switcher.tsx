@@ -8,9 +8,7 @@ import styles from './workspace-context-switcher.module.css';
 const workspaceStorageKey = 'tn_active_organization';
 
 type ActiveContext =
-  | { kind: 'career' }
-  | { kind: 'organization'; organizationId: string }
-  | { kind: 'hiring-setup' };
+  { kind: 'career' } | { kind: 'organization'; organizationId: string } | { kind: 'hiring-setup' };
 
 export function WorkspaceContextSwitcher({
   contexts,
@@ -65,10 +63,7 @@ export function WorkspaceContextSwitcher({
     setOpen(false);
     window.localStorage.setItem(workspaceStorageKey, organizationId);
 
-    if (
-      activeContext.kind === 'organization' &&
-      activeContext.organizationId === organizationId
-    ) {
+    if (activeContext.kind === 'organization' && activeContext.organizationId === organizationId) {
       return;
     }
 
@@ -107,12 +102,7 @@ export function WorkspaceContextSwitcher({
 
           <div className={styles.section}>
             <p className={styles.sectionLabel}>Personal</p>
-            <button
-              className={styles.option}
-              onClick={openCareer}
-              role="menuitem"
-              type="button"
-            >
+            <button className={styles.option} onClick={openCareer} role="menuitem" type="button">
               <span>
                 <strong>Career</strong>
                 <small>
@@ -121,7 +111,9 @@ export function WorkspaceContextSwitcher({
                     : 'Create your Career Passport'}
                 </small>
               </span>
-              {activeContext.kind === 'career' ? <span className={styles.active}>Current</span> : null}
+              {activeContext.kind === 'career' ? (
+                <span className={styles.active}>Current</span>
+              ) : null}
             </button>
           </div>
 
@@ -155,7 +147,12 @@ export function WorkspaceContextSwitcher({
           </div>
 
           <div className={styles.footer}>
-            <button className={styles.footerAction} onClick={openHiringSetup} role="menuitem" type="button">
+            <button
+              className={styles.footerAction}
+              onClick={openHiringSetup}
+              role="menuitem"
+              type="button"
+            >
               + Create or join organization
             </button>
           </div>
