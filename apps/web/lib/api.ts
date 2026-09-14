@@ -40,6 +40,15 @@ export interface SessionResponse {
   memberships: MembershipResponse[];
 }
 
+export interface AccountContextResponse {
+  user: SessionResponse['user'];
+  career: {
+    available: boolean;
+    candidateId: string | null;
+  };
+  organizations: MembershipResponse[];
+}
+
 export interface OrganizationResponse {
   id: string;
   displayName: string;
@@ -171,6 +180,10 @@ export async function apiRequest<T>(
 
 export function getSession(): Promise<SessionResponse> {
   return apiRequest<SessionResponse>('/auth/me');
+}
+
+export function getAccountContexts(): Promise<AccountContextResponse> {
+  return apiRequest<AccountContextResponse>('/account/contexts');
 }
 
 export function login(email: string, password: string): Promise<SessionResponse> {
