@@ -7,7 +7,7 @@ import {
   isResumeReadyForCandidateReview,
 } from './resume-processing-state.js';
 
-test('resume processing state machine allows the happy path', () => {
+void test('resume processing state machine allows the happy path', () => {
   const path = [
     ['UPLOADING', 'UPLOADED'],
     ['UPLOADED', 'VALIDATING'],
@@ -24,14 +24,14 @@ test('resume processing state machine allows the happy path', () => {
   }
 });
 
-test('resume processing state machine supports OCR fallback and bounded retry re-entry', () => {
+void test('resume processing state machine supports OCR fallback and bounded retry re-entry', () => {
   assert.equal(canTransitionResumeProcessingState('EXTRACTING', 'OCR_REQUIRED'), true);
   assert.equal(canTransitionResumeProcessingState('OCR_REQUIRED', 'PARSING'), true);
   assert.equal(canTransitionResumeProcessingState('PARSING', 'FAILED_RETRYABLE'), true);
   assert.equal(canTransitionResumeProcessingState('FAILED_RETRYABLE', 'PARSING'), true);
 });
 
-test('resume processing state machine blocks invalid and post-terminal transitions', () => {
+void test('resume processing state machine blocks invalid and post-terminal transitions', () => {
   assert.equal(canTransitionResumeProcessingState('UPLOADING', 'READY_FOR_REVIEW'), false);
   assert.equal(canTransitionResumeProcessingState('APPROVED', 'PARSING'), false);
   assert.equal(canTransitionResumeProcessingState('REJECTED', 'VALIDATING'), false);
@@ -41,7 +41,7 @@ test('resume processing state machine blocks invalid and post-terminal transitio
   );
 });
 
-test('resume processing state helpers distinguish review and terminal states', () => {
+void test('resume processing state helpers distinguish review and terminal states', () => {
   assert.equal(isResumeReadyForCandidateReview('READY_FOR_REVIEW'), true);
   assert.equal(isResumeReadyForCandidateReview('PARSING'), false);
   assert.equal(isResumeProcessingTerminal('APPROVED'), true);
