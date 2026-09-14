@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { ApiError, login, signup } from '../lib/api';
+import { getWorkspaceContextState, resolveWorkspaceLanding } from '../lib/workspace-context';
 
 type Mode = 'login' | 'signup';
 
@@ -25,9 +26,13 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     setError(null);
 
     try {
-      if (isSignup) await signup(email, password);
-      else await login(email, password);
-      router.replace((nextPath ?? '/app') as Route);
+      const session = isSignup ? await signup(email, password) : await login(email, password);
+      if (nextPath) {
+        router.replace(nextPath as Route);
+      } else {
+        const context = await getWorkspaceContextState(session);
+        router.replace(resolveWorkspaceLanding(context));
+      }
       router.refresh();
     } catch (caught) {
       setError(
