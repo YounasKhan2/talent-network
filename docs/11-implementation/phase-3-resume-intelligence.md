@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B implementation is now in progress.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B implementation is functionally verified end-to-end; final automated hardening and clean-tree closure are in progress.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -80,9 +80,9 @@ Verification evidence:
 - repository returned to a clean `main` working tree after a formatting-only transition-table change
 - final formatting-only commit: `1084bcd style(api): format resume processing transitions`
 
-### Phase 3B — Private object storage + direct upload ← CURRENT
+### Phase 3B — Private object storage + direct upload ← FINAL CLOSURE
 
-Implemented so far:
+Implemented:
 
 - provider-neutral S3 adapter using the AWS S3 SDK
 - local RustFS compatibility through existing generic S3 environment variables
@@ -139,15 +139,31 @@ Phase 3C validation / malware scanning
 
 The API does not proxy normal resume bytes through the NestJS process.
 
-Phase 3B verification still required before closure:
+End-to-end RustFS verification completed on 2026-09-15 with a real PDF:
 
-- install/update dependency lockfile locally
-- run complete local `pnpm check`
-- exercise the RustFS direct-upload path with a real PDF/DOCX object
-- prove another candidate cannot complete or download the ResumeVersion
-- prove object size mismatch fails without advancing state
-- prove presigned private download works only after upload completion
-- return repository to a clean working tree
+- upload authorization returned a short-lived presigned PUT URL
+- direct RustFS PUT returned HTTP 200
+- upload completion verified the stored object and advanced the ResumeVersion to `UPLOADED`
+- stored metadata matched the submitted PDF (`application/pdf`, 233,158 bytes)
+- private download authorization returned a short-lived presigned URL
+- the private download succeeded and reproduced the 233,158-byte file
+- the presigned URLs themselves were treated as secrets and not persisted in verification notes
+- the complete local `pnpm check` was green before the manual RustFS verification
+
+Additional Phase 3B automated hardening has been added to the database integration suite for:
+
+- cross-candidate denial of upload completion
+- cross-candidate denial of private download authorization
+- stored-object size mismatch rejection
+- proof that a failed size check does not advance the ResumeVersion beyond `UPLOADING`
+- successful `UPLOADED` transition with matching object metadata
+- upload-completed audit/outbox evidence
+
+Phase 3B final closure requires only:
+
+- rerun the root quality gate with the new hardening tests
+- reconcile and commit the generated dependency lockfile / formatting-only local changes
+- return the repository to a clean working tree
 
 ### Phase 3C — Validation and malware scanning
 
@@ -388,19 +404,23 @@ Root pnpm check                           ✅
 Repository clean after verification      ✅
 ```
 
-Implemented Phase 3B code awaiting local verification:
+Phase 3B verification status:
 
 ```text
-Provider-neutral S3 adapter                    ✅ code
-RustFS-compatible configuration                ✅ code
-Development bucket bootstrap                   ✅ code
-Presigned direct upload authorization          ✅ code
-Upload completion HEAD verification            ✅ code
-Candidate-authorized private download URL      ✅ code
-Resume HTTP list/detail surface                ✅ code
-Dependency lockfile + local quality gate       ⏳ verify locally
-Real RustFS PDF/DOCX direct upload              ⏳ verify locally
-Cross-candidate storage authorization tests     ⏳ verify locally
+Provider-neutral S3 adapter                    ✅
+RustFS-compatible configuration                ✅
+Development bucket bootstrap                   ✅
+Presigned direct upload authorization          ✅ verified with real PDF
+Direct RustFS PUT                              ✅ HTTP 200
+Upload completion HEAD verification            ✅
+ResumeVersion → UPLOADED                       ✅
+Candidate-authorized private download          ✅ verified
+Downloaded object size parity                  ✅ 233,158 bytes
+Full root pnpm check                           ✅ before manual RustFS verification
+Cross-candidate storage authorization tests     ✅ code added; rerun pending
+Stored-object size mismatch regression          ✅ code added; rerun pending
+Dependency lockfile/local formatting commit     ⏳ final reconciliation
+Clean working tree                              ⏳ final closure
 ```
 
 Phase 3B preserves the direct-upload boundary: normal resume bytes go browser → private object storage, not browser → NestJS API → object storage.
