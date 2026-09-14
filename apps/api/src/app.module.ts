@@ -8,6 +8,7 @@ import { HealthController } from './health/health.controller.js';
 import { HealthService } from './health/health.service.js';
 import { OrganizationsModule } from './organizations/organizations.module.js';
 import { RedisModule } from './redis/redis.module.js';
+import { ResumesModule } from './resumes/resumes.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RedisModule } from './redis/redis.module.js';
     AuthorizationModule,
     OrganizationsModule,
     CandidatesModule,
+    ResumesModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],
