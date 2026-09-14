@@ -193,11 +193,15 @@ export class ResumesService {
         objectKey: true,
         originalFilename: true,
         processingState: true,
+        failureCode: true,
       },
     });
     if (!version) throw new NotFoundException({ code: 'RESUME_VERSION_NOT_FOUND' });
     if (version.processingState === 'UPLOADING') {
       throw new ConflictException({ code: 'RESUME_UPLOAD_NOT_COMPLETED' });
+    }
+    if (version.failureCode === 'MALWARE_DETECTED') {
+      throw new ConflictException({ code: 'RESUME_SECURITY_QUARANTINED' });
     }
 
     return {
