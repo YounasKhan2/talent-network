@@ -7,7 +7,7 @@ import {
   verifyPassword,
 } from './auth.crypto.js';
 
-test('password hashing verifies the original password and rejects a different password', async () => {
+await test('password hashing verifies the original password and rejects a different password', async () => {
   const encoded = await hashPassword('correct horse battery staple');
 
   assert.equal(await verifyPassword('correct horse battery staple', encoded), true);
@@ -15,7 +15,7 @@ test('password hashing verifies the original password and rejects a different pa
   assert.match(encoded, /^scrypt-v1\$/);
 });
 
-test('opaque session tokens are random and only deterministic after hashing', () => {
+await test('opaque session tokens are random and only deterministic after hashing', () => {
   const first = createOpaqueToken();
   const second = createOpaqueToken();
 
