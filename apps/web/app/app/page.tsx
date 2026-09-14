@@ -1,35 +1,61 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   ApiError,
   createOrganization,
+  getActiveOrganizationContext,
   getSession,
   logout,
+  requestEmailVerification,
+  type MembershipResponse,
+  type Permission,
   type SessionResponse,
 } from '../../lib/api';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
+const workspaceStorageKey = 'tn_active_organization';
+
 export default function WorkspaceEntryPage() {
   const router = useRouter();
   const [session, setSession] = useState<SessionResponse | null>(null);
+  const [activeMembership, setActiveMembership] = useState<MembershipResponse | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [displayName, setDisplayName] = useState('');
   const [organizationPending, setOrganizationPending] = useState(false);
+  const [workspacePending, setWorkspacePending] = useState(false);
+  const [verificationPending, setVerificationPending] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
-    void getSession()
-      .then((result) => {
+    async function loadWorkspace() {
+      try {
+        const result = await getSession();
         if (!active) return;
         setSession(result);
-        setLoadState('ready');
-      })
-      .catch((caught: unknown) => {
+
+        if (result.memberships.length > 0) {
+          const storedOrganizationId = window.localStorage.getItem(workspaceStorageKey);
+          const selected =
+            result.memberships.find(
+              (membership) => membership.organizationId === storedOrganizationId,
+            ) ?? result.memberships[0];
+
+          if (selected) {
+            const context = await getActiveOrganizationContext(selected.organizationId);
+            if (!active) return;
+            setActiveMembership(context.membership);
+            window.localStorage.setItem(workspaceStorageKey, selected.organizationId);
+          }
+        }
+
+        if (active) setLoadState('ready');
+      } catch (caught) {
         if (!active) return;
         if (caught instanceof ApiError && caught.status === 401) {
           router.replace('/login');
@@ -37,14 +63,14 @@ export default function WorkspaceEntryPage() {
         }
         setError(caught instanceof Error ? caught.message : 'Unable to load your workspace.');
         setLoadState('error');
-      });
+      }
+    }
 
+    void loadWorkspace();
     return () => {
       active = false;
     };
   }, [router]);
-
-  const primaryMembership = useMemo(() => session?.memberships[0] ?? null, [session]);
 
   async function createWorkspace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,8 +78,12 @@ export default function WorkspaceEntryPage() {
     setError(null);
 
     try {
-      await createOrganization({ displayName });
-      setSession(await getSession());
+      const organization = await createOrganization({ displayName });
+      const refreshedSession = await getSession();
+      const context = await getActiveOrganizationContext(organization.id);
+      setSession(refreshedSession);
+      setActiveMembership(context.membership);
+      window.localStorage.setItem(workspaceStorageKey, organization.id);
       setDisplayName('');
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Unable to create the workspace.');
@@ -62,10 +92,42 @@ export default function WorkspaceEntryPage() {
     }
   }
 
+  async function switchWorkspace(organizationId: string) {
+    if (organizationId === activeMembership?.organizationId) return;
+    setWorkspacePending(true);
+    setError(null);
+
+    try {
+      const context = await getActiveOrganizationContext(organizationId);
+      setActiveMembership(context.membership);
+      window.localStorage.setItem(workspaceStorageKey, organizationId);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Unable to switch workspace.');
+    } finally {
+      setWorkspacePending(false);
+    }
+  }
+
+  async function sendVerification() {
+    setVerificationPending(true);
+    setVerificationMessage(null);
+    try {
+      await requestEmailVerification();
+      setVerificationMessage('Verification link sent. Check your inbox.');
+    } catch (caught) {
+      setVerificationMessage(
+        caught instanceof ApiError ? caught.message : 'Unable to send a verification link.',
+      );
+    } finally {
+      setVerificationPending(false);
+    }
+  }
+
   async function signOut() {
     try {
       await logout();
     } finally {
+      window.localStorage.removeItem(workspaceStorageKey);
       router.replace('/login');
       router.refresh();
     }
@@ -90,7 +152,7 @@ export default function WorkspaceEntryPage() {
     );
   }
 
-  if (!primaryMembership) {
+  if (session.memberships.length === 0) {
     return (
       <main className="onboarding-shell">
         <header className="onboarding-header">
@@ -143,24 +205,72 @@ export default function WorkspaceEntryPage() {
     );
   }
 
+  if (!activeMembership) {
+    return (
+      <main className="workspace-loading">
+        <p className="eyebrow">Talent Network</p>
+        <p>Resolving your active organization…</p>
+      </main>
+    );
+  }
+
+  const permissions = activeMembership.permissions;
+
   return (
     <main className="product-shell">
       <aside className="product-sidebar">
         <div className="sidebar-brand">TN</div>
+
+        <div className="workspace-switcher">
+          <span>Workspace</span>
+          <select
+            aria-label="Active workspace"
+            disabled={workspacePending}
+            onChange={(event) => void switchWorkspace(event.target.value)}
+            value={activeMembership.organizationId}
+          >
+            {session.memberships.map((membership) => (
+              <option key={membership.organizationId} value={membership.organizationId}>
+                {membership.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <nav aria-label="Workspace navigation">
           <a className="nav-item nav-item-active" href="#overview">
             Overview
           </a>
-          <a className="nav-item" href="#jobs">
-            Jobs
-          </a>
-          <a className="nav-item" href="#candidates">
-            Candidates
-          </a>
-          <a className="nav-item" href="#interviews">
-            Interviews
+          {hasPermission(permissions, 'jobs.read') ? (
+            <a className="nav-item" href="#capabilities">
+              Jobs
+            </a>
+          ) : null}
+          {hasPermission(permissions, 'applications.read') ? (
+            <a className="nav-item" href="#capabilities">
+              Candidates
+            </a>
+          ) : null}
+          {hasPermission(permissions, 'interviews.read') ? (
+            <a className="nav-item" href="#capabilities">
+              Interviews
+            </a>
+          ) : null}
+          {hasPermission(permissions, 'organization.members.read') ? (
+            <a className="nav-item" href="#capabilities">
+              Team
+            </a>
+          ) : null}
+          {hasPermission(permissions, 'audit.read') ? (
+            <a className="nav-item" href="#capabilities">
+              Audit
+            </a>
+          ) : null}
+          <a className="nav-item" href="#account">
+            Account
           </a>
         </nav>
+
         <button className="sidebar-account" onClick={() => void signOut()} type="button">
           <span>{session.user.primaryEmail}</span>
           <small>Sign out</small>
@@ -171,39 +281,111 @@ export default function WorkspaceEntryPage() {
         <header className="workspace-topbar">
           <div>
             <p className="section-kicker">Active workspace</p>
-            <h1>{primaryMembership.displayName}</h1>
+            <h1>{activeMembership.displayName}</h1>
           </div>
-          <div className="workspace-role">{primaryMembership.roleKey.replaceAll('_', ' ')}</div>
+          <div className="workspace-role">{activeMembership.roleKey.replaceAll('_', ' ')}</div>
         </header>
+
+        {!session.user.emailVerifiedAt ? (
+          <section className="verification-strip" aria-label="Email verification required">
+            <div>
+              <strong>Verify your account email</strong>
+              <p>
+                Verification strengthens account trust and is required before sensitive workflows
+                expand.
+              </p>
+            </div>
+            <div className="verification-actions">
+              {verificationMessage ? <span>{verificationMessage}</span> : null}
+              <button
+                className="compact-action"
+                disabled={verificationPending}
+                onClick={() => void sendVerification()}
+                type="button"
+              >
+                {verificationPending ? 'Sending…' : 'Send verification link'}
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {error ? (
+          <p className="form-error workspace-error" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <section className="workspace-intro">
           <p className="eyebrow">Phase 1 connected</p>
           <h2>Your authenticated workspace is live.</h2>
           <p>
-            Identity, tenant membership, permissions, sessions, audit events, and transactional
-            outbox behavior are now connected to the product surface. Jobs and candidate workflows
-            arrive in the next implementation phases.
+            The active organization is resolved server-side on every switch. Navigation is derived
+            from the current role permission bundle instead of client-side role conditionals.
           </p>
         </section>
 
         <section className="workspace-metrics" aria-label="Workspace foundation status">
           <article>
             <span>Identity</span>
-            <strong>Session-backed</strong>
+            <strong>{session.user.emailVerifiedAt ? 'Verified' : 'Verification pending'}</strong>
             <small>HttpOnly session + CSRF protection</small>
           </article>
           <article>
             <span>Tenant</span>
-            <strong>{primaryMembership.slug}</strong>
-            <small>Organization-scoped authorization</small>
+            <strong>{activeMembership.slug}</strong>
+            <small>Server-authorized workspace context</small>
           </article>
           <article>
             <span>Access</span>
-            <strong>{primaryMembership.permissions.length} permissions</strong>
-            <small>Resolved server-side from role bundle</small>
+            <strong>{permissions.length} permissions</strong>
+            <small>Resolved from the active membership bundle</small>
           </article>
+        </section>
+
+        <section className="capability-panel" id="capabilities">
+          <div>
+            <p className="section-kicker">Permission-aware surface</p>
+            <h2>Only tools available to this membership appear in navigation.</h2>
+          </div>
+          <div className="permission-list">
+            {permissions.map((permission) => (
+              <div key={permission}>
+                <span>{permission}</span>
+                <strong>Granted</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="account-panel" id="account">
+          <div>
+            <p className="section-kicker">Account</p>
+            <h2>Identity and workspace context</h2>
+          </div>
+          <dl>
+            <div>
+              <dt>Email</dt>
+              <dd>{session.user.primaryEmail}</dd>
+            </div>
+            <div>
+              <dt>Email status</dt>
+              <dd>{session.user.emailVerifiedAt ? 'Verified' : 'Pending verification'}</dd>
+            </div>
+            <div>
+              <dt>Role</dt>
+              <dd>{activeMembership.roleKey.replaceAll('_', ' ')}</dd>
+            </div>
+            <div>
+              <dt>Organization ID</dt>
+              <dd>{activeMembership.organizationId}</dd>
+            </div>
+          </dl>
         </section>
       </section>
     </main>
   );
+}
+
+function hasPermission(permissions: readonly Permission[], permission: Permission): boolean {
+  return permissions.includes(permission);
 }
