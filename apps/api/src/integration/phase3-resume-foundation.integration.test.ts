@@ -5,6 +5,7 @@ import { createDatabaseClient } from '@talent-network/database';
 import { AuthService } from '../auth/auth.service.js';
 import { CandidatesService } from '../candidates/candidates.service.js';
 import { ResumesService } from '../resumes/resumes.service.js';
+import { StorageService } from '../storage/storage.service.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for Phase 3 resume tests.');
@@ -15,7 +16,8 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
   const runId = randomUUID();
   const auth = new AuthService(database);
   const candidates = new CandidatesService(database);
-  const resumes = new ResumesService(database);
+  const storage = new StorageService();
+  const resumes = new ResumesService(database, storage);
   const createdUserIds: string[] = [];
   const createdResumeVersionIds: string[] = [];
 
