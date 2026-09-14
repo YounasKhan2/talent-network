@@ -1,18 +1,20 @@
-import { Injectable, OnApplicationShutdown } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { parseApiEnv } from '@talent-network/config';
 import type { ReadinessDependency, ReadinessResponse } from '@talent-network/contracts';
-import { createDatabaseClient, type DatabaseClient } from '@talent-network/database';
+import type { DatabaseClient } from '@talent-network/database';
 import { Redis } from 'ioredis';
+import { DATABASE_CLIENT } from '../database/database.module.js';
 
 @Injectable()
 export class HealthService implements OnApplicationShutdown {
   private readonly env = parseApiEnv();
-  private readonly database: DatabaseClient = createDatabaseClient(this.env.DATABASE_URL);
   private readonly redis = new Redis(this.env.REDIS_URL, {
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
   });
+
+  constructor(@Inject(DATABASE_CLIENT) private readonly database: DatabaseClient) {}
 
   liveness() {
     return {
@@ -44,7 +46,7 @@ export class HealthService implements OnApplicationShutdown {
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await Promise.allSettled([this.database.$disconnect(), this.redis.quit()]);
+    await this.redis.quit();
   }
 
   private async probe(name: string, operation: () => Promise<void>): Promise<ReadinessDependency> {
