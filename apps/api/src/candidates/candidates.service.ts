@@ -25,32 +25,32 @@ export interface CandidateSettingsInput {
 
 export interface CandidateSkillInput {
   name: string;
-  proficiency?: string | null;
-  experienceMonths?: number | null;
-  lastUsedAt?: Date | null;
+  proficiency: string | null;
+  experienceMonths: number | null;
+  lastUsedAt: Date | null;
 }
 
 export interface CandidateEmploymentInput {
   companyName: string;
   title: string;
-  employmentType?: string | null;
-  location?: string | null;
-  workMode?: 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE' | null;
-  startDate?: Date | null;
-  endDate?: Date | null;
-  isCurrent?: boolean;
-  summary?: string | null;
+  employmentType: string | null;
+  location: string | null;
+  workMode: 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE' | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  isCurrent: boolean;
+  summary: string | null;
 }
 
 export interface CandidateEducationInput {
   institutionName: string;
-  degree?: string | null;
-  fieldOfStudy?: string | null;
-  location?: string | null;
-  startDate?: Date | null;
-  endDate?: Date | null;
-  isCurrent?: boolean;
-  description?: string | null;
+  degree: string | null;
+  fieldOfStudy: string | null;
+  location: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  isCurrent: boolean;
+  description: string | null;
 }
 
 const profileInclude = {
@@ -76,9 +76,7 @@ export class CandidatesService {
     if (existing) return existing;
 
     return this.database.$transaction(async (transaction) => {
-      const candidate = await transaction.candidate.create({
-        data: { userId },
-      });
+      const candidate = await transaction.candidate.create({ data: { userId } });
       const version = await transaction.candidateProfileVersion.create({
         data: {
           candidateId: candidate.id,
@@ -107,7 +105,6 @@ export class CandidatesService {
         eventType: 'candidate.passport.created',
         payload: { candidateId: candidate.id, userId, profileVersionId: version.id },
       });
-
       return transaction.candidate.findUniqueOrThrow({
         where: { id: candidate.id },
         include: { currentProfileVersion: { include: profileInclude } },
@@ -132,20 +129,14 @@ export class CandidatesService {
   async updateSettings(userId: string, input: CandidateSettingsInput) {
     const candidate = await this.requireCandidate(userId);
     return this.database.$transaction(async (transaction) => {
-      const updated = await transaction.candidate.update({
-        where: { id: candidate.id },
-        data: input,
-      });
+      const updated = await transaction.candidate.update({ where: { id: candidate.id }, data: input });
       await writeAuditEvent(transaction, {
         actorType: 'USER',
         actorId: userId,
         action: 'candidate.settings.updated',
         resourceType: 'Candidate',
         resourceId: candidate.id,
-        metadata: {
-          visibility: updated.visibility,
-          discoverability: updated.discoverability,
-        },
+        metadata: { visibility: updated.visibility, discoverability: updated.discoverability },
       });
       await writeOutboxEvent(transaction, {
         aggregateType: 'Candidate',
@@ -332,7 +323,6 @@ export class CandidatesService {
           },
         },
       });
-
       await transaction.candidateProfileVersion.update({
         where: { id: current.id },
         data: { status: 'SUPERSEDED' },
@@ -353,13 +343,8 @@ export class CandidatesService {
         aggregateType: 'Candidate',
         aggregateId: candidate.id,
         eventType: 'candidate.passport.updated',
-        payload: {
-          candidateId: candidate.id,
-          profileVersionId: next.id,
-          versionNumber: next.versionNumber,
-        },
+        payload: { candidateId: candidate.id, profileVersionId: next.id, versionNumber: next.versionNumber },
       });
-
       return transaction.candidate.findUniqueOrThrow({
         where: { id: candidate.id },
         include: { currentProfileVersion: { include: profileInclude } },
