@@ -15,6 +15,7 @@ import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.htt
 import {
   CandidatesService,
   type CandidateCertificationInput,
+  type CandidateCustomSectionInput,
   type CandidateEducationInput,
   type CandidateEmploymentInput,
   type CandidateLanguageInput,
@@ -123,6 +124,25 @@ const locationPreferenceSchema = z.object({
   remoteOnly: z.boolean().optional(),
 });
 
+const customSectionItemSchema = z
+  .object({
+    title: z.string().trim().min(1).max(220),
+    subtitle: z.string().trim().max(220).nullable().optional(),
+    description: z.string().trim().max(4000).nullable().optional(),
+    startDate: nullableDateSchema,
+    endDate: nullableDateSchema,
+    url: nullableUrlSchema,
+  })
+  .strict();
+
+const customSectionSchema = z
+  .object({
+    title: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(1000).nullable().optional(),
+    items: z.array(customSectionItemSchema).max(50),
+  })
+  .strict();
+
 const skillsPayloadSchema = z.object({ skills: z.array(skillSchema).max(100) }).strict();
 const employmentPayloadSchema = z
   .object({ employments: z.array(employmentSchema).max(50) })
@@ -136,6 +156,9 @@ const languagesPayloadSchema = z.object({ languages: z.array(languageSchema).max
 const linksPayloadSchema = z.object({ links: z.array(linkSchema).max(30) }).strict();
 const locationsPayloadSchema = z
   .object({ locationPreferences: z.array(locationPreferenceSchema).max(30) })
+  .strict();
+const customSectionsPayloadSchema = z
+  .object({ customSections: z.array(customSectionSchema).max(20) })
   .strict();
 
 @Controller('candidate')
@@ -222,6 +245,13 @@ export class CandidatesController {
       session.user.id,
       parseLocationPreferences(body),
     );
+  }
+
+  @Put('passport/custom-sections')
+  async replaceCustomSections(@Body() body: unknown, @Req() request: RequestLike) {
+    assertCsrf(request);
+    const session = await this.authService.getSession(readSessionToken(request));
+    return this.candidatesService.replaceCustomSections(session.user.id, parseCustomSections(body));
   }
 
   @Patch('settings')
@@ -381,6 +411,24 @@ function parseLocationPreferences(body: unknown): CandidateLocationPreferenceInp
     region: item.region ?? null,
     city: item.city ?? null,
     remoteOnly: item.remoteOnly ?? false,
+  }));
+}
+
+function parseCustomSections(body: unknown): CandidateCustomSectionInput[] {
+  const parsed = customSectionsPayloadSchema.safeParse(body);
+  if (!parsed.success)
+    throw invalidPayload('INVALID_CANDIDATE_CUSTOM_SECTIONS', parsed.error.flatten());
+  return parsed.data.customSections.map((section) => ({
+    title: section.title,
+    description: section.description ?? null,
+    items: section.items.map((item) => ({
+      title: item.title,
+      subtitle: item.subtitle ?? null,
+      description: item.description ?? null,
+      startDate: toDate(item.startDate),
+      endDate: toDate(item.endDate),
+      url: item.url ?? null,
+    })),
   }));
 }
 
