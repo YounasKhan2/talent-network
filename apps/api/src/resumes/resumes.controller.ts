@@ -12,7 +12,11 @@ const uploadAuthorizationSchema = z
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ]),
-    sizeBytes: z.number().int().positive().max(10 * 1024 * 1024),
+    sizeBytes: z
+      .number()
+      .int()
+      .positive()
+      .max(10 * 1024 * 1024),
   })
   .strict();
 

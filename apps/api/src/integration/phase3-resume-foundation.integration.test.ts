@@ -5,10 +5,7 @@ import { createDatabaseClient } from '@talent-network/database';
 import { AuthService } from '../auth/auth.service.js';
 import { CandidatesService } from '../candidates/candidates.service.js';
 import { ResumesService } from '../resumes/resumes.service.js';
-import type {
-  StorageObjectMetadata,
-  StorageService,
-} from '../storage/storage.service.js';
+import type { StorageObjectMetadata, StorageService } from '../storage/storage.service.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for Phase 3 resume tests.');
@@ -151,21 +148,24 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
       };
     });
 
-    await t.test('matching object metadata advances to uploaded and enables private download', async () => {
-      const completed = await resumes.completeDirectUpload(
-        primary.session.user.id,
-        prepared.version.id,
-      );
-      assert.equal(completed.processingState, 'UPLOADED');
+    await t.test(
+      'matching object metadata advances to uploaded and enables private download',
+      async () => {
+        const completed = await resumes.completeDirectUpload(
+          primary.session.user.id,
+          prepared.version.id,
+        );
+        assert.equal(completed.processingState, 'UPLOADED');
 
-      const download = await resumes.createDownloadAuthorization(
-        primary.session.user.id,
-        prepared.version.id,
-      );
-      assert.equal(download.url, 'http://storage.local/presigned-download');
-      assert.equal(download.resumeVersionId, prepared.version.id);
-      assert.equal(download.expiresInSeconds, 300);
-    });
+        const download = await resumes.createDownloadAuthorization(
+          primary.session.user.id,
+          prepared.version.id,
+        );
+        assert.equal(download.url, 'http://storage.local/presigned-download');
+        assert.equal(download.resumeVersionId, prepared.version.id);
+        assert.equal(download.expiresInSeconds, 300);
+      },
+    );
 
     await t.test('writes auditable upload-prepared and upload-completed records', async () => {
       const preparedAudit = await database.auditEvent.findFirst({

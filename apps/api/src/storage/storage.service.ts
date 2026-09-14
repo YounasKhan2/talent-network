@@ -34,7 +34,8 @@ export class StorageService {
       await this.client.send(new HeadBucketCommand({ Bucket: this.env.S3_BUCKET }));
       return;
     } catch {
-      if (this.env.NODE_ENV === 'production') throw new Error('Configured S3 bucket is unavailable.');
+      if (this.env.NODE_ENV === 'production')
+        throw new Error('Configured S3 bucket is unavailable.');
     }
 
     try {
@@ -75,7 +76,9 @@ export class StorageService {
         Bucket: this.env.S3_BUCKET,
         Key: input.objectKey,
         ...(input.downloadFilename
-          ? { ResponseContentDisposition: `attachment; filename="${sanitizeFilename(input.downloadFilename)}"` }
+          ? {
+              ResponseContentDisposition: `attachment; filename="${sanitizeFilename(input.downloadFilename)}"`,
+            }
           : {}),
       }),
       { expiresIn: input.expiresInSeconds },
