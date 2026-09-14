@@ -11,10 +11,7 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import {
-  ORGANIZATION_ROLE_KEYS,
-  type OrganizationRoleKey,
-} from '@talent-network/contracts';
+import { ORGANIZATION_ROLE_KEYS } from '@talent-network/contracts';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
@@ -174,7 +171,7 @@ function parseCreateInvitation(body: unknown): CreateOrganizationInvitationInput
 
   return {
     email: parsed.data.email,
-    roleKey: parsed.data.roleKey as OrganizationRoleKey,
+    roleKey: parsed.data.roleKey,
   };
 }
 
