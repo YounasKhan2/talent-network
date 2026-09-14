@@ -9,6 +9,9 @@ catalogs:
     typescript:
       specifier: ^5.9.2
       version: 5.9.3
+    zod:
+      specifier: ^4.1.5
+      version: 4.6.3
 
 importers:
   .:
@@ -67,6 +70,9 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.3
     devDependencies:
       tsx:
         specifier: ^4.20.5
