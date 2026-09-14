@@ -7,14 +7,20 @@ import { rememberCareerContext, rememberOrganizationContext } from '../lib/works
 import styles from './workspace-context-switcher.module.css';
 
 type ActiveContext =
-  { kind: 'career' } | { kind: 'organization'; organizationId: string } | { kind: 'hiring-setup' };
+  | { kind: 'career' }
+  | { kind: 'organization'; organizationId: string }
+  | { kind: 'hiring-setup' };
+
+type MenuPlacement = 'top' | 'bottom';
 
 export function WorkspaceContextSwitcher({
   contexts,
   activeContext,
+  menuPlacement = 'bottom',
 }: {
   contexts: AccountContextResponse;
   activeContext: ActiveContext;
+  menuPlacement?: MenuPlacement;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -75,6 +81,9 @@ export function WorkspaceContextSwitcher({
     router.push('/onboarding?intent=hire');
   }
 
+  const menuClassName =
+    menuPlacement === 'top' ? `${styles.menu} ${styles.menuTop}` : styles.menu;
+
   return (
     <div className={styles.root} ref={rootRef}>
       <button
@@ -94,7 +103,7 @@ export function WorkspaceContextSwitcher({
       </button>
 
       {open ? (
-        <div aria-label="Switch workspace context" className={styles.menu} role="menu">
+        <div aria-label="Switch workspace context" className={menuClassName} role="menu">
           <div className={styles.account}>
             <span>Signed in as</span>
             <strong>{contexts.user.primaryEmail}</strong>
