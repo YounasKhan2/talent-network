@@ -51,7 +51,10 @@ async function main(): Promise<void> {
           bucket: env.S3_BUCKET,
           scanner,
         },
-        { finalAttempt },
+        {
+          finalAttempt,
+          retryAttempt: job.attemptsMade > 0,
+        },
       );
     },
     {
