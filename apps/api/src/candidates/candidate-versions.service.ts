@@ -17,11 +17,16 @@ const versionInclude = {
   },
 };
 
+export interface CandidateVersionListOptions {
+  beforeVersionNumber?: number;
+  limit: number;
+}
+
 @Injectable()
 export class CandidateVersionsService {
   constructor(@Inject(DATABASE_CLIENT) private readonly database: DatabaseClient) {}
 
-  async list(userId: string) {
+  async list(userId: string, options: CandidateVersionListOptions) {
     const candidate = await this.database.candidate.findUnique({
       where: { userId },
       select: { id: true, currentProfileVersionId: true },
@@ -29,8 +34,14 @@ export class CandidateVersionsService {
     if (!candidate) throw candidateNotInitialized();
 
     const versions = await this.database.candidateProfileVersion.findMany({
-      where: { candidateId: candidate.id },
+      where: {
+        candidateId: candidate.id,
+        ...(options.beforeVersionNumber === undefined
+          ? {}
+          : { versionNumber: { lt: options.beforeVersionNumber } }),
+      },
       orderBy: { versionNumber: 'desc' },
+      take: options.limit + 1,
       select: {
         id: true,
         versionNumber: true,
@@ -41,12 +52,17 @@ export class CandidateVersionsService {
       },
     });
 
+    const hasMore = versions.length > options.limit;
+    const page = hasMore ? versions.slice(0, options.limit) : versions;
+    const nextCursor = hasMore ? page.at(-1)?.versionNumber ?? null : null;
+
     return {
       currentProfileVersionId: candidate.currentProfileVersionId,
-      versions: versions.map((version) => ({
+      versions: page.map((version) => ({
         ...version,
         isCurrent: version.id === candidate.currentProfileVersionId,
       })),
+      nextCursor,
     };
   }
 
