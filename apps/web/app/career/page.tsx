@@ -47,10 +47,7 @@ export default function CareerPassportPage() {
           router.replace('/login?next=/career');
           return;
         }
-        if (
-          caught instanceof ApiError &&
-          caught.code === 'CANDIDATE_PASSPORT_NOT_INITIALIZED'
-        ) {
+        if (caught instanceof ApiError && caught.code === 'CANDIDATE_PASSPORT_NOT_INITIALIZED') {
           router.replace('/onboarding?intent=career');
           return;
         }
@@ -70,10 +67,7 @@ export default function CareerPassportPage() {
   if (loadState === 'loading') return <CareerState title="Loading your Career Passport…" />;
   if (loadState === 'error' || !passport?.currentProfileVersion) {
     return (
-      <CareerState
-        title="We could not load your Career Passport."
-        detail={error ?? undefined}
-      />
+      <CareerState title="We could not load your Career Passport." detail={error ?? undefined} />
     );
   }
 
@@ -197,7 +191,11 @@ export default function CareerPassportPage() {
   );
 }
 
-function OverviewSection({ passport, pending, onSave }: {
+function OverviewSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof updateCandidateOverview>[0]) => Promise<void>;
@@ -220,25 +218,52 @@ function OverviewSection({ passport, pending, onSave }: {
 
   return (
     <section className="career-section" id="overview">
-      <SectionHeader index="01" title="Professional overview" note="The top-level signal employers and matching systems will read first." />
-      <form className="career-form" onSubmit={(event) => {
-        event.preventDefault();
-        void onSave({
-          headline: headline || null,
-          summary: summary || null,
-          availabilityStatus,
-          compensationCurrency: currency || null,
-          compensationTarget: target ? Number(target) : null,
-          compensationPeriod: 'ANNUAL',
-          preferredWorkModes: workModes,
-        });
-      }}>
-        <label><span>Professional headline</span><input maxLength={180} onChange={(event) => setHeadline(event.target.value)} value={headline} /></label>
-        <label><span>Summary</span><textarea maxLength={4000} onChange={(event) => setSummary(event.target.value)} rows={6} value={summary} /></label>
+      <SectionHeader
+        index="01"
+        title="Professional overview"
+        note="The top-level signal employers and matching systems will read first."
+      />
+      <form
+        className="career-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSave({
+            headline: headline || null,
+            summary: summary || null,
+            availabilityStatus,
+            compensationCurrency: currency || null,
+            compensationTarget: target ? Number(target) : null,
+            compensationPeriod: 'ANNUAL',
+            preferredWorkModes: workModes,
+          });
+        }}
+      >
+        <label>
+          <span>Professional headline</span>
+          <input
+            maxLength={180}
+            onChange={(event) => setHeadline(event.target.value)}
+            value={headline}
+          />
+        </label>
+        <label>
+          <span>Summary</span>
+          <textarea
+            maxLength={4000}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={6}
+            value={summary}
+          />
+        </label>
         <div className="career-field-grid">
           <label>
             <span>Availability</span>
-            <select onChange={(event) => setAvailabilityStatus(event.target.value as typeof availabilityStatus)} value={availabilityStatus}>
+            <select
+              onChange={(event) =>
+                setAvailabilityStatus(event.target.value as typeof availabilityStatus)
+              }
+              value={availabilityStatus}
+            >
               <option value="IMMEDIATE">Immediately available</option>
               <option value="NOTICE_PERIOD">Serving notice period</option>
               <option value="OPEN_TO_OFFERS">Open to offers</option>
@@ -248,8 +273,17 @@ function OverviewSection({ passport, pending, onSave }: {
           <label>
             <span>Target compensation</span>
             <div className="career-inline-fields">
-              <input maxLength={3} onChange={(event) => setCurrency(event.target.value.toUpperCase())} value={currency} />
-              <input min="0" onChange={(event) => setTarget(event.target.value)} type="number" value={target} />
+              <input
+                maxLength={3}
+                onChange={(event) => setCurrency(event.target.value.toUpperCase())}
+                value={currency}
+              />
+              <input
+                min="0"
+                onChange={(event) => setTarget(event.target.value)}
+                type="number"
+                value={target}
+              />
             </div>
           </label>
         </div>
@@ -257,7 +291,16 @@ function OverviewSection({ passport, pending, onSave }: {
           <legend>Preferred work modes</legend>
           <div className="career-toggle-row">
             {(['REMOTE', 'HYBRID', 'ONSITE', 'FLEXIBLE'] as CandidateWorkMode[]).map((mode) => (
-              <button className={workModes.includes(mode) ? 'career-toggle career-toggle-active' : 'career-toggle'} key={mode} onClick={() => toggleWorkMode(mode)} type="button">{mode}</button>
+              <button
+                className={
+                  workModes.includes(mode) ? 'career-toggle career-toggle-active' : 'career-toggle'
+                }
+                key={mode}
+                onClick={() => toggleWorkMode(mode)}
+                type="button"
+              >
+                {mode}
+              </button>
             ))}
           </div>
         </fieldset>
@@ -267,7 +310,11 @@ function OverviewSection({ passport, pending, onSave }: {
   );
 }
 
-function ExperienceSection({ passport, pending, onSave }: {
+function ExperienceSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateEmployment>[0]) => Promise<void>;
@@ -280,7 +327,29 @@ function ExperienceSection({ passport, pending, onSave }: {
     event.preventDefault();
     if (!companyName.trim() || !title.trim()) return;
     await onSave([
-      ...existing.map(({ companyName, title, employmentType, location, workMode, startDate, endDate, isCurrent, summary }) => ({ companyName, title, employmentType, location, workMode, startDate, endDate, isCurrent, summary })),
+      ...existing.map(
+        ({
+          companyName,
+          title,
+          employmentType,
+          location,
+          workMode,
+          startDate,
+          endDate,
+          isCurrent,
+          summary,
+        }) => ({
+          companyName,
+          title,
+          employmentType,
+          location,
+          workMode,
+          startDate,
+          endDate,
+          isCurrent,
+          summary,
+        }),
+      ),
       { companyName: companyName.trim(), title: title.trim(), isCurrent: true },
     ]);
     setCompanyName('');
@@ -288,17 +357,43 @@ function ExperienceSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="experience" index="02" title="Experience" note="Employment history is preserved with each profile version." empty="No work history added yet." records={existing.map((item) => ({ id: item.id, title: item.title, subtitle: item.companyName, meta: item.isCurrent ? 'Current role' : 'Previous role' }))}>
+    <SimpleRecordSection
+      id="experience"
+      index="02"
+      title="Experience"
+      note="Employment history is preserved with each profile version."
+      empty="No work history added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.title,
+        subtitle: item.companyName,
+        meta: item.isCurrent ? 'Current role' : 'Previous role',
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setTitle(event.target.value)} placeholder="Role title" value={title} />
-        <input onChange={(event) => setCompanyName(event.target.value)} placeholder="Company" value={companyName} />
-        <button className="compact-action" disabled={pending} type="submit">Add experience</button>
+        <input
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Role title"
+          value={title}
+        />
+        <input
+          onChange={(event) => setCompanyName(event.target.value)}
+          placeholder="Company"
+          value={companyName}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add experience
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function EducationSection({ passport, pending, onSave }: {
+function EducationSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateEducation>[0]) => Promise<void>;
@@ -311,7 +406,27 @@ function EducationSection({ passport, pending, onSave }: {
     event.preventDefault();
     if (!institutionName.trim()) return;
     await onSave([
-      ...existing.map(({ institutionName, degree, fieldOfStudy, location, startDate, endDate, isCurrent, description }) => ({ institutionName, degree, fieldOfStudy, location, startDate, endDate, isCurrent, description })),
+      ...existing.map(
+        ({
+          institutionName,
+          degree,
+          fieldOfStudy,
+          location,
+          startDate,
+          endDate,
+          isCurrent,
+          description,
+        }) => ({
+          institutionName,
+          degree,
+          fieldOfStudy,
+          location,
+          startDate,
+          endDate,
+          isCurrent,
+          description,
+        }),
+      ),
       { institutionName: institutionName.trim(), degree: degree.trim() || null },
     ]);
     setInstitutionName('');
@@ -319,39 +434,92 @@ function EducationSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="education" index="03" title="Education" note="Add formal education without forcing it into hiring signal where it is irrelevant." empty="No education added yet." records={existing.map((item) => ({ id: item.id, title: item.degree || 'Education', subtitle: item.institutionName, meta: item.fieldOfStudy || 'Field not specified' }))}>
+    <SimpleRecordSection
+      id="education"
+      index="03"
+      title="Education"
+      note="Add formal education without forcing it into hiring signal where it is irrelevant."
+      empty="No education added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.degree || 'Education',
+        subtitle: item.institutionName,
+        meta: item.fieldOfStudy || 'Field not specified',
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setInstitutionName(event.target.value)} placeholder="Institution" value={institutionName} />
-        <input onChange={(event) => setDegree(event.target.value)} placeholder="Degree" value={degree} />
-        <button className="compact-action" disabled={pending} type="submit">Add education</button>
+        <input
+          onChange={(event) => setInstitutionName(event.target.value)}
+          placeholder="Institution"
+          value={institutionName}
+        />
+        <input
+          onChange={(event) => setDegree(event.target.value)}
+          placeholder="Degree"
+          value={degree}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add education
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function SkillsSection({ passport, pending, onSave }: {
+function SkillsSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateSkills>[0]) => Promise<void>;
 }) {
-  const [value, setValue] = useState(passport.currentProfileVersion!.skills.map((skill) => skill.name).join(', '));
+  const [value, setValue] = useState(
+    passport.currentProfileVersion!.skills.map((skill) => skill.name).join(', '),
+  );
   return (
     <section className="career-section" id="skills">
-      <SectionHeader index="04" title="Skills" note="Keep skills factual. Evidence and verification attach in later phases." />
-      <form className="career-form" onSubmit={(event) => {
-        event.preventDefault();
-        const names = value.split(',').map((item) => item.trim()).filter(Boolean);
-        void onSave(names.map((name) => ({ name })));
-      }}>
-        <label><span>Skills, separated by commas</span><textarea onChange={(event) => setValue(event.target.value)} rows={4} value={value} /></label>
-        <div className="career-tag-preview">{value.split(',').map((item) => item.trim()).filter(Boolean).map((skill) => <span key={skill}>{skill}</span>)}</div>
+      <SectionHeader
+        index="04"
+        title="Skills"
+        note="Keep skills factual. Evidence and verification attach in later phases."
+      />
+      <form
+        className="career-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const names = value
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean);
+          void onSave(names.map((name) => ({ name })));
+        }}
+      >
+        <label>
+          <span>Skills, separated by commas</span>
+          <textarea onChange={(event) => setValue(event.target.value)} rows={4} value={value} />
+        </label>
+        <div className="career-tag-preview">
+          {value
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((skill) => (
+              <span key={skill}>{skill}</span>
+            ))}
+        </div>
         <SaveButton pending={pending} label="Save skills" />
       </form>
     </section>
   );
 }
 
-function ProjectsSection({ passport, pending, onSave }: {
+function ProjectsSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateProjects>[0]) => Promise<void>;
@@ -365,7 +533,15 @@ function ProjectsSection({ passport, pending, onSave }: {
     event.preventDefault();
     if (!name.trim()) return;
     await onSave([
-      ...existing.map(({ name, description, role, url, repositoryUrl, startDate, endDate }) => ({ name, description, role, url, repositoryUrl, startDate, endDate })),
+      ...existing.map(({ name, description, role, url, repositoryUrl, startDate, endDate }) => ({
+        name,
+        description,
+        role,
+        url,
+        repositoryUrl,
+        startDate,
+        endDate,
+      })),
       { name: name.trim(), role: role.trim() || null, url: url.trim() || null },
     ]);
     setName('');
@@ -374,18 +550,49 @@ function ProjectsSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="projects" index="05" title="Projects" note="Show work that demonstrates capability beyond job titles." empty="No projects added yet." records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.role || 'Project', meta: item.url || item.repositoryUrl || 'No link added' }))}>
+    <SimpleRecordSection
+      id="projects"
+      index="05"
+      title="Projects"
+      note="Show work that demonstrates capability beyond job titles."
+      empty="No projects added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.name,
+        subtitle: item.role || 'Project',
+        meta: item.url || item.repositoryUrl || 'No link added',
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setName(event.target.value)} placeholder="Project name" value={name} />
-        <input onChange={(event) => setRole(event.target.value)} placeholder="Your role" value={role} />
-        <input onChange={(event) => setUrl(event.target.value)} placeholder="https://…" type="url" value={url} />
-        <button className="compact-action" disabled={pending} type="submit">Add project</button>
+        <input
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Project name"
+          value={name}
+        />
+        <input
+          onChange={(event) => setRole(event.target.value)}
+          placeholder="Your role"
+          value={role}
+        />
+        <input
+          onChange={(event) => setUrl(event.target.value)}
+          placeholder="https://…"
+          type="url"
+          value={url}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add project
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function CertificationsSection({ passport, pending, onSave }: {
+function CertificationsSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateCertifications>[0]) => Promise<void>;
@@ -398,7 +605,14 @@ function CertificationsSection({ passport, pending, onSave }: {
     event.preventDefault();
     if (!name.trim()) return;
     await onSave([
-      ...existing.map(({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt }) => ({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt })),
+      ...existing.map(({ name, issuer, credentialId, credentialUrl, issuedAt, expiresAt }) => ({
+        name,
+        issuer,
+        credentialId,
+        credentialUrl,
+        issuedAt,
+        expiresAt,
+      })),
       { name: name.trim(), issuer: issuer.trim() || null },
     ]);
     setName('');
@@ -406,17 +620,43 @@ function CertificationsSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="certifications" index="06" title="Certifications" note="Keep credentials structured so later verification can attach evidence without rewriting history." empty="No certifications added yet." records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.issuer || 'Issuer not specified', meta: item.credentialId || 'Credential ID not added' }))}>
+    <SimpleRecordSection
+      id="certifications"
+      index="06"
+      title="Certifications"
+      note="Keep credentials structured so later verification can attach evidence without rewriting history."
+      empty="No certifications added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.name,
+        subtitle: item.issuer || 'Issuer not specified',
+        meta: item.credentialId || 'Credential ID not added',
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setName(event.target.value)} placeholder="Certification" value={name} />
-        <input onChange={(event) => setIssuer(event.target.value)} placeholder="Issuer" value={issuer} />
-        <button className="compact-action" disabled={pending} type="submit">Add certification</button>
+        <input
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Certification"
+          value={name}
+        />
+        <input
+          onChange={(event) => setIssuer(event.target.value)}
+          placeholder="Issuer"
+          value={issuer}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add certification
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function LanguagesSection({ passport, pending, onSave }: {
+function LanguagesSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateLanguages>[0]) => Promise<void>;
@@ -437,17 +677,42 @@ function LanguagesSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="languages" index="07" title="Languages" note="Language ability is professional context, not an automatic hiring requirement." empty="No languages added yet." records={existing.map((item) => ({ id: item.id, title: item.name, subtitle: item.proficiency || 'Proficiency not specified' }))}>
+    <SimpleRecordSection
+      id="languages"
+      index="07"
+      title="Languages"
+      note="Language ability is professional context, not an automatic hiring requirement."
+      empty="No languages added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.name,
+        subtitle: item.proficiency || 'Proficiency not specified',
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setName(event.target.value)} placeholder="Language" value={name} />
-        <input onChange={(event) => setProficiency(event.target.value)} placeholder="Proficiency" value={proficiency} />
-        <button className="compact-action" disabled={pending} type="submit">Add language</button>
+        <input
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Language"
+          value={name}
+        />
+        <input
+          onChange={(event) => setProficiency(event.target.value)}
+          placeholder="Proficiency"
+          value={proficiency}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add language
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function LinksSection({ passport, pending, onSave }: {
+function LinksSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateLinks>[0]) => Promise<void>;
@@ -470,18 +735,49 @@ function LinksSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="links" index="08" title="Professional links" note="Portfolio, GitHub, LinkedIn and other evidence stay reusable across applications." empty="No professional links added yet." records={existing.map((item) => ({ id: item.id, title: item.label, subtitle: item.kind || 'Link', meta: item.url }))}>
+    <SimpleRecordSection
+      id="links"
+      index="08"
+      title="Professional links"
+      note="Portfolio, GitHub, LinkedIn and other evidence stay reusable across applications."
+      empty="No professional links added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.label,
+        subtitle: item.kind || 'Link',
+        meta: item.url,
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setLabel(event.target.value)} placeholder="Label" value={label} />
-        <input onChange={(event) => setKind(event.target.value)} placeholder="Kind, e.g. GitHub" value={kind} />
-        <input onChange={(event) => setUrl(event.target.value)} placeholder="https://…" type="url" value={url} />
-        <button className="compact-action" disabled={pending} type="submit">Add link</button>
+        <input
+          onChange={(event) => setLabel(event.target.value)}
+          placeholder="Label"
+          value={label}
+        />
+        <input
+          onChange={(event) => setKind(event.target.value)}
+          placeholder="Kind, e.g. GitHub"
+          value={kind}
+        />
+        <input
+          onChange={(event) => setUrl(event.target.value)}
+          placeholder="https://…"
+          type="url"
+          value={url}
+        />
+        <button className="compact-action" disabled={pending} type="submit">
+          Add link
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function LocationsSection({ passport, pending, onSave }: {
+function LocationsSection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof replaceCandidateLocations>[0]) => Promise<void>;
@@ -496,8 +792,19 @@ function LocationsSection({ passport, pending, onSave }: {
     event.preventDefault();
     if (!label.trim()) return;
     await onSave([
-      ...existing.map(({ label, countryCode, region, city, remoteOnly }) => ({ label, countryCode, region, city, remoteOnly })),
-      { label: label.trim(), countryCode: countryCode.trim().toUpperCase() || null, city: city.trim() || null, remoteOnly },
+      ...existing.map(({ label, countryCode, region, city, remoteOnly }) => ({
+        label,
+        countryCode,
+        region,
+        city,
+        remoteOnly,
+      })),
+      {
+        label: label.trim(),
+        countryCode: countryCode.trim().toUpperCase() || null,
+        city: city.trim() || null,
+        remoteOnly,
+      },
     ]);
     setLabel('');
     setCountryCode('');
@@ -506,19 +813,55 @@ function LocationsSection({ passport, pending, onSave }: {
   }
 
   return (
-    <SimpleRecordSection id="locations" index="09" title="Location preferences" note="Describe where you can work without exposing more location detail than necessary." empty="No location preferences added yet." records={existing.map((item) => ({ id: item.id, title: item.label, subtitle: [item.city, item.region, item.countryCode].filter(Boolean).join(', ') || 'Location not specified', meta: item.remoteOnly ? 'Remote only' : 'Open to local/hybrid roles' }))}>
+    <SimpleRecordSection
+      id="locations"
+      index="09"
+      title="Location preferences"
+      note="Describe where you can work without exposing more location detail than necessary."
+      empty="No location preferences added yet."
+      records={existing.map((item) => ({
+        id: item.id,
+        title: item.label,
+        subtitle:
+          [item.city, item.region, item.countryCode].filter(Boolean).join(', ') ||
+          'Location not specified',
+        meta: item.remoteOnly ? 'Remote only' : 'Open to local/hybrid roles',
+      }))}
+    >
       <form className="career-add-row" onSubmit={(event) => void add(event)}>
-        <input onChange={(event) => setLabel(event.target.value)} placeholder="Preference label" value={label} />
-        <input maxLength={2} onChange={(event) => setCountryCode(event.target.value.toUpperCase())} placeholder="PK" value={countryCode} />
+        <input
+          onChange={(event) => setLabel(event.target.value)}
+          placeholder="Preference label"
+          value={label}
+        />
+        <input
+          maxLength={2}
+          onChange={(event) => setCountryCode(event.target.value.toUpperCase())}
+          placeholder="PK"
+          value={countryCode}
+        />
         <input onChange={(event) => setCity(event.target.value)} placeholder="City" value={city} />
-        <label><input checked={remoteOnly} onChange={(event) => setRemoteOnly(event.target.checked)} type="checkbox" /> Remote only</label>
-        <button className="compact-action" disabled={pending} type="submit">Add location</button>
+        <label>
+          <input
+            checked={remoteOnly}
+            onChange={(event) => setRemoteOnly(event.target.checked)}
+            type="checkbox"
+          />{' '}
+          Remote only
+        </label>
+        <button className="compact-action" disabled={pending} type="submit">
+          Add location
+        </button>
       </form>
     </SimpleRecordSection>
   );
 }
 
-function PrivacySection({ passport, pending, onSave }: {
+function PrivacySection({
+  passport,
+  pending,
+  onSave,
+}: {
   passport: CandidatePassportResponse;
   pending: boolean;
   onSave: (input: Parameters<typeof updateCandidateSettings>[0]) => Promise<void>;
@@ -528,23 +871,61 @@ function PrivacySection({ passport, pending, onSave }: {
 
   return (
     <section className="career-section" id="privacy">
-      <SectionHeader index="10" title="Privacy & discoverability" note="Private by default. Visibility and recruiter discoverability are separate controls." />
-      <form className="career-form" onSubmit={(event) => {
-        event.preventDefault();
-        void onSave({ visibility, discoverability });
-      }}>
+      <SectionHeader
+        index="10"
+        title="Privacy & discoverability"
+        note="Private by default. Visibility and recruiter discoverability are separate controls."
+      />
+      <form
+        className="career-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSave({ visibility, discoverability });
+        }}
+      >
         <div className="career-field-grid">
-          <label><span>Profile visibility</span><select onChange={(event) => setVisibility(event.target.value as typeof visibility)} value={visibility}><option value="PRIVATE">Private</option><option value="NETWORK">Talent Network</option><option value="VERIFIED_RECRUITERS">Verified recruiters</option></select></label>
-          <label><span>Search discoverability</span><select onChange={(event) => setDiscoverability(event.target.value as typeof discoverability)} value={discoverability}><option value="HIDDEN">Hidden</option><option value="SEARCHABLE">Searchable</option></select></label>
+          <label>
+            <span>Profile visibility</span>
+            <select
+              onChange={(event) => setVisibility(event.target.value as typeof visibility)}
+              value={visibility}
+            >
+              <option value="PRIVATE">Private</option>
+              <option value="NETWORK">Talent Network</option>
+              <option value="VERIFIED_RECRUITERS">Verified recruiters</option>
+            </select>
+          </label>
+          <label>
+            <span>Search discoverability</span>
+            <select
+              onChange={(event) => setDiscoverability(event.target.value as typeof discoverability)}
+              value={discoverability}
+            >
+              <option value="HIDDEN">Hidden</option>
+              <option value="SEARCHABLE">Searchable</option>
+            </select>
+          </label>
         </div>
-        <p className="career-privacy-note">Joining an organization never gives that organization direct access to this private Career workspace. Employers receive only information intentionally shared through allowed product flows.</p>
+        <p className="career-privacy-note">
+          Joining an organization never gives that organization direct access to this private Career
+          workspace. Employers receive only information intentionally shared through allowed product
+          flows.
+        </p>
         <SaveButton pending={pending} label="Save privacy settings" />
       </form>
     </section>
   );
 }
 
-function SimpleRecordSection({ id, index, title, note, empty, records, children }: {
+function SimpleRecordSection({
+  id,
+  index,
+  title,
+  note,
+  empty,
+  records,
+  children,
+}: {
   id: string;
   index: string;
   title: string;
@@ -557,13 +938,17 @@ function SimpleRecordSection({ id, index, title, note, empty, records, children 
     <section className="career-section" id={id}>
       <SectionHeader index={index} title={title} note={note} />
       <div className="career-record-list">
-        {records.length ? records.map((record) => (
-          <article key={record.id}>
-            <strong>{record.title}</strong>
-            {record.subtitle ? <span>{record.subtitle}</span> : null}
-            {record.meta ? <small>{record.meta}</small> : null}
-          </article>
-        )) : <p>{empty}</p>}
+        {records.length ? (
+          records.map((record) => (
+            <article key={record.id}>
+              <strong>{record.title}</strong>
+              {record.subtitle ? <span>{record.subtitle}</span> : null}
+              {record.meta ? <small>{record.meta}</small> : null}
+            </article>
+          ))
+        ) : (
+          <p>{empty}</p>
+        )}
       </div>
       {children}
     </section>
@@ -571,15 +956,33 @@ function SimpleRecordSection({ id, index, title, note, empty, records, children 
 }
 
 function SaveButton({ pending, label }: { pending: boolean; label: string }) {
-  return <button className="primary-action" disabled={pending} type="submit">{pending ? 'Saving…' : label}</button>;
+  return (
+    <button className="primary-action" disabled={pending} type="submit">
+      {pending ? 'Saving…' : label}
+    </button>
+  );
 }
 
 function SectionHeader({ index, title, note }: { index: string; title: string; note: string }) {
-  return <header className="career-section-header"><span>{index}</span><div><h2>{title}</h2><p>{note}</p></div></header>;
+  return (
+    <header className="career-section-header">
+      <span>{index}</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{note}</p>
+      </div>
+    </header>
+  );
 }
 
 function CareerState({ title, detail }: { title: string; detail?: string }) {
-  return <main className="workspace-loading"><p className="eyebrow">Talent Network</p><h1>{title}</h1>{detail ? <p>{detail}</p> : null}</main>;
+  return (
+    <main className="workspace-loading">
+      <p className="eyebrow">Talent Network</p>
+      <h1>{title}</h1>
+      {detail ? <p>{detail}</p> : null}
+    </main>
+  );
 }
 
 function calculateCompleteness(passport: CandidatePassportResponse | null): number {

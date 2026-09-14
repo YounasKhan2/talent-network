@@ -17,19 +17,11 @@ export type Permission =
   | 'audit.read';
 
 export type OrganizationRoleKey =
-  | 'ORG_OWNER'
-  | 'ORG_ADMIN'
-  | 'RECRUITER'
-  | 'HIRING_MANAGER'
-  | 'INTERVIEWER'
-  | 'VIEWER';
+  'ORG_OWNER' | 'ORG_ADMIN' | 'RECRUITER' | 'HIRING_MANAGER' | 'INTERVIEWER' | 'VIEWER';
 
 export type CandidateWorkMode = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE';
 export type CandidateAvailabilityStatus =
-  | 'IMMEDIATE'
-  | 'NOTICE_PERIOD'
-  | 'OPEN_TO_OFFERS'
-  | 'NOT_LOOKING';
+  'IMMEDIATE' | 'NOTICE_PERIOD' | 'OPEN_TO_OFFERS' | 'NOT_LOOKING';
 
 export interface MembershipResponse {
   organizationId: string;
@@ -232,7 +224,8 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const payload = await readJson(response);
-    const message = readString(payload, 'message') ?? `Request failed with status ${response.status}.`;
+    const message =
+      readString(payload, 'message') ?? `Request failed with status ${response.status}.`;
     const code = readString(payload, 'code');
     throw new ApiError(message, response.status, code);
   }
@@ -323,7 +316,9 @@ export function createOrganizationInvitation(
 export function listOrganizationInvitations(
   organizationId: string,
 ): Promise<OrganizationInvitationResponse[]> {
-  return apiRequest<OrganizationInvitationResponse[]>(`/organizations/${organizationId}/invitations`);
+  return apiRequest<OrganizationInvitationResponse[]>(
+    `/organizations/${organizationId}/invitations`,
+  );
 }
 
 export function revokeOrganizationInvitation(
@@ -343,7 +338,9 @@ export function acceptOrganizationInvitation(token: string): Promise<unknown> {
 }
 
 export function initializeCandidatePassport(): Promise<CandidatePassportResponse> {
-  return apiRequest<CandidatePassportResponse>('/candidate/passport/initialize', { method: 'POST' });
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/initialize', {
+    method: 'POST',
+  });
 }
 
 export function getCandidatePassport(): Promise<CandidatePassportResponse> {
@@ -368,87 +365,103 @@ export function updateCandidateOverview(input: {
   });
 }
 
-export function replaceCandidateSkills(skills: Array<{
-  name: string;
-  proficiency?: string | null;
-  experienceMonths?: number | null;
-  lastUsedAt?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateSkills(
+  skills: Array<{
+    name: string;
+    proficiency?: string | null;
+    experienceMonths?: number | null;
+    lastUsedAt?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/skills', { skills });
 }
 
-export function replaceCandidateEmployment(employments: Array<{
-  companyName: string;
-  title: string;
-  employmentType?: string | null;
-  location?: string | null;
-  workMode?: CandidateWorkMode | null;
-  startDate?: string | null;
-  endDate?: string | null;
-  isCurrent?: boolean;
-  summary?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateEmployment(
+  employments: Array<{
+    companyName: string;
+    title: string;
+    employmentType?: string | null;
+    location?: string | null;
+    workMode?: CandidateWorkMode | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    isCurrent?: boolean;
+    summary?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/experience', { employments });
 }
 
-export function replaceCandidateEducation(education: Array<{
-  institutionName: string;
-  degree?: string | null;
-  fieldOfStudy?: string | null;
-  location?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
-  isCurrent?: boolean;
-  description?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateEducation(
+  education: Array<{
+    institutionName: string;
+    degree?: string | null;
+    fieldOfStudy?: string | null;
+    location?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    isCurrent?: boolean;
+    description?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/education', { education });
 }
 
-export function replaceCandidateProjects(projects: Array<{
-  name: string;
-  description?: string | null;
-  role?: string | null;
-  url?: string | null;
-  repositoryUrl?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateProjects(
+  projects: Array<{
+    name: string;
+    description?: string | null;
+    role?: string | null;
+    url?: string | null;
+    repositoryUrl?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/projects', { projects });
 }
 
-export function replaceCandidateCertifications(certifications: Array<{
-  name: string;
-  issuer?: string | null;
-  credentialId?: string | null;
-  credentialUrl?: string | null;
-  issuedAt?: string | null;
-  expiresAt?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateCertifications(
+  certifications: Array<{
+    name: string;
+    issuer?: string | null;
+    credentialId?: string | null;
+    credentialUrl?: string | null;
+    issuedAt?: string | null;
+    expiresAt?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/certifications', { certifications });
 }
 
-export function replaceCandidateLanguages(languages: Array<{
-  name: string;
-  proficiency?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateLanguages(
+  languages: Array<{
+    name: string;
+    proficiency?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/languages', { languages });
 }
 
-export function replaceCandidateLinks(links: Array<{
-  label: string;
-  url: string;
-  kind?: string | null;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateLinks(
+  links: Array<{
+    label: string;
+    url: string;
+    kind?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/links', { links });
 }
 
-export function replaceCandidateLocations(locationPreferences: Array<{
-  label: string;
-  countryCode?: string | null;
-  region?: string | null;
-  city?: string | null;
-  remoteOnly?: boolean;
-}>): Promise<CandidatePassportResponse> {
+export function replaceCandidateLocations(
+  locationPreferences: Array<{
+    label: string;
+    countryCode?: string | null;
+    region?: string | null;
+    city?: string | null;
+    remoteOnly?: boolean;
+  }>,
+): Promise<CandidatePassportResponse> {
   return replaceCandidateSection('/candidate/passport/locations', { locationPreferences });
 }
 
