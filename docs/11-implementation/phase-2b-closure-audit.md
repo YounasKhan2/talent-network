@@ -2,9 +2,9 @@
 
 ## Status
 
-**Implementation complete; final local quality gate and browser verification required before Phase 2B is marked CLOSED / VERIFIED.**
+**CLOSED / VERIFIED — 2026-09-15**
 
-Phase 2B closes the Career Passport expansion and the first candidate-workspace information architecture. It must leave Phase 3 Resume Intelligence with stable identity, privacy, versioning, evidence, and navigation contracts.
+Phase 2B closes the Career Passport expansion and the first candidate-workspace information architecture. It leaves Phase 3 Resume Intelligence with stable identity, privacy, versioning, evidence, and navigation contracts.
 
 ## Closure scope
 
@@ -34,7 +34,7 @@ Candidate Workspace
     └── Version history
 ```
 
-The global Candidate Workspace navigation is product-level navigation. The existing Career Passport rail remains section-level navigation for the Passport editor:
+The global Candidate Workspace navigation is product-level navigation. The Career Passport rail remains section-level navigation for the Passport editor:
 
 ```text
 Global Candidate navigation
@@ -53,9 +53,9 @@ Career Passport
     └── Privacy
 ```
 
-Do not move Passport sections into the global sidebar. Future product-level destinations such as Resume, Job Matches, Applications, Career Copilot, and Settings must join the global Candidate Workspace navigation only when their product slices exist.
+Do not move Passport sections into the global sidebar. Future product-level destinations such as Resume, Job Matches, Applications, Career Copilot, and Settings join the global Candidate Workspace navigation only when their product slices exist.
 
-`/career` remains the current Career Passport route in Phase 2B. A future candidate Home surface may become the default `/career` destination when the dashboard has real application/job/resume data; Phase 2B does not create an empty dashboard merely to satisfy route aesthetics.
+`/career` remains the Career Passport route at Phase 2B closure. A future candidate Home surface may become the default `/career` destination when the dashboard has real application/job/resume data; Phase 2B intentionally does not create an empty dashboard merely to satisfy route aesthetics.
 
 ## Architecture audit
 
@@ -95,54 +95,65 @@ Do not move Passport sections into the global sidebar. Future product-level dest
 - Candidate Workspace shell is shared by `/career`, `/career/evidence`, and `/career/history`.
 - Career Passport section navigation remains local to the Passport editor.
 - Workspace context switching remains available without logout.
-- Mobile layout collapses global navigation without duplicating product routes.
+- Candidate and Organization workspace headers remain distinct but visually consistent.
+- The Career context selector opens within the viewport and does not overflow below or outside the sidebar.
+- Mobile/narrow layout keeps all implemented Candidate destinations reachable.
 
-## Required local quality gate
+## Verified local quality gate
 
-Before closure, run from the repository root:
+The repository root quality gate was run successfully after the final Phase 2B implementation and UI fixes:
 
 ```powershell
 pnpm check
 git status
 ```
 
-Required result:
+Verified result:
 
-- formatting passes
-- lint passes
-- typecheck passes
-- unit tests pass
-- Phase 1 integration suite passes
-- Phase 2 integration suite passes
-- Phase 2A privacy-firewall suite passes
-- Phase 2B editor + version-history suites pass
-- production builds pass
-- working tree is clean
+- formatting passed
+- lint passed
+- typecheck passed
+- unit tests passed
+- Phase 1 integration suite passed
+- Phase 2 integration suite passed
+- Phase 2A privacy-firewall suite passed
+- Phase 2B Career editor suite passed
+- Phase 2B immutable version-history suite passed
+- production builds passed
+- working tree clean and synchronized with `origin/main`
 
-## Required browser verification
+The final formatting-only workspace-context-switcher change was committed and pushed after the green quality gate. No functional code changed after that successful gate.
 
-Verify with a candidate that also has at least one organization membership when possible:
+## Verified browser acceptance
+
+The final browser acceptance pass is complete. Verified behaviors include:
 
 1. `/career` loads inside the Candidate Workspace shell.
 2. Career Passport is selected in the global navigation.
-3. Passport inner section rail still navigates Overview through Privacy.
+3. Passport inner section rail navigates Overview through Privacy.
 4. `/career/evidence` loads and Evidence is selected globally.
 5. `/career/history` loads and Version history is selected globally.
-6. Workspace switcher can move Career → Organization → Career without logout.
-7. Candidate-only account still renders the shell correctly.
-8. Evidence filters work and opening/filtering evidence does not increment Passport version.
+6. Workspace switcher moves Career → Organization → Career without logout.
+7. Candidate-only account renders the shell correctly.
+8. Evidence filters work and evidence viewing/filtering does not increment Passport version.
 9. Version history remains read-only.
-10. Professional edit creates exactly one new profile version.
-11. Privacy-only edit does not create a professional profile version.
-12. Narrow/mobile viewport exposes all three Candidate destinations and the context switcher.
-13. Back/forward browser navigation preserves correct active navigation state.
-14. No Candidate private professional data appears in the organization workspace merely because the same User is a member.
+10. Professional edits create exactly one new profile version.
+11. Privacy-only edits do not create a professional profile version.
+12. Narrow/mobile viewport exposes all implemented Candidate destinations and context switching.
+13. Browser back/forward navigation preserves correct active navigation state.
+14. Organization membership does not expose private Candidate professional data.
+15. Organization context header is present and preserved.
+16. Candidate context popup remains fully visible inside the viewport.
 
 ## Closure decision
 
-Phase 2B may be marked **CLOSED / VERIFIED** only after the local gate and browser checks above pass.
+**Phase 2B is CLOSED / VERIFIED.**
 
-After closure, Phase 3 begins with the Resume Intelligence pipeline:
+No additional Career Passport feature is required before Phase 3 begins. Future improvements such as no-op version detection, grouped/draft saves, richer version-reason metadata, and retention rules for unreferenced transient versions are scale/evolution work and do not invalidate the Phase 2B architecture.
+
+## Phase 3 handoff — Resume Intelligence
+
+Phase 3 is now the active implementation phase.
 
 ```text
 Upload
@@ -164,4 +175,11 @@ Candidate review
 Accept / Edit / Ignore
 ```
 
-Resume parsing must never silently mutate the Career Passport.
+Phase 3 must preserve these Phase 2B invariants:
+
+- resume parsing never silently mutates the Career Passport
+- parsed data is a proposal until candidate approval
+- imported professional changes create normal versioned Passport state
+- private Career data remains isolated from Organization membership
+- future applications pin immutable Career Passport and resume versions
+- evidence provenance remains distinguishable from independent verification
