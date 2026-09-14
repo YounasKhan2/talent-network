@@ -2,13 +2,15 @@
 
 ## Status
 
-**In implementation.**
+**Phase 2B in implementation.**
 
 Phase 2 turns authentication identity into a candidate-owned, reusable professional identity that later resume parsing, matching, applications, assessments, and Career Copilot workflows can reference without mutating historical submissions.
 
+Phase 2A identity/workspace hardening is closed. All Phase 2B work must preserve its context, authorization, consent, and Candidate/Organization privacy-firewall invariants.
+
 ## Implemented foundation
 
-The first Phase 2 slice introduces:
+The Career Passport currently includes:
 
 - one `Candidate` domain identity per authenticated user
 - private-by-default visibility and hidden-by-default discoverability
@@ -19,19 +21,21 @@ The first Phase 2 slice introduces:
 - versioned experience
 - versioned education
 - versioned skills
-- schema foundations for projects, certifications, languages, links, and location preferences
+- versioned projects
+- versioned certifications
+- versioned languages
+- versioned professional links
+- versioned location preferences
 - compensation, availability, work-mode, and employment-type preferences
 - candidate audit events and transactional outbox events
 - authenticated Career Passport API endpoints
-- candidate Career Passport web workspace
+- candidate Career Passport web workspace for the initial sections
 - profile completeness guidance without gamified hiring scores
-- Phase 2 PostgreSQL integration coverage
+- PostgreSQL integration coverage for version preservation
 
 ## Versioning invariant
 
 A Career Passport edit must not rewrite the profile snapshot that may later be attached to an application.
-
-Current behavior:
 
 ```text
 Candidate.currentProfileVersionId
@@ -48,6 +52,8 @@ Candidate.currentProfileVersionId → N+1
 
 `SUPERSEDED` does not mean deleted. Historical versions remain available for future application snapshot references and explainability.
 
+Every currently supported Passport section participates in this copy-on-write rule. Replacing projects, for example, must preserve experience, education, skills, certifications, languages, links, locations, and overview fields in the new version.
+
 ## Privacy invariant
 
 Candidate visibility is separate from organization authorization.
@@ -59,7 +65,11 @@ visibility      = PRIVATE
 discoverability = HIDDEN
 ```
 
-Changing a candidate privacy setting must never grant an employer permission to access data it is otherwise not authorized to access.
+Changing Candidate privacy settings must never grant an employer permission to access data it is otherwise not authorized to access.
+
+Canonical cross-context policy:
+
+- [`../06-security/candidate-organization-privacy-firewall.md`](../06-security/candidate-organization-privacy-firewall.md)
 
 ## API surface
 
@@ -70,22 +80,66 @@ PATCH /api/v1/candidate/passport/overview
 PUT   /api/v1/candidate/passport/skills
 PUT   /api/v1/candidate/passport/experience
 PUT   /api/v1/candidate/passport/education
+PUT   /api/v1/candidate/passport/projects
+PUT   /api/v1/candidate/passport/certifications
+PUT   /api/v1/candidate/passport/languages
+PUT   /api/v1/candidate/passport/links
+PUT   /api/v1/candidate/passport/locations
 PATCH /api/v1/candidate/settings
 ```
 
-All mutations use the existing session + CSRF boundary. Candidate ownership is derived from the authenticated session user; the client never supplies a candidate ID to authorize a write.
+All mutations use the existing session + CSRF boundary. Candidate ownership is derived from the authenticated session user; the client never supplies a Candidate ID to authorize a write.
+
+The replacement endpoints intentionally accept ordered arrays. Array order becomes persisted `sortOrder`, which gives the later edit/reorder UX one consistent backend contract rather than introducing per-row ordering mutations prematurely.
+
+## Phase 2B backend expansion slice
+
+The first Phase 2B implementation slice activates the schema foundations that already existed for projects, certifications, languages, links, and location preferences.
+
+Validation boundaries include:
+
+- bounded collection sizes
+- bounded field lengths
+- valid URLs for portfolio/repository/credential/professional links
+- ISO date-time inputs at the HTTP boundary
+- ISO alpha-2-shaped country codes for location preferences
+- case-insensitive duplicate rejection for languages
+- existing normalized duplicate rejection for skills
+- server-controlled Candidate ownership and version numbers
+
+No new database migration is required for this slice because these entities were deliberately included in the initial Phase 2 schema.
+
+## Integration coverage
+
+The Phase 2 PostgreSQL suite now covers:
+
+1. Candidate initialization is private by default
+2. first approved profile version is created atomically
+3. overview edits create a new version
+4. previous versions become `SUPERSEDED`
+5. skill replacement preserves unrelated profile data
+6. experience and education remain versioned
+7. projects are versioned
+8. certifications are versioned while preserving projects
+9. languages are versioned
+10. professional links are versioned while preserving other sections
+11. location preferences are versioned while preserving the complete prior Passport state
+12. privacy changes do not create a professional-profile version
+13. Candidate creation/update continues to emit durable events
+
+The repository quality gate must be run locally before this slice is marked verified.
 
 ## Candidate web surface
 
-Initial route:
+Current route:
 
 ```text
 /career
 ```
 
-The visual model follows the candidate UX specification: calm, editorial, section-based, and document-like rather than an employer dashboard.
+The visual model remains calm, editorial, section-based, and document-like rather than an employer dashboard.
 
-Initial sections:
+Already surfaced in the current UI:
 
 - professional overview
 - experience
@@ -93,36 +147,31 @@ Initial sections:
 - skills
 - privacy & discoverability
 
-The database already contains versioned foundations for the remaining Passport sections so later UI/API slices do not require redesigning the profile ownership model.
+Next web slice activates:
 
-## Quality gate addition
+- projects
+- certifications
+- languages
+- links / GitHub / LinkedIn / portfolio
+- location preferences
+- richer employment/compensation preferences
+- proper edit/remove/reorder interactions instead of append-only helpers
+- profile completeness based on meaningful professional evidence rather than arbitrary percentage gaming
 
-The root `pnpm check` now includes a Phase 2 PostgreSQL integration suite after the Phase 1 suite.
+## Remaining Phase 2B sequence
 
-Phase 2 integration coverage is intended to prove:
+```text
+Backend domain/API expansion                     ✅ code complete / gate pending
+        ↓
+Web API contracts + Career sections              ← next
+        ↓
+Edit / remove / reorder UX
+        ↓
+Profile version history + read-only inspection
+        ↓
+Verification/evidence indicators
+        ↓
+Resume-import handoff into Phase 3
+```
 
-1. candidate initialization is private by default
-2. first approved profile version is created atomically
-3. an overview edit creates a new version
-4. the previous version becomes `SUPERSEDED`
-5. section replacement preserves unrelated profile data
-6. experience and education remain versioned
-7. privacy changes do not create a new professional profile version
-8. candidate creation/update emits expected durable events
-
-Do not mark this Phase 2 slice verified until the repository quality gate and browser flow have actually been executed locally.
-
-## Next slice
-
-After this foundation is verified:
-
-1. projects
-2. certifications
-3. languages
-4. links / GitHub / LinkedIn / portfolio
-5. location preferences
-6. richer compensation and employment preferences
-7. section edit/remove/reorder UX
-8. profile history/read-only version inspection
-9. verification indicators
-10. resume-import handoff into Phase 3
+Do not collapse Career Passport into a resume editor. The Passport remains structured professional source data; resumes are later presentation artifacts and application-specific evidence.
