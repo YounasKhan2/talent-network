@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './account-workflows.css';
+import './team-workflows.css';
 
 export const metadata: Metadata = {
   title: 'Talent Network',
