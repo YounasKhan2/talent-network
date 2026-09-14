@@ -13,9 +13,10 @@
     "test:integration:phase1": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration",
     "test:integration:phase2": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration:phase2",
     "test:integration:phase2a": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration:phase2a",
+    "test:integration:phase2b": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration:phase2b",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:phase1 && pnpm test:integration:phase2 && pnpm test:integration:phase2a && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:phase1 && pnpm test:integration:phase2 && pnpm test:integration:phase2a && pnpm test:integration:phase2b && pnpm build"
   },
   "engines": {
     "node": ">=24.15.0 <25",
