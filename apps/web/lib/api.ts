@@ -16,6 +16,14 @@ export type Permission =
   | 'scorecards.submit'
   | 'audit.read';
 
+export type OrganizationRoleKey =
+  | 'ORG_OWNER'
+  | 'ORG_ADMIN'
+  | 'RECRUITER'
+  | 'HIRING_MANAGER'
+  | 'INTERVIEWER'
+  | 'VIEWER';
+
 export interface MembershipResponse {
   organizationId: string;
   displayName: string;
@@ -45,6 +53,18 @@ export interface OrganizationResponse {
 export interface ActiveOrganizationContextResponse {
   organization: OrganizationResponse;
   membership: MembershipResponse;
+}
+
+export interface OrganizationInvitationResponse {
+  id: string;
+  organizationId?: string;
+  email: string;
+  roleKey: OrganizationRoleKey;
+  status: string;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
 }
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:4000';
@@ -157,6 +177,31 @@ export function getActiveOrganizationContext(
 ): Promise<ActiveOrganizationContextResponse> {
   return apiRequest<ActiveOrganizationContextResponse>('/organizations/active-context', {
     organizationId,
+  });
+}
+
+export function createOrganizationInvitation(
+  organizationId: string,
+  input: { email: string; roleKey: Exclude<OrganizationRoleKey, 'ORG_OWNER'> },
+): Promise<OrganizationInvitationResponse> {
+  return apiRequest<OrganizationInvitationResponse>(`/organizations/${organizationId}/invitations`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationInvitations(
+  organizationId: string,
+): Promise<OrganizationInvitationResponse[]> {
+  return apiRequest<OrganizationInvitationResponse[]>(`/organizations/${organizationId}/invitations`);
+}
+
+export function revokeOrganizationInvitation(
+  organizationId: string,
+  invitationId: string,
+): Promise<void> {
+  return apiRequest<void>(`/organizations/${organizationId}/invitations/${invitationId}`, {
+    method: 'DELETE',
   });
 }
 
