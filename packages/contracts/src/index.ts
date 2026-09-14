@@ -113,3 +113,12 @@ export interface SessionResponse {
   user: AuthenticatedUser;
   memberships: OrganizationMembershipSummary[];
 }
+
+export interface AccountContextResponse {
+  user: AuthenticatedUser;
+  career: {
+    available: boolean;
+    candidateId: string | null;
+  };
+  organizations: OrganizationMembershipSummary[];
+}
