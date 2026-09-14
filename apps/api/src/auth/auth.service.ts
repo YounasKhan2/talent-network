@@ -1,4 +1,10 @@
-import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   ORGANIZATION_ROLE_KEYS,
   ROLE_PERMISSIONS,
@@ -16,6 +22,8 @@ import {
 } from './auth.crypto.js';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 
 export interface SessionContext {
   userAgent?: string;
@@ -25,6 +33,11 @@ export interface SessionContext {
 interface AuthResult {
   sessionToken: string;
   session: SessionResponse;
+}
+
+export interface OneTimeTokenDelivery {
+  email: string;
+  token: string;
 }
 
 @Injectable()
@@ -136,6 +149,181 @@ export class AuthService {
     ]);
 
     return { sessionToken, session: await this.getSession(sessionToken) };
+  }
+
+  async requestEmailVerification(userId: string): Promise<OneTimeTokenDelivery | null> {
+    const user = await this.database.user.findUnique({
+      where: { id: userId },
+      select: { id: true, primaryEmail: true, emailVerifiedAt: true, status: true },
+    });
+
+    if (!user || user.status !== 'ACTIVE' || user.emailVerifiedAt) return null;
+
+    const token = createOpaqueToken();
+    const now = new Date();
+
+    await this.database.$transaction(async (transaction) => {
+      await transaction.emailVerificationToken.updateMany({
+        where: { userId, consumedAt: null },
+        data: { consumedAt: now },
+      });
+      await transaction.emailVerificationToken.create({
+        data: {
+          userId,
+          tokenHash: hashOpaqueToken(token),
+          expiresAt: new Date(now.getTime() + EMAIL_VERIFICATION_TTL_MS),
+        },
+      });
+      await transaction.auditEvent.create({
+        data: {
+          actorType: 'USER',
+          actorId: userId,
+          action: 'auth.email_verification.requested',
+          resourceType: 'User',
+          resourceId: userId,
+        },
+      });
+    });
+
+    return { email: user.primaryEmail, token };
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    const tokenHash = hashOpaqueToken(token);
+    const record = await this.database.emailVerificationToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+    const now = new Date();
+
+    if (
+      !record ||
+      record.consumedAt ||
+      record.expiresAt <= now ||
+      record.user.status !== 'ACTIVE'
+    ) {
+      throw invalidOneTimeToken();
+    }
+
+    await this.database.$transaction(async (transaction) => {
+      const consumed = await transaction.emailVerificationToken.updateMany({
+        where: { id: record.id, consumedAt: null, expiresAt: { gt: now } },
+        data: { consumedAt: now },
+      });
+      if (consumed.count !== 1) throw invalidOneTimeToken();
+
+      await transaction.user.update({
+        where: { id: record.userId },
+        data: { emailVerifiedAt: now },
+      });
+      await transaction.auditEvent.create({
+        data: {
+          actorType: 'USER',
+          actorId: record.userId,
+          action: 'auth.email.verified',
+          resourceType: 'User',
+          resourceId: record.userId,
+        },
+      });
+      await transaction.outboxEvent.create({
+        data: {
+          aggregateType: 'User',
+          aggregateId: record.userId,
+          eventType: 'identity.email.verified',
+          payload: { userId: record.userId },
+        },
+      });
+    });
+  }
+
+  async requestPasswordReset(email: string): Promise<OneTimeTokenDelivery | null> {
+    const user = await this.database.user.findUnique({
+      where: { primaryEmail: normalizeEmail(email) },
+      select: { id: true, primaryEmail: true, status: true },
+    });
+    if (!user || user.status !== 'ACTIVE') return null;
+
+    const token = createOpaqueToken();
+    const now = new Date();
+
+    await this.database.$transaction(async (transaction) => {
+      await transaction.passwordResetToken.updateMany({
+        where: { userId: user.id, consumedAt: null },
+        data: { consumedAt: now },
+      });
+      await transaction.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashOpaqueToken(token),
+          expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
+        },
+      });
+      await transaction.auditEvent.create({
+        data: {
+          actorType: 'USER',
+          actorId: user.id,
+          action: 'auth.password_reset.requested',
+          resourceType: 'User',
+          resourceId: user.id,
+        },
+      });
+    });
+
+    return { email: user.primaryEmail, token };
+  }
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    const tokenHash = hashOpaqueToken(token);
+    const record = await this.database.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+    const now = new Date();
+
+    if (
+      !record ||
+      record.consumedAt ||
+      record.expiresAt <= now ||
+      record.user.status !== 'ACTIVE'
+    ) {
+      throw invalidOneTimeToken();
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    await this.database.$transaction(async (transaction) => {
+      const consumed = await transaction.passwordResetToken.updateMany({
+        where: { id: record.id, consumedAt: null, expiresAt: { gt: now } },
+        data: { consumedAt: now },
+      });
+      if (consumed.count !== 1) throw invalidOneTimeToken();
+
+      await transaction.user.update({
+        where: { id: record.userId },
+        data: { passwordHash },
+      });
+      await transaction.session.updateMany({
+        where: { userId: record.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await transaction.auditEvent.create({
+        data: {
+          actorType: 'USER',
+          actorId: record.userId,
+          action: 'auth.password.reset',
+          resourceType: 'User',
+          resourceId: record.userId,
+        },
+      });
+      await transaction.outboxEvent.create({
+        data: {
+          aggregateType: 'User',
+          aggregateId: record.userId,
+          eventType: 'identity.password.reset',
+          payload: { userId: record.userId },
+        },
+      });
+    });
   }
 
   async logout(sessionToken: string): Promise<void> {
@@ -260,6 +448,13 @@ function parseRoleKey(value: string): OrganizationRoleKey | null {
   return ORGANIZATION_ROLE_KEYS.includes(value as OrganizationRoleKey)
     ? (value as OrganizationRoleKey)
     : null;
+}
+
+function invalidOneTimeToken(): BadRequestException {
+  return new BadRequestException({
+    code: 'AUTH_TOKEN_INVALID',
+    message: 'This authentication link is invalid or has expired.',
+  });
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
