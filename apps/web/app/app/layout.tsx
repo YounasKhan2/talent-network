@@ -3,7 +3,7 @@
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError, getSession } from '../../lib/api';
+import { ApiError } from '../../lib/api';
 import { getWorkspaceContextState, type WorkspaceContextState } from '../../lib/workspace-context';
 import styles from '../career/context-bar.module.css';
 
@@ -20,8 +20,7 @@ export default function HiringWorkspaceLayout({ children }: { children: ReactNod
 
     async function resolveHiringContext() {
       try {
-        const session = await getSession();
-        const nextContext = await getWorkspaceContextState(session);
+        const nextContext = await getWorkspaceContextState();
         if (!active) return;
         setContext(nextContext);
         setState('ready');
