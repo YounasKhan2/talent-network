@@ -13,7 +13,7 @@
     "test:integration:phase1": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:phase1 && pnpm build"
   },
   "engines": {
     "node": ">=24.15.0 <25",
