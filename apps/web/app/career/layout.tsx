@@ -109,7 +109,11 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <WorkspaceContextSwitcher activeContext={{ kind: 'career' }} contexts={contexts} />
+          <WorkspaceContextSwitcher
+            activeContext={{ kind: 'career' }}
+            contexts={contexts}
+            menuPlacement="top"
+          />
         </div>
       </aside>
 
