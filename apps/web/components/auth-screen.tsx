@@ -1,7 +1,8 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { ApiError, login, signup } from '../lib/api';
 
@@ -9,12 +10,14 @@ type Mode = 'login' | 'signup';
 
 export function AuthScreen({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isSignup = mode === 'signup';
+  const nextPath = safeInternalPath(searchParams.get('next'));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,7 +27,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     try {
       if (isSignup) await signup(email, password);
       else await login(email, password);
-      router.replace('/app');
+      router.replace((nextPath ?? '/app') as Route);
       router.refresh();
     } catch (caught) {
       setError(
@@ -34,6 +37,11 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       setPending(false);
     }
   }
+
+  const switchHref = {
+    pathname: isSignup ? '/login' : '/signup',
+    ...(nextPath ? { query: { next: nextPath } } : {}),
+  } as const;
 
   return (
     <main className="auth-shell">
@@ -97,6 +105,13 @@ export function AuthScreen({ mode }: { mode: Mode }) {
               />
             </label>
 
+            {!isSignup ? (
+              <div className="form-helper-row">
+                <span />
+                <Link href="/forgot-password">Forgot password?</Link>
+              </div>
+            ) : null}
+
             {error ? (
               <p className="form-error" role="alert">
                 {error}
@@ -110,12 +125,15 @@ export function AuthScreen({ mode }: { mode: Mode }) {
 
           <div className="auth-switch-row">
             <span>{isSignup ? 'Already have an account?' : 'New to Talent Network?'}</span>
-            <Link href={isSignup ? '/login' : '/signup'}>
-              {isSignup ? 'Sign in' : 'Create account'}
-            </Link>
+            <Link href={switchHref}>{isSignup ? 'Sign in' : 'Create account'}</Link>
           </div>
         </div>
       </section>
     </main>
   );
+}
+
+function safeInternalPath(value: string | null): string | null {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
 }
