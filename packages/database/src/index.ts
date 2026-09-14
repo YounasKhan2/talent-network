@@ -1,5 +1,5 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, Prisma } from './generated/prisma/client.js';
+import { PrismaClient, type Prisma } from './generated/prisma/client.js';
 
 export function createDatabaseClient(connectionString: string): PrismaClient {
   const adapter = new PrismaPg({ connectionString });
