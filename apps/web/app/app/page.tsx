@@ -5,18 +5,31 @@ import { useEffect, useState, type FormEvent } from 'react';
 import {
   ApiError,
   createOrganization,
+  createOrganizationInvitation,
   getActiveOrganizationContext,
   getSession,
+  listOrganizationInvitations,
   logout,
   requestEmailVerification,
+  revokeOrganizationInvitation,
   type MembershipResponse,
+  type OrganizationInvitationResponse,
+  type OrganizationRoleKey,
   type Permission,
   type SessionResponse,
 } from '../../lib/api';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type InvitableRole = Exclude<OrganizationRoleKey, 'ORG_OWNER'>;
 
 const workspaceStorageKey = 'tn_active_organization';
+const invitableRoles: readonly InvitableRole[] = [
+  'ORG_ADMIN',
+  'RECRUITER',
+  'HIRING_MANAGER',
+  'INTERVIEWER',
+  'VIEWER',
+];
 
 export default function WorkspaceEntryPage() {
   const router = useRouter();
@@ -28,6 +41,11 @@ export default function WorkspaceEntryPage() {
   const [workspacePending, setWorkspacePending] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [invitations, setInvitations] = useState<OrganizationInvitationResponse[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<InvitableRole>('RECRUITER');
+  const [invitePending, setInvitePending] = useState(false);
+  const [teamMessage, setTeamMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,6 +90,33 @@ export default function WorkspaceEntryPage() {
     };
   }, [router]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadInvitations() {
+      if (
+        !activeMembership ||
+        !hasPermission(activeMembership.permissions, 'organization.members.read')
+      ) {
+        setInvitations([]);
+        return;
+      }
+
+      try {
+        const result = await listOrganizationInvitations(activeMembership.organizationId);
+        if (active) setInvitations(result);
+      } catch (caught) {
+        if (!active) return;
+        setTeamMessage(caught instanceof ApiError ? caught.message : 'Unable to load invitations.');
+      }
+    }
+
+    void loadInvitations();
+    return () => {
+      active = false;
+    };
+  }, [activeMembership]);
+
   async function createWorkspace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setOrganizationPending(true);
@@ -96,6 +141,7 @@ export default function WorkspaceEntryPage() {
     if (organizationId === activeMembership?.organizationId) return;
     setWorkspacePending(true);
     setError(null);
+    setTeamMessage(null);
 
     try {
       const context = await getActiveOrganizationContext(organizationId);
@@ -120,6 +166,40 @@ export default function WorkspaceEntryPage() {
       );
     } finally {
       setVerificationPending(false);
+    }
+  }
+
+  async function inviteTeamMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeMembership) return;
+
+    setInvitePending(true);
+    setTeamMessage(null);
+    try {
+      await createOrganizationInvitation(activeMembership.organizationId, {
+        email: inviteEmail,
+        roleKey: inviteRole,
+      });
+      setInviteEmail('');
+      setTeamMessage('Invitation created. In development, the acceptance URL is printed by the API.');
+      setInvitations(await listOrganizationInvitations(activeMembership.organizationId));
+    } catch (caught) {
+      setTeamMessage(caught instanceof ApiError ? caught.message : 'Unable to create invitation.');
+    } finally {
+      setInvitePending(false);
+    }
+  }
+
+  async function revokeInvitation(invitationId: string) {
+    if (!activeMembership) return;
+
+    setTeamMessage(null);
+    try {
+      await revokeOrganizationInvitation(activeMembership.organizationId, invitationId);
+      setInvitations(await listOrganizationInvitations(activeMembership.organizationId));
+      setTeamMessage('Invitation revoked.');
+    } catch (caught) {
+      setTeamMessage(caught instanceof ApiError ? caught.message : 'Unable to revoke invitation.');
     }
   }
 
@@ -215,6 +295,8 @@ export default function WorkspaceEntryPage() {
   }
 
   const permissions = activeMembership.permissions;
+  const canReadTeam = hasPermission(permissions, 'organization.members.read');
+  const canManageTeam = hasPermission(permissions, 'organization.members.manage');
 
   return (
     <main className="product-shell">
@@ -256,8 +338,8 @@ export default function WorkspaceEntryPage() {
               Interviews
             </a>
           ) : null}
-          {hasPermission(permissions, 'organization.members.read') ? (
-            <a className="nav-item" href="#capabilities">
+          {canReadTeam ? (
+            <a className="nav-item" href="#team">
               Team
             </a>
           ) : null}
@@ -341,6 +423,88 @@ export default function WorkspaceEntryPage() {
             <small>Resolved from the active membership bundle</small>
           </article>
         </section>
+
+        {canReadTeam ? (
+          <section className="team-panel" id="team">
+            <div className="team-panel-heading">
+              <p className="section-kicker">Team access</p>
+              <h2>Invite people into this organization with explicit roles.</h2>
+              <p>
+                The backend remains authoritative: each invitation is tenant-bound, one-time, and
+                checked against the signed-in account email when accepted.
+              </p>
+            </div>
+
+            <div className="team-panel-workspace">
+              {canManageTeam ? (
+                <form className="team-invite-form" onSubmit={(event) => void inviteTeamMember(event)}>
+                  <label>
+                    <span>Email</span>
+                    <input
+                      autoComplete="email"
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="recruiter@company.com"
+                      required
+                      type="email"
+                      value={inviteEmail}
+                    />
+                  </label>
+                  <label>
+                    <span>Role</span>
+                    <select
+                      onChange={(event) => setInviteRole(event.target.value as InvitableRole)}
+                      value={inviteRole}
+                    >
+                      {invitableRoles.map((role) => (
+                        <option key={role} value={role}>
+                          {role.replaceAll('_', ' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="compact-action" disabled={invitePending} type="submit">
+                    {invitePending ? 'Inviting…' : 'Send invitation'}
+                  </button>
+                </form>
+              ) : null}
+
+              {teamMessage ? <p className="team-message">{teamMessage}</p> : null}
+
+              <div className="invitation-table" role="table" aria-label="Organization invitations">
+                <div className="invitation-row invitation-row-head" role="row">
+                  <span role="columnheader">Email</span>
+                  <span role="columnheader">Role</span>
+                  <span role="columnheader">Status</span>
+                  <span role="columnheader">Action</span>
+                </div>
+                {invitations.length === 0 ? (
+                  <div className="invitation-empty">No invitations yet.</div>
+                ) : (
+                  invitations.map((invitation) => (
+                    <div className="invitation-row" key={invitation.id} role="row">
+                      <span role="cell">{invitation.email}</span>
+                      <span role="cell">{invitation.roleKey.replaceAll('_', ' ')}</span>
+                      <span role="cell">{invitation.status}</span>
+                      <span role="cell">
+                        {canManageTeam && invitation.status === 'PENDING' ? (
+                          <button
+                            className="text-action"
+                            onClick={() => void revokeInvitation(invitation.id)}
+                            type="button"
+                          >
+                            Revoke
+                          </button>
+                        ) : (
+                          '—'
+                        )}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="capability-panel" id="capabilities">
           <div>
