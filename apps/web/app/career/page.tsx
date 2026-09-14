@@ -394,7 +394,7 @@ function ExperienceSection({
         title: item.title,
         subtitle: item.companyName,
         meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
-        description: item.summary ?? undefined,
+        ...(item.summary ? { description: item.summary } : {}),
       }))}
     >
       <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
@@ -409,7 +409,10 @@ function ExperienceSection({
           </label>
           <label>
             <span>Employment type</span>
-            <select onChange={(event) => setEmploymentType(event.target.value)} value={employmentType}>
+            <select
+              onChange={(event) => setEmploymentType(event.target.value)}
+              value={employmentType}
+            >
               <option value="">Not specified</option>
               <option value="FULL_TIME">Full-time</option>
               <option value="PART_TIME">Part-time</option>
@@ -441,7 +444,11 @@ function ExperienceSection({
           </label>
           <label>
             <span>Start month</span>
-            <input onChange={(event) => setStartMonth(event.target.value)} type="month" value={startMonth} />
+            <input
+              onChange={(event) => setStartMonth(event.target.value)}
+              type="month"
+              value={startMonth}
+            />
           </label>
           <label>
             <span>End month</span>
@@ -557,7 +564,11 @@ function EducationSection({
         title: item.degree || 'Education',
         subtitle: item.institutionName,
         meta: formatDateRange(item.startDate, item.endDate, item.isCurrent),
-        description: [item.fieldOfStudy, item.description].filter(Boolean).join(' · ') || undefined,
+        ...([item.fieldOfStudy, item.description].filter(Boolean).join(' · ')
+          ? {
+              description: [item.fieldOfStudy, item.description].filter(Boolean).join(' · '),
+            }
+          : {}),
       }))}
     >
       <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
@@ -583,7 +594,11 @@ function EducationSection({
           </label>
           <label>
             <span>Start month</span>
-            <input onChange={(event) => setStartMonth(event.target.value)} type="month" value={startMonth} />
+            <input
+              onChange={(event) => setStartMonth(event.target.value)}
+              type="month"
+              value={startMonth}
+            />
           </label>
           <label>
             <span>End / graduation month</span>
@@ -734,7 +749,7 @@ function ProjectsSection({
         title: item.name,
         subtitle: item.role || 'Project',
         meta: formatDateRange(item.startDate, item.endDate),
-        description: item.description ?? undefined,
+        ...(item.description ? { description: item.description } : {}),
       }))}
     >
       <form className="career-form career-entry-form" onSubmit={(event) => void add(event)}>
@@ -753,11 +768,19 @@ function ProjectsSection({
           </label>
           <label>
             <span>Start month</span>
-            <input onChange={(event) => setStartMonth(event.target.value)} type="month" value={startMonth} />
+            <input
+              onChange={(event) => setStartMonth(event.target.value)}
+              type="month"
+              value={startMonth}
+            />
           </label>
           <label>
             <span>End month</span>
-            <input onChange={(event) => setEndMonth(event.target.value)} type="month" value={endMonth} />
+            <input
+              onChange={(event) => setEndMonth(event.target.value)}
+              type="month"
+              value={endMonth}
+            />
           </label>
           <label>
             <span>Project URL</span>
@@ -1130,7 +1153,9 @@ function SimpleRecordSection({
               <strong>{item.title}</strong>
               <span>{item.subtitle}</span>
               {item.meta ? <small>{item.meta}</small> : null}
-              {item.description ? <p className="career-record-description">{item.description}</p> : null}
+              {item.description ? (
+                <p className="career-record-description">{item.description}</p>
+              ) : null}
             </article>
           ))
         ) : (
@@ -1176,7 +1201,11 @@ function monthToIso(value: string): string | null {
   return value ? `${value}-01T00:00:00.000Z` : null;
 }
 
-function formatDateRange(startDate: string | null, endDate: string | null, isCurrent = false): string {
+function formatDateRange(
+  startDate: string | null,
+  endDate: string | null,
+  isCurrent = false,
+): string {
   const start = formatMonth(startDate);
   const end = isCurrent ? 'Present' : formatMonth(endDate);
   if (start && end) return `${start} – ${end}`;
