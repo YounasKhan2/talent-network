@@ -19,6 +19,13 @@ export type Permission =
 export type OrganizationRoleKey =
   'ORG_OWNER' | 'ORG_ADMIN' | 'RECRUITER' | 'HIRING_MANAGER' | 'INTERVIEWER' | 'VIEWER';
 
+export type CandidateWorkMode = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE';
+export type CandidateAvailabilityStatus =
+  | 'IMMEDIATE'
+  | 'NOTICE_PERIOD'
+  | 'OPEN_TO_OFFERS'
+  | 'NOT_LOOKING';
+
 export interface MembershipResponse {
   organizationId: string;
   displayName: string;
@@ -60,6 +67,63 @@ export interface OrganizationInvitationResponse {
   acceptedAt?: string | null;
   revokedAt?: string | null;
   createdAt: string;
+}
+
+export interface CandidatePassportResponse {
+  id: string;
+  userId: string;
+  visibility: 'PRIVATE' | 'NETWORK' | 'VERIFIED_RECRUITERS';
+  discoverability: 'HIDDEN' | 'SEARCHABLE';
+  primaryLocale: string;
+  timezone: string;
+  currentProfileVersionId: string | null;
+  currentProfileVersion: {
+    id: string;
+    versionNumber: number;
+    status: string;
+    source: string;
+    headline: string | null;
+    summary: string | null;
+    availabilityStatus: CandidateAvailabilityStatus | null;
+    availableFrom: string | null;
+    compensationCurrency: string | null;
+    compensationMinimum: number | null;
+    compensationTarget: number | null;
+    compensationPeriod: string | null;
+    preferredWorkModes: CandidateWorkMode[];
+    preferredEmploymentTypes: string[];
+    employments: Array<{
+      id: string;
+      companyName: string;
+      title: string;
+      employmentType: string | null;
+      location: string | null;
+      workMode: CandidateWorkMode | null;
+      startDate: string | null;
+      endDate: string | null;
+      isCurrent: boolean;
+      summary: string | null;
+    }>;
+    education: Array<{
+      id: string;
+      institutionName: string;
+      degree: string | null;
+      fieldOfStudy: string | null;
+      location: string | null;
+      startDate: string | null;
+      endDate: string | null;
+      isCurrent: boolean;
+      description: string | null;
+    }>;
+    skills: Array<{
+      id: string;
+      name: string;
+      normalizedName: string;
+      proficiency: string | null;
+      experienceMonths: number | null;
+      lastUsedAt: string | null;
+    }>;
+  } | null;
 }
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:4000';
@@ -209,6 +273,95 @@ export function acceptOrganizationInvitation(token: string): Promise<unknown> {
   return apiRequest<unknown>('/organizations/invitations/accept', {
     method: 'POST',
     body: JSON.stringify({ token }),
+  });
+}
+
+export function initializeCandidatePassport(): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/initialize', { method: 'POST' });
+}
+
+export function getCandidatePassport(): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport');
+}
+
+export function updateCandidateOverview(input: {
+  headline?: string | null;
+  summary?: string | null;
+  availabilityStatus?: CandidateAvailabilityStatus | null;
+  availableFrom?: string | null;
+  compensationCurrency?: string | null;
+  compensationMinimum?: number | null;
+  compensationTarget?: number | null;
+  compensationPeriod?: string | null;
+  preferredWorkModes?: CandidateWorkMode[];
+  preferredEmploymentTypes?: string[];
+}): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/overview', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function replaceCandidateSkills(
+  skills: Array<{
+    name: string;
+    proficiency?: string | null;
+    experienceMonths?: number | null;
+    lastUsedAt?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/skills', {
+    method: 'PUT',
+    body: JSON.stringify({ skills }),
+  });
+}
+
+export function replaceCandidateEmployment(
+  employments: Array<{
+    companyName: string;
+    title: string;
+    employmentType?: string | null;
+    location?: string | null;
+    workMode?: CandidateWorkMode | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    isCurrent?: boolean;
+    summary?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/experience', {
+    method: 'PUT',
+    body: JSON.stringify({ employments }),
+  });
+}
+
+export function replaceCandidateEducation(
+  education: Array<{
+    institutionName: string;
+    degree?: string | null;
+    fieldOfStudy?: string | null;
+    location?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    isCurrent?: boolean;
+    description?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/education', {
+    method: 'PUT',
+    body: JSON.stringify({ education }),
+  });
+}
+
+export function updateCandidateSettings(input: {
+  visibility?: 'PRIVATE' | 'NETWORK' | 'VERIFIED_RECRUITERS';
+  discoverability?: 'HIDDEN' | 'SEARCHABLE';
+  primaryLocale?: string;
+  timezone?: string;
+}): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
   });
 }
 
