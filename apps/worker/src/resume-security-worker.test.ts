@@ -9,7 +9,7 @@ const CLEAN_PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\nstartxref\n0\n%%
 const VERSION_ID = '11111111-1111-4111-8111-111111111111';
 const RESUME_ID = '22222222-2222-4222-8222-222222222222';
 
-test('scanner failure becomes retryable and a later retry can advance to extracting', async () => {
+void test('scanner failure becomes retryable and a later retry can advance to extracting', async () => {
   const fixture = createFixture('UPLOADED');
   const failingScanner = scannerResult({
     status: 'ERROR',
@@ -53,7 +53,7 @@ test('scanner failure becomes retryable and a later retry can advance to extract
   assert.equal(fixture.outboxTypes.at(-1), 'candidate.resume.security_passed');
 });
 
-test('the final scanner failure becomes terminal and is audited', async () => {
+void test('the final scanner failure becomes terminal and is audited', async () => {
   const fixture = createFixture('UPLOADED');
   const failingScanner = scannerResult({
     status: 'ERROR',
@@ -78,7 +78,7 @@ test('the final scanner failure becomes terminal and is audited', async () => {
   assert.equal(fixture.outboxTypes.at(-1), 'candidate.resume.security_failed_terminal');
 });
 
-test('retry execution recovers an interrupted scanning state', async () => {
+void test('retry execution recovers an interrupted scanning state', async () => {
   const fixture = createFixture('SCANNING');
   const cleanScanner = scannerResult({
     status: 'CLEAN',
@@ -99,7 +99,7 @@ test('retry execution recovers an interrupted scanning state', async () => {
   assert.equal(fixture.auditActions.at(-1), 'candidate.resume.security_passed');
 });
 
-test('infected resume is rejected and never advances to extraction', async () => {
+void test('infected resume is rejected and never advances to extraction', async () => {
   const fixture = createFixture('UPLOADED');
   const infectedScanner = scannerResult({
     status: 'INFECTED',
@@ -122,7 +122,7 @@ test('infected resume is rejected and never advances to extraction', async () =>
   assert.equal(fixture.outboxTypes.at(-1), 'candidate.resume.security_rejected');
 });
 
-test('invalid document is rejected before the malware scanner is called', async () => {
+void test('invalid document is rejected before the malware scanner is called', async () => {
   const fixture = createFixture('UPLOADED', Buffer.from('not-a-pdf', 'ascii'));
   let scanCalls = 0;
   const scanner: MalwareScanner = {
