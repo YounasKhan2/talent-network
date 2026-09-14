@@ -22,6 +22,7 @@ export interface ResumeSecurityProcessorDependencies {
 
 export interface ResumeSecurityExecutionContext {
   finalAttempt?: boolean;
+  retryAttempt?: boolean;
 }
 
 export async function processResumeSecurityJob(
@@ -30,7 +31,7 @@ export async function processResumeSecurityJob(
   execution: ResumeSecurityExecutionContext = {},
 ): Promise<void> {
   const { database, storage, bucket, scanner } = dependencies;
-  const claimed = await database.resumeVersion.updateMany({
+  let claimed = await database.resumeVersion.updateMany({
     where: {
       id: input.resumeVersionId,
       OR: [
@@ -48,6 +49,20 @@ export async function processResumeSecurityJob(
     },
   });
 
+  if (claimed.count === 0 && execution.retryAttempt === true) {
+    claimed = await database.resumeVersion.updateMany({
+      where: {
+        id: input.resumeVersionId,
+        processingState: { in: ['VALIDATING', 'SCANNING'] },
+      },
+      data: {
+        processingState: 'VALIDATING',
+        failureCode: null,
+        failureMetadata: null,
+      },
+    });
+  }
+
   if (claimed.count === 0) {
     const existing = await database.resumeVersion.findUnique({
       where: { id: input.resumeVersionId },
@@ -56,6 +71,7 @@ export async function processResumeSecurityJob(
     if (!existing) throw new Error('ResumeVersion not found.');
 
     if (
+      existing.processingState === 'VALIDATING' ||
       existing.processingState === 'SCANNING' ||
       existing.processingState === 'EXTRACTING' ||
       existing.processingState === 'OCR_REQUIRED' ||
@@ -116,8 +132,8 @@ export async function processResumeSecurityJob(
     return;
   }
 
-  await database.resumeVersion.update({
-    where: { id: version.id },
+  const movedToScanning = await database.resumeVersion.updateMany({
+    where: { id: version.id, processingState: 'VALIDATING' },
     data: {
       processingState: 'SCANNING',
       checksumSha256: validation.checksumSha256,
@@ -125,6 +141,7 @@ export async function processResumeSecurityJob(
       failureMetadata: null,
     },
   });
+  if (movedToScanning.count === 0) return;
 
   const scan = await scanner.scan(bytes);
   if (scan.status === 'ERROR') {
@@ -155,14 +172,15 @@ export async function processResumeSecurityJob(
   }
 
   await database.$transaction(async (transaction) => {
-    await transaction.resumeVersion.update({
-      where: { id: version.id },
+    const advanced = await transaction.resumeVersion.updateMany({
+      where: { id: version.id, processingState: 'SCANNING' },
       data: {
         processingState: 'EXTRACTING',
         failureCode: null,
         failureMetadata: null,
       },
     });
+    if (advanced.count === 0) return;
 
     await transaction.auditEvent.create({
       data: {
@@ -215,10 +233,15 @@ async function rejectResume(
   failureMetadata: Record<string, unknown>,
 ): Promise<void> {
   await database.$transaction(async (transaction) => {
-    await transaction.resumeVersion.update({
-      where: { id: version.id },
+    const rejected = await transaction.resumeVersion.updateMany({
+      where: {
+        id: version.id,
+        processingState: { in: ['VALIDATING', 'SCANNING'] },
+      },
       data: { processingState: 'REJECTED', failureCode, failureMetadata },
     });
+    if (rejected.count === 0) return;
+
     await transaction.auditEvent.create({
       data: {
         actorType: 'SYSTEM',
@@ -255,18 +278,26 @@ async function markProcessingFailure(
   finalAttempt: boolean,
 ): Promise<void> {
   if (!finalAttempt) {
-    await database.resumeVersion.update({
-      where: { id: version.id },
+    await database.resumeVersion.updateMany({
+      where: {
+        id: version.id,
+        processingState: { in: ['VALIDATING', 'SCANNING'] },
+      },
       data: { processingState: 'FAILED_RETRYABLE', failureCode, failureMetadata },
     });
     return;
   }
 
   await database.$transaction(async (transaction) => {
-    await transaction.resumeVersion.update({
-      where: { id: version.id },
+    const failed = await transaction.resumeVersion.updateMany({
+      where: {
+        id: version.id,
+        processingState: { in: ['VALIDATING', 'SCANNING'] },
+      },
       data: { processingState: 'FAILED_TERMINAL', failureCode, failureMetadata },
     });
+    if (failed.count === 0) return;
+
     await transaction.auditEvent.create({
       data: {
         actorType: 'SYSTEM',
