@@ -15,12 +15,13 @@ Talent Network is a documentation-led, production-oriented employment operating 
 | Monorepo bootstrap                     | ✅ Complete         |
 | Engineering foundation                 | ✅ Complete         |
 | Phase 1 backend foundation             | ✅ Verified         |
-| Phase 1 authenticated web experience   | 🟡 In progress      |
-| Candidate Career Passport              | ⏳ Next major phase |
+| Phase 1 authenticated web experience   | ✅ Verified         |
+| Candidate Career Passport              | 🟡 Current phase    |
+| Resume Intelligence                    | ⏳ Next major phase |
 
-**Current implementation phase:** Phase 1 — Identity, Organizations, Permissions & Authenticated Web Experience.
+**Current implementation phase:** Phase 2 — Candidate Career Passport.
 
-The Phase 1 backend is verified through repository quality gates, database-backed integration coverage, and browser-tested signup/login/organization onboarding. Remaining Phase 1 product work connects account recovery, email verification, invitation acceptance, workspace switching, and permission-aware navigation before Phase 2 begins.
+Phase 1 is closed after repository quality-gate verification plus browser-tested signup/login, organization onboarding, email verification, password recovery, invitation acceptance/revocation, multi-workspace switching, and permission-aware owner/recruiter behavior.
 
 The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
 
@@ -296,9 +297,9 @@ See [`docs/11-implementation/local-quality-gates.md`](./docs/11-implementation/l
 ```text
 0 Engineering Foundation                       ✅ complete
         ↓
-1 Identity + Organizations + Permissions       ← current
+1 Identity + Organizations + Permissions       ✅ complete
         ↓
-2 Candidate Career Passport
+2 Candidate Career Passport                    ← current
         ↓
 3 Resume Intelligence
         ↓
