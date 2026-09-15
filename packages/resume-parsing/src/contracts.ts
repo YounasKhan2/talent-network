@@ -1,3 +1,4 @@
+import type { PreprocessedResumeDocument } from './preprocessing.js';
 import type {
   ParsedResumeSchemaVersion,
   ResumeEvidencePolicyVersion,
@@ -135,7 +136,7 @@ export interface ResumeParseInput {
   sourceExtractionId: string;
   processingPipelineVersion: string;
   sourceDocumentSchemaVersion: string;
-  sourceDocument: unknown;
+  preprocessedDocument: PreprocessedResumeDocument;
 }
 
 export interface ParsedResumeDraft {
