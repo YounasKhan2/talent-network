@@ -23,15 +23,20 @@ type PdfTextItem = {
   hasEOL: boolean;
 };
 
-function isPdfTextItem(item: unknown): item is PdfTextItem {
-  return (
-    typeof item === 'object' &&
-    item !== null &&
-    'str' in item &&
-    typeof (item as { str?: unknown }).str === 'string' &&
-    'hasEOL' in item &&
-    typeof (item as { hasEOL?: unknown }).hasEOL === 'boolean'
-  );
+function toPdfTextItem(item: unknown): PdfTextItem | null {
+  if (typeof item !== 'object' || item === null || !('str' in item)) {
+    return null;
+  }
+
+  const candidate = item as { str?: unknown; hasEOL?: unknown };
+  if (typeof candidate.str !== 'string') {
+    return null;
+  }
+
+  return {
+    str: candidate.str,
+    hasEOL: candidate.hasEOL === true,
+  };
 }
 
 export class PdfJsResumeExtractor implements ResumeExtractor {
@@ -63,7 +68,8 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
         const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent();
         const rawText = content.items
-          .filter(isPdfTextItem)
+          .map((item) => toPdfTextItem(item))
+          .filter((item): item is PdfTextItem => item !== null)
           .map((item) => `${item.str}${item.hasEOL ? '\n' : ' '}`)
           .join('');
         const text = normalizeExtractedText(rawText);
