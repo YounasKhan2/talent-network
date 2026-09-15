@@ -20,13 +20,13 @@ Talent Network is a documentation-led, production-oriented employment operating 
   3A Resume Domain + Processing Contract    ✅ VERIFIED
   3B Private Object Storage + Upload        ✅ VERIFIED
   3C Validation + Malware Scanning          ✅ VERIFIED
-  3D Extraction + OCR                       🟡 CURRENT
+  3D Extraction + OCR                       ✅ VERIFIED
     3D-A Contracts + Persistence            ✅ VERIFIED
     3D-B Native PDF/DOCX Extraction         ✅ VERIFIED
     3D-C Quality Routing                    ✅ VERIFIED
-    3D-D OCR Fallback                       🟡 IMPLEMENTED / APP-RUNTIME VERIFICATION
-    3D-E Runtime Closure                    🟡 CURRENT ACCEPTANCE
-  3E Structured Parsing + Evidence          ⬜ REMAINING
+    3D-D OCR Fallback                       ✅ VERIFIED
+    3D-E Runtime Closure                    ✅ VERIFIED
+  3E Structured Parsing + Evidence          🟡 CURRENT
   3F Candidate Review Workspace             ⬜ REMAINING
 4 Employer + Jobs                           ⬜ REMAINING
 5 Job Discovery                             ⬜ REMAINING
@@ -93,7 +93,7 @@ MVP Production Hardening + Launch           ⬜ REMAINING
 - [x] infected-file logical quarantine and download denial
 - [x] clean and EICAR runtime acceptance
 
-**3D — Extraction + OCR · 🟡 Current**
+**3D — Extraction + OCR · ✅ Verified**
 
 - [x] ResumeDocument/source-range contracts
 - [x] deterministic extraction quality policy
@@ -112,14 +112,19 @@ MVP Production Hardening + Launch           ⬜ REMAINING
 - [x] real local OCR container health check
 - [x] real image-only scanned-PDF OCR smoke test (`332` recognized characters on page 1)
 - [x] deterministic scanned fixture materialized for application acceptance
-- [x] complete repository `pnpm check` green after OCR implementation
-- [ ] verify persisted application path `OCR_REQUIRED → candidate.resume.ocr_required → resume.ocr → OCR ResumeExtraction COMPLETED → PARSING`
-- [ ] verify runtime logs/audit/outbox contain no raw OCR text during that real path
-- [ ] close Phase 3D runtime quality gate
+- [x] persisted runtime path `EXTRACTING → OCR_REQUIRED → PARSING`
+- [x] separate `NATIVE_PDF` and `OCR` ResumeExtraction completion verified
+- [x] scheduler publication verified for extraction and OCR handoffs
+- [x] known OCR fixture text absent from audit/outbox metadata
+- [x] duplicate-delivery/retry/idempotency coverage green
+- [x] complete repository `pnpm check` green after runtime acceptance
+- [x] Phase 3D runtime quality gate closed on 2026-09-15
 
-> **UI boundary:** Resume upload/history/review navigation is intentionally not part of the current Career UI yet. That product surface belongs to **Phase 3F — Candidate Review Workspace** after structured parsing/evidence work in Phase 3E. Phase 3D runtime closure uses the real backend/storage/outbox/queue pipeline rather than an invented UI route.
+> **Verified runtime baseline:** `0621076b31ae91b9ee9dda106d4e04e3fcc3fdb6`. Closure evidence is recorded in [`docs/11-implementation/phase-3d-extraction-ocr.md`](./docs/11-implementation/phase-3d-extraction-ocr.md) and the acceptance procedure remains in [`docs/11-implementation/phase-3d-runtime-acceptance.md`](./docs/11-implementation/phase-3d-runtime-acceptance.md).
 
-**3E — Structured parsing + evidence mapping · ⬜ Remaining**
+> **UI boundary:** Resume upload/history/review navigation is intentionally not part of the current Career UI yet. That product surface belongs to **Phase 3F — Candidate Review Workspace** after structured parsing/evidence work in Phase 3E. Phase 3D runtime closure used the real backend/storage/outbox/queue pipeline rather than an invented UI route.
+
+**3E — Structured parsing + evidence mapping · 🟡 Current**
 
 - [ ] schema-validated structured resume parser
 - [ ] AI Gateway integration where semantic interpretation is useful
