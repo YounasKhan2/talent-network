@@ -139,7 +139,7 @@ function collectSourceFragments(document: PreprocessedResumeDocument): ResumeSou
 function collectParsedClaims(parsedResume: ParsedResume): Array<[string, ParsedClaim<unknown>]> {
   const claims: Array<[string, ParsedClaim<unknown>]> = [];
   const push = <T>(path: string, claim: ParsedClaim<T> | undefined): void => {
-    if (claim) claims.push([path, claim as ParsedClaim<unknown>]);
+    if (claim) claims.push([path, claim]);
   };
 
   push('identityCandidate.fullName', parsedResume.identityCandidate?.fullName);
