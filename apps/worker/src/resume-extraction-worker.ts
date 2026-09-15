@@ -283,7 +283,9 @@ async function markExtractionFailure(
   database: DatabaseClient,
   version: { id: string; resumeId: string; processingPipelineVersion: string },
   failureCode: string,
-  failureMetadata: Parameters<DatabaseClient['resumeVersion']['updateMany']>[0]['data']['failureMetadata'],
+  failureMetadata: Parameters<
+    DatabaseClient['resumeVersion']['updateMany']
+  >[0]['data']['failureMetadata'],
   finalAttempt: boolean,
 ): Promise<void> {
   if (!finalAttempt) {
