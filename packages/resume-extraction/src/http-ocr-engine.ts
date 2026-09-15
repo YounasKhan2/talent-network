@@ -145,7 +145,7 @@ function parseOcrPayload(value: string): OcrPayload {
     if (
       pageNumber !== null &&
       pageNumber !== undefined &&
-      (!Number.isInteger(pageNumber) || (pageNumber as number) <= 0)
+      (typeof pageNumber !== 'number' || !Number.isInteger(pageNumber) || pageNumber <= 0)
     ) {
       throw new Error('RESUME_OCR_RECOGNITION_FAILED:INVALID_PAGE_NUMBER');
     }
