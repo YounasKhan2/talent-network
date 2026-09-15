@@ -1,5 +1,11 @@
 import { apiRequest, type CandidatePassportResponse } from './api';
 
+export const MAX_RESUME_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const ALLOWED_RESUME_UPLOAD_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+] as const;
+
 export interface CandidateResumeListItem {
   id: string;
   title: string;
@@ -107,10 +113,56 @@ export interface CandidateResumeReviewResponse {
   };
 }
 
+export interface ResumeUploadAuthorization {
+  resumeId: string;
+  resumeVersionId: string;
+  upload: {
+    method: 'PUT';
+    url: string;
+    headers: Record<string, string>;
+    expiresInSeconds: number;
+    maxSizeBytes: number;
+  };
+}
+
 export function listCandidateResumes(): Promise<CandidateResumeListItem[]> {
   return apiRequest<CandidateResumeListItem[]>('/candidate/resumes');
 }
 
 export function getCandidateResumeReview(resumeId: string): Promise<CandidateResumeReviewResponse> {
   return apiRequest<CandidateResumeReviewResponse>(`/candidate/resumes/${resumeId}/review`);
+}
+
+export function authorizeCandidateResumeUpload(input: {
+  title: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+}): Promise<ResumeUploadAuthorization> {
+  return apiRequest<ResumeUploadAuthorization>('/candidate/resumes/upload-authorization', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function completeCandidateResumeUpload(resumeVersionId: string): Promise<unknown> {
+  return apiRequest('/candidate/resumes/upload-complete', {
+    method: 'POST',
+    body: JSON.stringify({ resumeVersionId }),
+  });
+}
+
+export async function putCandidateResumeFile(
+  authorization: ResumeUploadAuthorization,
+  file: File,
+): Promise<void> {
+  const response = await fetch(authorization.upload.url, {
+    method: authorization.upload.method,
+    headers: authorization.upload.headers,
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Private resume upload failed with status ${response.status}.`);
+  }
 }
