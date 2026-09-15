@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   MammothDocxResumeExtractor,
   PdfJsResumeExtractor,
+  RESUME_DOCUMENT_SCHEMA_VERSION,
   decideResumeExtractionQuality,
 } from './index.js';
 
@@ -36,7 +37,7 @@ function assertValidBlocks(
   }
 }
 
-void test('real native PDF fixture extracts through PDF.js with truthful page semantics', async () => {
+void test('real native PDF fixture preserves PDF.js text-layer and geometry data', async () => {
   const bytes = await readFile(fixtureUrl('synthetic-resume.pdf'));
   const extractor = new PdfJsResumeExtractor();
 
@@ -46,6 +47,7 @@ void test('real native PDF fixture extracts through PDF.js with truthful page se
     bytes,
   });
 
+  assert.equal(result.document.schemaVersion, RESUME_DOCUMENT_SCHEMA_VERSION);
   assert.equal(result.document.resumeVersionId, FIXTURE_VERSION_ID);
   assert.equal(result.document.sourceMimeType, 'application/pdf');
   assert.equal(result.document.extractionMethod, 'NATIVE_PDF');
@@ -57,6 +59,22 @@ void test('real native PDF fixture extracts through PDF.js with truthful page se
   result.document.pages.forEach((page, index) => {
     assert.equal(page.pageNumber, index + 1);
     assertValidBlocks(page.text, page.blocks);
+    assert.ok((page.lines?.length ?? 0) > 0);
+
+    const nativePdf = page.nativePdf;
+    assert.ok(nativePdf);
+    assert.equal(nativePdf?.pageNumber, index + 1);
+    assert.ok((nativePdf?.viewport.width ?? 0) > 0);
+    assert.ok((nativePdf?.viewport.height ?? 0) > 0);
+    assert.ok((nativePdf?.view.length ?? 0) >= 4);
+
+    const textItems = nativePdf?.textContent.items.filter((item) => item.kind === 'TEXT') ?? [];
+    assert.ok(textItems.length > 0);
+    assert.ok(textItems.some((item) => item.transform.length >= 6));
+    assert.ok(textItems.some((item) => item.width > 0));
+    assert.ok(textItems.some((item) => item.height > 0));
+    assert.ok(textItems.some((item) => item.fontName.length > 0));
+    assert.ok(Object.keys(nativePdf?.textContent.styles ?? {}).length > 0);
   });
 
   assert.equal(
@@ -75,6 +93,7 @@ void test('real DOCX fixture extracts through Mammoth without fabricated paginat
     bytes,
   });
 
+  assert.equal(result.document.schemaVersion, RESUME_DOCUMENT_SCHEMA_VERSION);
   assert.equal(result.document.resumeVersionId, FIXTURE_VERSION_ID);
   assert.equal(result.document.sourceMimeType, DOCX_MIME);
   assert.equal(result.document.extractionMethod, 'NATIVE_DOCX');
@@ -82,6 +101,7 @@ void test('real DOCX fixture extracts through Mammoth without fabricated paginat
   assertFixtureText(result.document.text);
   assert.equal(result.document.pages.length, 1);
   assert.equal(result.document.pages[0]?.pageNumber, null);
+  assert.equal(result.document.pages[0]?.nativePdf, undefined);
   assert.ok(result.document.quality.nonWhitespaceCharacterCount >= 120);
   assertValidBlocks(result.document.pages[0]?.text ?? '', result.document.pages[0]?.blocks ?? []);
 
