@@ -17,12 +17,14 @@
 .header h1,
 .reviewHeader h2,
 .sectionHeading h3,
+.uploadPanel h2,
 .state h1,
 .compactState h1 {
   margin: 0;
 }
 
-.header p {
+.header p,
+.uploadPanel p {
   max-width: 760px;
   margin: 10px 0 0;
   color: var(--muted);
@@ -38,6 +40,79 @@
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.uploadPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 24px;
+}
+
+.uploadPanel > div:first-child {
+  min-width: 0;
+}
+
+.uploadPanel > div:first-child > small {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.uploadControls {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.fileInput {
+  display: none;
+}
+
+.uploadButton {
+  border: 1px solid var(--line-strong, var(--line));
+  background: var(--ink, #111827);
+  color: var(--surface, #fff);
+  border-radius: 14px;
+  padding: 11px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.uploadButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.uploadHint,
+.uploadProgress,
+.uploadSuccess,
+.uploadError {
+  max-width: 260px;
+  text-align: right;
+  line-height: 1.45;
+}
+
+.uploadHint,
+.uploadProgress {
+  color: var(--muted);
+}
+
+.uploadSuccess {
+  color: var(--success, #087a55);
+  font-weight: 700;
+}
+
+.uploadError {
+  color: var(--danger, #b42318);
+  font-weight: 700;
 }
 
 .workspaceGrid {
@@ -139,6 +214,36 @@
 .reviewHeader p {
   margin: 8px 0 0;
   color: var(--muted);
+}
+
+.processingTimeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 22px;
+  gap: 6px;
+}
+
+.processingStep,
+.processingStepComplete {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+}
+
+.processingStep > span,
+.processingStepComplete > span {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.processingStepComplete > span {
+  background: currentColor;
+}
+
+.processingStepComplete {
+  color: var(--ink, #111827);
+  font-weight: 700;
 }
 
 .metrics {
@@ -324,10 +429,32 @@
 
 @media (max-width: 680px) {
   .header,
+  .uploadPanel,
   .reviewHeader,
   .sectionHeading,
   .reviewActions {
     flex-direction: column;
+  }
+
+  .uploadPanel {
+    align-items: stretch;
+  }
+
+  .uploadControls {
+    min-width: 0;
+    justify-items: stretch;
+  }
+
+  .uploadHint,
+  .uploadProgress,
+  .uploadSuccess,
+  .uploadError {
+    max-width: none;
+    text-align: left;
+  }
+
+  .processingTimeline {
+    grid-template-columns: 1fr;
   }
 
   .metrics,
