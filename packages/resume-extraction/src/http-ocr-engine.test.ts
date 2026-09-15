@@ -48,16 +48,23 @@ void test('HTTP OCR adapter classifies transient provider failures as retryable 
     fetchImpl: () => Promise.resolve(new Response('busy', { status: 503 })),
   });
 
-  await assert.rejects(() => engine.recognize(INPUT), /RESUME_OCR_SERVICE_UNAVAILABLE:HTTP_503/);
+  await assert.rejects(
+    () => engine.recognize(INPUT),
+    /RESUME_OCR_SERVICE_UNAVAILABLE:HTTP_503/,
+  );
 });
 
 void test('HTTP OCR adapter rejects malformed provider responses', async () => {
   const engine = new HttpResumeOcrEngine({
     endpoint: 'http://ocr.internal/v1/recognize',
-    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ pages: [] }), { status: 200 })),
+    fetchImpl: () =>
+      Promise.resolve(new Response(JSON.stringify({ pages: [] }), { status: 200 })),
   });
 
-  await assert.rejects(() => engine.recognize(INPUT), /RESUME_OCR_RECOGNITION_FAILED:INVALID_PAGES/);
+  await assert.rejects(
+    () => engine.recognize(INPUT),
+    /RESUME_OCR_RECOGNITION_FAILED:INVALID_PAGES/,
+  );
 });
 
 void test('HTTP OCR adapter never accepts unbounded response payloads', async () => {
@@ -72,5 +79,8 @@ void test('HTTP OCR adapter never accepts unbounded response payloads', async ()
       ),
   });
 
-  await assert.rejects(() => engine.recognize(INPUT), /RESUME_OCR_RECOGNITION_FAILED:RESPONSE_TOO_LARGE/);
+  await assert.rejects(
+    () => engine.recognize(INPUT),
+    /RESUME_OCR_RECOGNITION_FAILED:RESPONSE_TOO_LARGE/,
+  );
 });
