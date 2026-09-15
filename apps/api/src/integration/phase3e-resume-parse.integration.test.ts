@@ -128,7 +128,9 @@ void test('Phase 3E parse persistence is candidate-owned, source-bound, and rebu
         1,
       );
       assert.equal(
-        await database.candidateProfileVersion.count({ where: { candidateId: primaryCandidate.id } }),
+        await database.candidateProfileVersion.count({
+          where: { candidateId: primaryCandidate.id },
+        }),
         beforeProfileCount,
       );
 

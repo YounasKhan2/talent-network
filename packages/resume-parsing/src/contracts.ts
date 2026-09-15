@@ -10,11 +10,7 @@ export interface ParsedEvidenceRange {
 }
 
 export type ParsedEvidenceKind =
-  | 'DIRECT_TEXT'
-  | 'SECTION_CONTEXT'
-  | 'NORMALIZED_VALUE'
-  | 'DERIVED_DATE'
-  | 'DERIVED_LINK';
+  'DIRECT_TEXT' | 'SECTION_CONTEXT' | 'NORMALIZED_VALUE' | 'DERIVED_DATE' | 'DERIVED_LINK';
 
 export interface ParsedEvidence {
   resumeExtractionId: string;
