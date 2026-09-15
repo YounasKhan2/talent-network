@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common'
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
+import { ResumeReviewService } from './resume-review.service.js';
 import { ResumesService } from './resumes.service.js';
 
 const uploadAuthorizationSchema = z
@@ -27,12 +28,19 @@ export class ResumesController {
   constructor(
     @Inject(AuthService) private readonly authService: AuthService,
     @Inject(ResumesService) private readonly resumesService: ResumesService,
+    @Inject(ResumeReviewService) private readonly resumeReviewService: ResumeReviewService,
   ) {}
 
   @Get()
   async list(@Req() request: RequestLike) {
     const session = await this.authService.getSession(readSessionToken(request));
     return this.resumesService.list(session.user.id);
+  }
+
+  @Get(':resumeId/review')
+  async getReview(@Param('resumeId') resumeId: string, @Req() request: RequestLike) {
+    const session = await this.authService.getSession(readSessionToken(request));
+    return this.resumeReviewService.getReview(session.user.id, resumeId);
   }
 
   @Get(':resumeId')
