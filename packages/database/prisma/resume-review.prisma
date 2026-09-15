@@ -1,0 +1,25 @@
+enum ResumeReviewDecision {
+  PENDING
+  ACCEPTED
+  EDITED
+  IGNORED
+}
+
+/// Candidate-owned review state for one completed parse proposal.
+/// The parse result remains rebuildable; this row records the human decision.
+model ResumeReview {
+  id                      String               @id @default(uuid()) @db.Uuid
+  resumeVersionId         String               @unique @db.Uuid
+  parseResultId           String               @unique @db.Uuid
+  baseProfileVersionId    String               @db.Uuid
+  decision                ResumeReviewDecision @default(PENDING)
+  candidateEdits          Json?
+  appliedProfileVersionId String?              @unique @db.Uuid
+  decidedAt               DateTime?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  parseResult             ResumeParseResult    @relation(fields: [parseResultId], references: [id], onDelete: Cascade)
+
+  @@index([resumeVersionId, decision])
+  @@index([baseProfileVersionId])
+}
