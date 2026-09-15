@@ -18,6 +18,7 @@
 .reviewHeader h2,
 .sectionHeading h3,
 .uploadPanel h2,
+.editPanel h3,
 .state h1,
 .compactState h1 {
   margin: 0;
@@ -110,7 +111,8 @@
   font-weight: 700;
 }
 
-.uploadError {
+.uploadError,
+.actionError {
   color: var(--danger, #b42318);
   font-weight: 700;
 }
@@ -178,7 +180,8 @@
 .claimCard span,
 .compareCard span,
 .metrics span,
-.sectionCounts span {
+.sectionCounts span,
+.editPanel label > span {
   color: var(--muted);
   font-size: 12px;
 }
@@ -268,7 +271,8 @@
   overflow-wrap: anywhere;
 }
 
-.notice {
+.notice,
+.decisionNotice {
   margin-top: 20px;
   padding: 16px 18px;
   border: 1px solid var(--line);
@@ -276,13 +280,35 @@
   border-radius: 16px;
 }
 
+.decisionNotice {
+  display: grid;
+  gap: 8px;
+}
+
+.decisionNotice > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.decisionNotice p,
+.decisionNotice small,
 .notice p,
 .emptyState p,
 .reviewActions p,
 .compactState p,
-.state p {
+.state p,
+.identityNote,
+.editPanel p {
   color: var(--muted);
   line-height: 1.6;
+}
+
+.decisionNotice p,
+.editPanel p,
+.identityNote {
+  margin: 0;
 }
 
 .section {
@@ -331,6 +357,11 @@
   font-size: 11px;
 }
 
+.identityNote {
+  margin-top: 12px;
+  font-size: 12px;
+}
+
 .compareGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -369,6 +400,44 @@
   font-size: 22px;
 }
 
+.editPanel {
+  display: grid;
+  gap: 16px;
+  margin-top: 26px;
+  padding: 20px;
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: 18px;
+  background: var(--surface-soft);
+}
+
+.editPanel > div {
+  display: grid;
+  gap: 6px;
+}
+
+.editPanel label {
+  display: grid;
+  gap: 7px;
+}
+
+.editPanel input,
+.editPanel textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  padding: 11px 12px;
+  box-sizing: border-box;
+}
+
+.editPanel textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.55;
+}
+
 .reviewActions {
   margin-top: 26px;
   padding-top: 24px;
@@ -378,6 +447,11 @@
 .reviewActions p {
   max-width: 620px;
   margin: 6px 0 0;
+}
+
+.actionError {
+  display: block;
+  margin-top: 8px;
 }
 
 .actionButtons {
@@ -392,8 +466,26 @@
   background: var(--surface-soft);
   border-radius: 12px;
   padding: 10px 12px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.actionButtons button:hover:not(:disabled) {
+  border-color: var(--line-strong, var(--line));
+}
+
+.actionButtons button:disabled {
   color: var(--muted);
   cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.actionButtons .primaryAction {
+  background: var(--ink, #111827);
+  color: var(--surface, #fff);
+  border-color: var(--ink, #111827);
+  font-weight: 700;
 }
 
 .emptyState,
@@ -464,5 +556,10 @@
 
   .actionButtons {
     justify-content: flex-start;
+  }
+
+  .decisionNotice > div {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
