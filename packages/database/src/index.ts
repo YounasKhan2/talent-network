@@ -1,5 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, type Prisma } from './generated/prisma/client.js';
+import { Prisma, PrismaClient } from './generated/prisma/client.js';
+
+export const DATABASE_JSON_DB_NULL = Prisma.DbNull;
 
 export function createDatabaseClient(connectionString: string): PrismaClient {
   const adapter = new PrismaPg({ connectionString });
@@ -8,4 +10,3 @@ export function createDatabaseClient(connectionString: string): PrismaClient {
 
 export type DatabaseClient = PrismaClient;
 export type PrismaInputJsonValue = Prisma.InputJsonValue;
-export type PrismaNullableJsonValueInput = Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue;
