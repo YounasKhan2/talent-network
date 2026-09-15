@@ -11,6 +11,10 @@
     "lint": "eslint src --max-warnings=0",
     "test": "tsx --test src/*.test.ts"
   },
+  "dependencies": {
+    "mammoth": "^1.12.3",
+    "pdfjs-dist": "^6.3.289"
+  },
   "devDependencies": {
     "tsx": "^4.20.5",
     "typescript": "catalog:"
