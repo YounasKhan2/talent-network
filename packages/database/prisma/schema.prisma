@@ -81,11 +81,10 @@ enum CandidateWorkMode {
 enum ResumeProcessingState {
   UPLOADING
   UPLOADED
+  VALIDATING
   SCANNING
-  SCANNED
   EXTRACTING
   OCR_REQUIRED
-  OCR_RUNNING
   PARSING
   READY_FOR_REVIEW
   APPROVED
@@ -95,19 +94,20 @@ enum ResumeProcessingState {
 }
 
 model User {
-  id                          String                     @id @default(uuid()) @db.Uuid
-  email                       String                     @unique
-  passwordHash                String
-  status                      UserStatus                 @default(ACTIVE)
-  emailVerifiedAt             DateTime?
-  createdAt                   DateTime                   @default(now())
-  updatedAt                   DateTime                   @updatedAt
-  sessions                    Session[]
-  emailVerificationTokens     EmailVerificationToken[]
-  passwordResetTokens         PasswordResetToken[]
-  organizationMemberships     OrganizationMember[]
-  organizationInvitationsSent OrganizationInvitation[]    @relation("InvitationInviter")
-  candidate                   Candidate?
+  id                  String                    @id @default(uuid()) @db.Uuid
+  primaryEmail        String                    @unique
+  emailVerifiedAt     DateTime?
+  passwordHash        String
+  status              UserStatus                @default(ACTIVE)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  sessions            Session[]
+  emailVerification   EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  memberships         OrganizationMember[]
+  invitationsSent     OrganizationInvitation[]  @relation("InvitationInviter")
+  auditEvents         AuditEvent[]               @relation("AuditActor")
+  candidate           Candidate?
 
   @@index([status, createdAt])
 }
@@ -117,6 +117,7 @@ model Session {
   userId        String   @db.Uuid
   tokenHash     String   @unique
   expiresAt     DateTime
+  lastSeenAt    DateTime @default(now())
   createdAt     DateTime @default(now())
   rotatedAt     DateTime?
   revokedAt     DateTime?
@@ -243,9 +244,9 @@ model CandidateProfileVersion {
   preferredWorkModes         CandidateWorkMode[]
   preferredEmploymentTypes   String[]
   approvedAt                 DateTime?
-  createdAt                  DateTime                      @default(now())
-  candidate                  Candidate                     @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
-  currentForCandidate        Candidate?                    @relation("CandidateCurrentProfile")
+  createdAt                  DateTime                       @default(now())
+  candidate                  Candidate                      @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
+  currentForCandidate        Candidate?                     @relation("CandidateCurrentProfile")
   employments                CandidateEmployment[]
   education                  CandidateEducation[]
   skills                     CandidateSkill[]
@@ -255,7 +256,7 @@ model CandidateProfileVersion {
   links                      CandidateLink[]
   locationPreferences        CandidateLocationPreference[]
   customSections             CandidateCustomSection[]
-  approvedFromResumeVersions ResumeVersion[]               @relation("ResumeApprovedProfileVersion")
+  approvedFromResumeVersions ResumeVersion[]                @relation("ResumeApprovedProfileVersion")
 
   @@unique([candidateId, versionNumber])
   @@index([candidateId, createdAt(sort: Desc)])
@@ -382,10 +383,10 @@ model CandidateLocationPreference {
   countryCode      String?
   region            String?
   city              String?
-  remoteOnly        Boolean                 @default(false)
-  sortOrder         Int                     @default(0)
-  createdAt         DateTime                @default(now())
-  profileVersion    CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+  remoteOnly       Boolean                 @default(false)
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
 
   @@index([profileVersionId, sortOrder])
   @@index([countryCode, city])
@@ -468,27 +469,31 @@ model AuditEvent {
   actorId        String?       @db.Uuid
   action         String
   resourceType   String
-  resourceId     String?
+  resourceId     String
   metadata       Json?
-  createdAt      DateTime      @default(now())
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  occurredAt     DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor          User?         @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
-  @@index([organizationId, createdAt(sort: Desc)])
-  @@index([actorId, createdAt(sort: Desc)])
-  @@index([resourceType, resourceId, createdAt(sort: Desc)])
+  @@index([organizationId, occurredAt(sort: Desc)])
+  @@index([actorId, occurredAt(sort: Desc)])
+  @@index([resourceType, resourceId, occurredAt(sort: Desc)])
 }
 
 model OutboxEvent {
-  id              String   @id @default(uuid()) @db.Uuid
-  aggregateType   String
-  aggregateId     String
-  eventType       String
-  payload         Json
-  occurredAt      DateTime @default(now())
-  publishedAt     DateTime?
-  publishAttempts Int      @default(0)
-  lastError       String?
+  id             String        @id @default(uuid()) @db.Uuid
+  aggregateType  String
+  aggregateId    String
+  organizationId String?       @db.Uuid
+  eventType      String
+  eventVersion   Int           @default(1)
+  payload        Json
+  occurredAt     DateTime      @default(now())
+  publishedAt    DateTime?
+  attemptCount   Int           @default(0)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@index([publishedAt, occurredAt])
-  @@index([aggregateType, aggregateId, occurredAt])
+  @@index([organizationId, occurredAt(sort: Desc)])
+  @@index([aggregateType, aggregateId, occurredAt(sort: Desc)])
 }
