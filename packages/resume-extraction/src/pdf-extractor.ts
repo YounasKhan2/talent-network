@@ -1,4 +1,4 @@
-import { getDocument, type TextItem } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import {
   RESUME_DOCUMENT_SCHEMA_VERSION,
@@ -17,6 +17,15 @@ import {
 } from './normalization.js';
 
 const PDF_MIME_TYPE = 'application/pdf';
+
+type PdfTextItem = {
+  str: string;
+  hasEOL?: boolean;
+};
+
+function isPdfTextItem(item: unknown): item is PdfTextItem {
+  return Boolean(item && typeof item === 'object' && 'str' in item);
+}
 
 export class PdfJsResumeExtractor implements ResumeExtractor {
   readonly name = 'pdfjs-dist';
@@ -47,7 +56,7 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
         const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent();
         const rawText = content.items
-          .filter((item): item is TextItem => 'str' in item)
+          .filter(isPdfTextItem)
           .map((item) => `${item.str}${item.hasEOL ? '\n' : ' '}`)
           .join('');
         const text = normalizeExtractedText(rawText);
