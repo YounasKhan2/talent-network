@@ -106,6 +106,8 @@ const SECTION_ALIASES: ReadonlyArray<readonly [ResumeSectionKind, readonly strin
   ['LINKS', ['links', 'profiles', 'online profiles']],
 ];
 
+const YEAR_RANGE_PATTERN = /^(?:19|20)\d{2}\s*[-–—]\s*(?:19|20)\d{2}$/;
+
 export function preprocessResumeDocument(
   document: ResumePreprocessingDocumentInput,
   options: { maximumChunkCharacters?: number } = {},
@@ -311,12 +313,19 @@ function collectPhoneMatches(
   for (const match of fragment.text.matchAll(pattern)) {
     const index = match.index;
     if (index === undefined || !match[0]) continue;
-    const digitCount = match[0].replace(/\D/g, '').length;
+    const value = match[0].trim();
+    if (YEAR_RANGE_PATTERN.test(value)) continue;
+
+    const digitCount = value.replace(/\D/g, '').length;
     if (digitCount < 7 || digitCount > 15) continue;
+
+    // A bare 7–8 digit number is too ambiguous for a high-confidence resume phone claim.
+    // Keep shorter values only when an explicit international '+' prefix is present.
+    if (digitCount < 9 && !value.startsWith('+')) continue;
 
     output.push({
       kind: 'PHONE',
-      value: match[0].trim(),
+      value,
       pageNumber: fragment.pageNumber,
       blockIndex: fragment.blockIndex,
       sourceRange: {
