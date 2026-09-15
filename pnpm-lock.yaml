@@ -98,6 +98,9 @@ importers:
       '@talent-network/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@talent-network/resume-extraction':
+        specifier: workspace:*
+        version: link:../../packages/resume-extraction
       '@talent-network/resume-security':
         specifier: workspace:*
         version: link:../../packages/resume-security
@@ -154,6 +157,9 @@ importers:
       '@talent-network/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@talent-network/resume-extraction':
+        specifier: workspace:*
+        version: link:../../packages/resume-extraction
       '@talent-network/resume-security':
         specifier: workspace:*
         version: link:../../packages/resume-security

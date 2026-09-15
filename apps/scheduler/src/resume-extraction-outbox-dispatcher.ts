@@ -39,17 +39,13 @@ export async function dispatchResumeExtractionEvents(
     }
 
     try {
-      await queue.add(
-        RESUME_EXTRACTION_QUEUE,
-        payload,
-        {
-          jobId: resumeExtractionJobId(payload.resumeVersionId, payload.processingPipelineVersion),
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 1_000 },
-          removeOnComplete: 1_000,
-          removeOnFail: 5_000,
-        },
-      );
+      await queue.add(RESUME_EXTRACTION_QUEUE, payload, {
+        jobId: resumeExtractionJobId(payload.resumeVersionId, payload.processingPipelineVersion),
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1_000 },
+        removeOnComplete: 1_000,
+        removeOnFail: 5_000,
+      });
 
       const marked = await database.outboxEvent.updateMany({
         where: { id: event.id, publishedAt: null },

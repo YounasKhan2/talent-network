@@ -171,7 +171,9 @@ export async function processResumeExtractionJob(
     const qualityDecision = decideResumeExtractionQuality(result.document.quality);
     const checksum = createHash('sha256').update(result.document.text).digest('hex');
     const nextState =
-      qualityDecision.decision === 'OCR_REQUIRED' ? ('OCR_REQUIRED' as const) : ('PARSING' as const);
+      qualityDecision.decision === 'OCR_REQUIRED'
+        ? ('OCR_REQUIRED' as const)
+        : ('PARSING' as const);
     const eventType =
       nextState === 'OCR_REQUIRED'
         ? 'candidate.resume.ocr_required'
