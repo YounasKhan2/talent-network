@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { parseApiEnv } from '@talent-network/config';
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -77,7 +78,7 @@ export class StorageService {
         Key: input.objectKey,
         ...(input.downloadFilename
           ? {
-              ResponseContentDisposition: `attachment; filename="${sanitizeFilename(input.downloadFilename)}"`,
+              ResponseContentDisposition: `attachment; filename=\"${sanitizeFilename(input.downloadFilename)}\"`,
             }
           : {}),
       }),
@@ -95,6 +96,15 @@ export class StorageService {
       contentType: result.ContentType ?? null,
       eTag: result.ETag?.replaceAll('"', '') ?? null,
     };
+  }
+
+  async deleteObject(objectKey: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.env.S3_BUCKET,
+        Key: objectKey,
+      }),
+    );
   }
 }
 
