@@ -65,25 +65,15 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
         const reconstructed = reconstructPdfPageText(items);
         const text = normalizeExtractedText(reconstructed.text);
 
-        // Reconstruction only normalizes whitespace within visual lines. Rebuild ranges after
-        // final normalization so every downstream evidence span remains truthful.
-        const lines = rebuildLineRanges(text, reconstructed.lines.map((line) => line.text));
-        const blocks = lines.map((line) => ({
-          text: line.text,
-          sourceRange: line.sourceRange,
-          boundingBox:
-            reconstructed.lines.find((candidate) => candidate.text === line.text)?.boundingBox ??
-            null,
-          sourceItemIndexes:
-            reconstructed.lines.find((candidate) => candidate.text === line.text)
-              ?.sourceItemIndexes ?? [],
-        }));
+        if (text !== reconstructed.text) {
+          throw new Error('RESUME_EXTRACTION_LAYOUT_RANGE_MISMATCH');
+        }
 
         pages.push({
           pageNumber,
           text,
-          lines,
-          blocks,
+          lines: reconstructed.lines,
+          blocks: reconstructed.blocks,
           nativePdf: {
             pageNumber,
             rotation: page.rotate,
@@ -124,39 +114,4 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
       await loadingTask.destroy();
     }
   }
-}
-
-function rebuildLineRanges(
-  pageText: string,
-  lineTexts: readonly string[],
-): Array<{
-  text: string;
-  sourceRange: { startOffset: number; endOffset: number };
-  boundingBox: null;
-  sourceItemIndexes: number[];
-}> {
-  const lines: Array<{
-    text: string;
-    sourceRange: { startOffset: number; endOffset: number };
-    boundingBox: null;
-    sourceItemIndexes: number[];
-  }> = [];
-  let cursor = 0;
-
-  for (const rawLine of lineTexts) {
-    const normalized = normalizeExtractedText(rawLine);
-    if (!normalized) continue;
-    const startOffset = pageText.indexOf(normalized, cursor);
-    if (startOffset < 0) continue;
-    const endOffset = startOffset + normalized.length;
-    lines.push({
-      text: normalized,
-      sourceRange: { startOffset, endOffset },
-      boundingBox: null,
-      sourceItemIndexes: [],
-    });
-    cursor = endOffset;
-  }
-
-  return lines;
 }
