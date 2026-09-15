@@ -15,7 +15,8 @@
     "test:integration:phase2a": "node --env-file=../../.env --import tsx --test src/integration/phase2a-privacy-firewall.integration.test.ts",
     "test:integration:phase2b": "node --env-file=../../.env --import tsx --test src/integration/phase2b-career-editor.integration.test.ts src/integration/phase2b-version-history.integration.test.ts",
     "test:integration:phase3": "node --env-file=../../.env --import tsx --test src/integration/phase3-resume-foundation.integration.test.ts src/integration/phase3d-resume-extraction.integration.test.ts src/integration/phase3e-resume-parse.integration.test.ts",
-    "test:runtime:phase3d-ocr": "node --env-file=../../.env --import tsx src/runtime/phase3d-ocr-acceptance.ts"
+    "test:runtime:phase3d-ocr": "node --env-file=../../.env --import tsx src/runtime/phase3d-ocr-acceptance.ts",
+    "test:runtime:phase3e-parse": "node --env-file=../../.env --import tsx src/runtime/phase3e-parse-acceptance.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.888.0",
