@@ -2,7 +2,7 @@
 
 ## Status
 
-**IMPLEMENTED / VERIFICATION PENDING — 2026-09-15**
+**CLOSED / VERIFIED — 2026-09-15**
 
 Phase 3C establishes the security boundary between a successfully stored candidate resume and every downstream extraction/parsing workflow.
 
@@ -90,13 +90,7 @@ MalwareScanner
     └── ERROR
 ```
 
-The result records:
-
-- engine
-- engine version when available
-- detection signature when infected
-- scanned byte count
-- scan duration
+The result records engine, engine version when available, detection signature when infected, scanned byte count, and scan duration.
 
 The first adapter is ClamAV using the daemon TCP INSTREAM protocol. Local infrastructure runs ClamAV as an isolated Docker service on port `3310` with a persistent signatures volume.
 
@@ -108,68 +102,20 @@ CLAMAV_PORT
 CLAMAV_TIMEOUT_MS
 ```
 
-## Queue and outbox delivery
+## Queue, retry, and recovery contract
 
-Upload completion emits `candidate.resume.upload_completed` inside the same database transaction as the `UPLOADED` transition.
+Upload completion emits `candidate.resume.upload_completed` inside the same database transaction as the `UPLOADED` transition. The scheduler publishes it to the shared resume-security BullMQ queue with a stable job id, three attempts, and exponential backoff beginning at one second. An outbox event is marked published only after queue insertion succeeds.
 
-The scheduler polls unpublished matching outbox events and publishes them to the shared resume-security BullMQ queue.
+Security processing is state-aware and idempotent. Retryable object-read or scanner failures enter `FAILED_RETRYABLE`; later BullMQ attempts can reclaim that state as well as interrupted `VALIDATING` or `SCANNING` states. Exhaustion converts the failure to `FAILED_TERMINAL`. Guarded conditional transitions prevent duplicate/concurrent deliveries from blindly overwriting already-advanced state.
 
-Initial job policy:
-
-- stable job id derived from outbox event id
-- 3 attempts
-- exponential backoff beginning at 1 second
-- bounded completed/failed job retention
-
-An outbox event is marked published only after queue insertion succeeds. Queue insertion failures leave the event unpublished for a later scheduler dispatch attempt.
-
-## Retry and crash recovery contract
-
-Security processing is state-aware and idempotent.
-
-Normal claim:
-
-```text
-UPLOADED → VALIDATING
-```
-
-Retryable infrastructure failures:
-
-```text
-VALIDATING / SCANNING
-→ FAILED_RETRYABLE
-→ VALIDATING on a later BullMQ attempt
-```
-
-Security-specific retryable failure codes currently include:
+Security-specific retryable codes currently include:
 
 - `RESUME_OBJECT_READ_FAILED`
 - `MALWARE_SCANNER_UNAVAILABLE`
 
-A retry execution may also reclaim an interrupted `VALIDATING` or `SCANNING` state. This covers worker/process interruption after a durable state transition but before the attempt reported a normal retryable failure.
-
-The final exhausted BullMQ attempt converts infrastructure failure to:
-
-```text
-FAILED_TERMINAL
-```
-
-State transitions use conditional updates so concurrent/duplicate deliveries do not blindly overwrite an already advanced state. Audit/outbox finalization occurs only after the guarded transition succeeds.
-
 ## Rejection and quarantine behavior
 
-Deterministic invalid files are rejected with `RESUME_VALIDATION_*` failure codes.
-
-Examples:
-
-- `RESUME_VALIDATION_FILE_EMPTY`
-- `RESUME_VALIDATION_FILE_TOO_LARGE`
-- `RESUME_VALIDATION_SIGNATURE_MISMATCH`
-- `RESUME_VALIDATION_CORRUPT_DOCUMENT`
-- `RESUME_VALIDATION_ENCRYPTED_DOCUMENT`
-- `RESUME_VALIDATION_UNSUPPORTED_DOCUMENT`
-
-Malware detection uses:
+Deterministic invalid files are rejected with `RESUME_VALIDATION_*` failure codes. Malware detection uses:
 
 ```text
 processingState = REJECTED
@@ -182,71 +128,76 @@ Physical quarantine-bucket movement or timed destruction may be added later if o
 
 ## Audit and event contract
 
-Security success:
-
-- audit: `candidate.resume.security_passed`
-- outbox: `candidate.resume.security_passed`
-- next state: `EXTRACTING`
-
-Security rejection:
-
-- audit: `candidate.resume.security_rejected`
-- outbox: `candidate.resume.security_rejected`
-- state: `REJECTED`
-
-Exhausted infrastructure failure:
-
-- audit: `candidate.resume.security_failed_terminal`
-- outbox: `candidate.resume.security_failed_terminal`
-- state: `FAILED_TERMINAL`
+Security success emits `candidate.resume.security_passed` to audit/outbox and advances to `EXTRACTING`. Security rejection emits `candidate.resume.security_rejected`. Exhausted infrastructure failure emits `candidate.resume.security_failed_terminal` and enters `FAILED_TERMINAL`.
 
 Raw resume text or bytes are not placed in audit/outbox payloads.
 
-## Automated coverage implemented
+## Automated coverage
 
-Shared validator coverage includes:
+Coverage includes PDF/DOCX validation, corruption/encryption/spoof cases, ClamAV response parsing, retry and crash recovery, infected-file rejection, invalid-file rejection before scanning, scheduler dispatch failure behavior, and API download denial for malware-quarantined resume versions.
 
-- valid PDF
-- spoofed PDF signature
-- encrypted PDF
-- structurally valid DOCX ZIP
-- truncated DOCX ZIP
-- missing required Word document part
-- encrypted ZIP entries
-- encrypted legacy Office compound document
-- recorded-size mismatch
+The root `pnpm check` was verified green locally on 2026-09-15, including resume-security, scheduler, worker, API, Phase 1/2/2A/2B/3 integration suites, and the final build.
 
-ClamAV adapter coverage includes response parsing for clean/infected/error results.
+## Runtime closure evidence — 2026-09-15
 
-Worker coverage includes:
+Phase 3C was closed after real local end-to-end acceptance through the production-shaped browser/direct-storage/queue/worker path.
 
-- scanner error → `FAILED_RETRYABLE`
-- later retry → `EXTRACTING`
-- final scanner error → `FAILED_TERMINAL`
-- interrupted `SCANNING` retry recovery
-- infected scan → `REJECTED` / `MALWARE_DETECTED`
-- invalid file rejection before malware scanning
+### Clean PDF
 
-Scheduler coverage includes:
+A newly authorized browser upload:
 
-- successful outbox → queue dispatch and publish marking
-- malformed payload attempt accounting
-- queue failure leaving event unpublished for later retry
+- obtained candidate-owned presigned upload authorization
+- uploaded directly from the browser to private RustFS with HTTP 200
+- completed through the API and populated `uploadedAt`
+- emitted `candidate.resume.upload_completed`
+- was dispatched by the scheduler to BullMQ
+- was consumed by the worker
+- passed deterministic PDF validation
+- populated `checksumSha256`
+- reached live ClamAV scanning
+- advanced from `SCANNING` to `EXTRACTING`
+- retained `failureCode = null` and `failureMetadata = null`
 
-API integration coverage includes candidate download denial for malware-quarantined resume versions.
+The browser CORS path was also hardened and verified using the local RustFS bootstrap policy rather than bypassing direct upload through the API.
 
-## Verification still required before Phase 3C closure
+### Harmless EICAR antivirus acceptance
 
-Phase 3C must not be marked closed until the following are proven locally:
+A structurally valid PDF containing the standard harmless EICAR antivirus test signature was uploaded through the same real browser flow.
 
-1. `pnpm format` and the complete `pnpm check` are green.
-2. PostgreSQL, Redis, RustFS, and ClamAV are healthy locally.
-3. Scheduler and worker start successfully with the configured services.
-4. A real clean PDF travels through upload → validation → ClamAV → `EXTRACTING`.
-5. A harmless EICAR antivirus test signature inside a structurally valid PDF travels through validation → ClamAV and ends as `REJECTED / MALWARE_DETECTED`.
-6. The EICAR-rejected ResumeVersion cannot receive a normal private download authorization.
-7. A scanner-unavailable path demonstrates bounded retry behavior and terminal classification after the final attempt, or equivalent automated/runtime evidence is accepted.
-8. The repository returns to a clean working tree after any lockfile/format normalization.
+Observed result:
+
+```text
+UPLOADED
+→ VALIDATING
+→ SCANNING
+→ REJECTED
+```
+
+Durable result:
+
+```text
+processingState = REJECTED
+failureCode = MALWARE_DETECTED
+signature = Eicar-Signature
+engine = clamav
+```
+
+The ResumeVersion had both `uploadedAt` and a SHA-256 checksum populated. A subsequent candidate download-authorization request returned HTTP 409 with `RESUME_SECURITY_QUARANTINED`, proving logical quarantine prevents normal signed download access.
+
+### Retry evidence
+
+Scanner-unavailable bounded retry and final terminalization are covered by the worker's automated retry tests, including recovery from interrupted security states. This automated evidence was accepted for the infrastructure-failure branch; the clean and infected branches were additionally verified against live RustFS, Redis/BullMQ, PostgreSQL, scheduler, worker, and ClamAV services.
+
+## Closure decision
+
+All Phase 3C closure requirements are satisfied. The security boundary is now considered verified for the MVP envelope.
+
+Known future hardening remains deliberately outside this closure:
+
+- physical quarantine bucket/destruction policy
+- scheduler multi-replica claim leasing
+- dead-letter handling for permanently malformed outbox payloads
+- broader malware-engine/provider redundancy if operational requirements justify it
 
 ## Phase boundary
 
