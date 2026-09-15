@@ -91,7 +91,9 @@ export class HttpResumeOcrEngine implements ResumeOcrEngine {
           blocks: createBlocks(text),
         };
       });
-      const text = normalizeExtractedText(pages.map((page) => page.text).join('\n\n'));
+      const text = normalizeExtractedText(
+        pages.map((page) => page.text).join('\n\n'),
+      );
       const quality = calculateExtractionQuality(pages);
       quality.warnings.push(...payload.warnings);
 
@@ -162,7 +164,10 @@ function parseOcrPayload(value: string): OcrPayload {
   return { pages, warnings };
 }
 
-async function readBoundedResponse(response: Response, maximumBytes: number): Promise<string> {
+async function readBoundedResponse(
+  response: Response,
+  maximumBytes: number,
+): Promise<string> {
   const declaredLength = Number(response.headers.get('content-length') ?? 0);
   if (declaredLength > maximumBytes) {
     throw new Error('RESUME_OCR_RECOGNITION_FAILED:RESPONSE_TOO_LARGE');
