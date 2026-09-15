@@ -16,13 +16,13 @@ const healthyQuality = (): ResumeExtractionQuality => ({
   warnings: [],
 });
 
-test('accepts sufficiently extracted native text', () => {
+void test('accepts sufficiently extracted native text', () => {
   const result = decideResumeExtractionQuality(healthyQuality());
   assert.equal(result.decision, 'NATIVE_TEXT_SUFFICIENT');
   assert.deepEqual(result.reasons, []);
 });
 
-test('routes text-poor documents to OCR', () => {
+void test('routes text-poor documents to OCR', () => {
   const result = decideResumeExtractionQuality({
     ...healthyQuality(),
     nonWhitespaceCharacterCount: 20,
@@ -34,7 +34,7 @@ test('routes text-poor documents to OCR', () => {
   assert.ok(result.reasons.includes('INSUFFICIENT_TEXT_PAGE_COVERAGE'));
 });
 
-test('routes corrupted-looking native text to OCR', () => {
+void test('routes corrupted-looking native text to OCR', () => {
   const result = decideResumeExtractionQuality({
     ...healthyQuality(),
     replacementCharacterRatio: 0.1,
