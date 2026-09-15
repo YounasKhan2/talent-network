@@ -177,8 +177,8 @@ async function main(): Promise<void> {
       },
     });
 
-    assertEvent(outboxEvents, 'candidate.resume.security_passed');
-    assertEvent(outboxEvents, 'candidate.resume.ocr_required');
+    assertPublishedOutboxEvent(outboxEvents, 'candidate.resume.security_passed');
+    assertPublishedOutboxEvent(outboxEvents, 'candidate.resume.ocr_required');
     assertEvent(outboxEvents, 'candidate.resume.ocr_completed');
     assertEvent(auditEvents, 'candidate.resume.security_passed', 'action');
     assertEvent(auditEvents, 'candidate.resume.ocr_completed', 'action');
@@ -192,6 +192,7 @@ async function main(): Promise<void> {
       );
     }
     console.log(`Outbox events: ${outboxEvents.map((event) => event.eventType).join(' -> ')}`);
+    console.log('Scheduler publication assertion passed for extraction and OCR handoffs.');
     console.log('Privacy assertion passed: no known OCR fixture text in audit/outbox metadata.');
     console.log('Phase 3D OCR runtime acceptance PASSED: OCR_REQUIRED -> resume.ocr -> PARSING.');
     succeeded = true;
@@ -272,6 +273,16 @@ function containsExpectedOcrText(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const text = (value as Record<string, unknown>).text;
   return typeof text === 'string' && PRIVATE_MARKERS.every((marker) => text.includes(marker));
+}
+
+function assertPublishedOutboxEvent(
+  events: Array<{ eventType: string; publishedAt: Date | null; attemptCount: number }>,
+  expected: string,
+): void {
+  const event = events.find((item) => item.eventType === expected);
+  assert(event, `Expected eventType=${expected}.`);
+  assert(event.publishedAt instanceof Date, `Expected ${expected} to be published by the scheduler.`);
+  assert(event.attemptCount > 0, `Expected ${expected} publication attemptCount > 0.`);
 }
 
 function assertEvent<T extends Record<string, unknown>>(
