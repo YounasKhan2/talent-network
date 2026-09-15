@@ -16,6 +16,7 @@
     "@talent-network/database": "workspace:*",
     "@talent-network/observability": "workspace:*",
     "@talent-network/resume-extraction": "workspace:*",
+    "@talent-network/resume-parsing": "workspace:*",
     "@talent-network/resume-security": "workspace:*",
     "bullmq": "^5.58.0",
     "ioredis": "^5.7.0"
