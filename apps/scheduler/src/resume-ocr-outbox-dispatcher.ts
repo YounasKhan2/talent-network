@@ -76,13 +76,17 @@ function readResumeOcrPayload(payload: unknown): ResumeOcrJobData | null {
   const record = payload as Record<string, unknown>;
   const resumeVersionId = record.resumeVersionId;
   const processingPipelineVersion = record.processingPipelineVersion;
-  const extractionId = record.extractionId;
+  const resumeExtractionId = record.resumeExtractionId;
 
   if (typeof resumeVersionId !== 'string' || resumeVersionId.length === 0) return null;
   if (typeof processingPipelineVersion !== 'string' || processingPipelineVersion.length === 0) {
     return null;
   }
-  if (typeof extractionId !== 'string' || extractionId.length === 0) return null;
+  if (typeof resumeExtractionId !== 'string' || resumeExtractionId.length === 0) return null;
 
-  return { resumeVersionId, processingPipelineVersion, extractionId };
+  return {
+    resumeVersionId,
+    processingPipelineVersion,
+    extractionId: resumeExtractionId,
+  };
 }
