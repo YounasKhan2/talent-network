@@ -44,29 +44,6 @@ export class ResumeReviewService {
             uploadedAt: true,
             createdAt: true,
             updatedAt: true,
-            parseResults: {
-              where: { status: 'COMPLETED' },
-              orderBy: { completedAt: 'desc' },
-              take: 1,
-              select: {
-                id: true,
-                sourceExtractionId: true,
-                parserName: true,
-                parserVersion: true,
-                schemaVersion: true,
-                parserPolicyVersion: true,
-                evidencePolicyVersion: true,
-                promptVersion: true,
-                provider: true,
-                model: true,
-                status: true,
-                parsedJson: true,
-                confidenceSummary: true,
-                warnings: true,
-                completedAt: true,
-                createdAt: true,
-              },
-            },
           },
         },
         candidate: {
@@ -81,7 +58,30 @@ export class ResumeReviewService {
     if (!resume) throw new NotFoundException({ code: 'RESUME_NOT_FOUND' });
 
     const currentVersion = resume.currentVersion;
-    const parseResult = currentVersion?.parseResults[0] ?? null;
+    const parseResult = currentVersion
+      ? await this.database.resumeParseResult.findFirst({
+          where: { resumeVersionId: currentVersion.id, status: 'COMPLETED' },
+          orderBy: [{ completedAt: 'desc' }, { createdAt: 'desc' }],
+          select: {
+            id: true,
+            sourceExtractionId: true,
+            parserName: true,
+            parserVersion: true,
+            schemaVersion: true,
+            parserPolicyVersion: true,
+            evidencePolicyVersion: true,
+            promptVersion: true,
+            provider: true,
+            model: true,
+            status: true,
+            parsedJson: true,
+            confidenceSummary: true,
+            warnings: true,
+            completedAt: true,
+            createdAt: true,
+          },
+        })
+      : null;
 
     return {
       resume: {
@@ -91,22 +91,7 @@ export class ResumeReviewService {
         createdAt: resume.createdAt,
         updatedAt: resume.updatedAt,
       },
-      version: currentVersion
-        ? {
-            id: currentVersion.id,
-            versionNumber: currentVersion.versionNumber,
-            originalFilename: currentVersion.originalFilename,
-            mimeType: currentVersion.mimeType,
-            sizeBytes: currentVersion.sizeBytes,
-            processingState: currentVersion.processingState,
-            failureCode: currentVersion.failureCode,
-            failureMetadata: currentVersion.failureMetadata,
-            processingPipelineVersion: currentVersion.processingPipelineVersion,
-            uploadedAt: currentVersion.uploadedAt,
-            createdAt: currentVersion.createdAt,
-            updatedAt: currentVersion.updatedAt,
-          }
-        : null,
+      version: currentVersion,
       proposal: parseResult,
       passport: {
         candidateId: resume.candidate.id,
