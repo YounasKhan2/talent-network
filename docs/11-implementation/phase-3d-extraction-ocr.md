@@ -2,7 +2,7 @@
 
 ## Status
 
-**3D-A CONTRACT FOUNDATION IMPLEMENTED / VERIFICATION PENDING — 2026-09-15**
+**3D-A CONTRACT + PERSISTENCE FOUNDATION IMPLEMENTED / VERIFICATION PENDING — 2026-09-15**
 
 Phase 3D begins only after Phase 3C has advanced a candidate-owned ResumeVersion to `EXTRACTING`. Its responsibility is to produce a rebuildable, source-aware document representation for Phase 3E. It does not infer Career Passport fields and never mutates the Passport.
 
@@ -82,22 +82,11 @@ Source ranges are offsets into the normalized document/page representation. PDF 
 
 ## Quality decision
 
-The native extractor reports observations. A separate deterministic quality evaluator decides whether OCR is required. The first policy should consider at least:
+The native extractor reports observations. A separate deterministic quality evaluator decides whether OCR is required. The first policy considers non-whitespace character count, page/text coverage, replacement-character ratio, control-character ratio, and extractor warnings/errors. Thresholds are versioned in the shared extraction package and fixture-tested. Missing text is not treated as malicious; it routes to OCR when appropriate.
 
-- non-whitespace character count
-- page count
-- pages containing usable text
-- replacement-character ratio
-- control-character ratio
-- extractor warnings/errors
+## Persistence
 
-Thresholds belong to a versioned policy constant/configuration and must be covered by fixtures. Missing text is not treated as malicious; it routes to OCR when appropriate.
-
-## Persistence direction
-
-Do not add extracted text columns directly to `ResumeVersion`. Keep immutable source metadata separate from rebuildable derived output.
-
-Preferred model:
+Derived extraction output is deliberately separate from `ResumeVersion`.
 
 ```text
 ResumeVersion 1 ── * ResumeExtraction
@@ -106,19 +95,20 @@ ResumeExtraction
 ├── id
 ├── resumeVersionId
 ├── extractionMethod
-├── extractorName
-├── extractorVersion
-├── schemaVersion
+├── extractorName / extractorVersion
+├── schemaVersion / pipelineVersion
 ├── status
 ├── qualityMetadata
-├── documentObjectKey? / documentJson
+├── documentJson / documentObjectKey
 ├── textChecksumSha256
-├── startedAt
-├── completedAt
+├── failureCode
+├── startedAt / completedAt
 └── timestamps
 ```
 
-For the MVP, normalized JSON may be persisted in PostgreSQL if bounded; large page/block payloads should move to private object storage behind the same provider-neutral adapter. The domain contract must therefore not assume PostgreSQL is the permanent blob store.
+The database FK cascades derived rows with their immutable source version. Stable execution identity is enforced by a unique key across `resumeVersionId + pipelineVersion + extractorName + extractorVersion + extractionMethod`, so duplicate delivery cannot create duplicate derived records. PostgreSQL may hold bounded normalized JSON during MVP; the optional `documentObjectKey` keeps the contract ready for large private artifacts in provider-neutral object storage.
+
+Prisma now uses its multi-file schema-folder mode. The extraction model is isolated in `prisma/resume-extraction.prisma`, while the database migration owns the FK to `ResumeVersion`. This keeps the source-artifact model from accumulating derived-pipeline concerns while retaining referential integrity.
 
 ## Queue contracts
 
@@ -156,29 +146,24 @@ Do not hide OCR inside the PDF extractor; the `OCR_REQUIRED` state must remain o
 
 ## Resource limits
 
-Extraction must have explicit bounds for:
-
-- maximum source bytes inherited from upload policy
-- maximum pages
-- maximum normalized characters
-- execution timeout
-- OCR page count
-- OCR concurrency
-- derived artifact size
-
-Limit breaches must use explicit failure codes and must never silently truncate evidence that Phase 3E could mistake for a complete resume.
+Extraction must have explicit bounds for maximum source bytes inherited from upload policy, maximum pages, maximum normalized characters, execution timeout, OCR page count, OCR concurrency, and derived artifact size. Limit breaches must use explicit failure codes and must never silently truncate evidence that Phase 3E could mistake for a complete resume.
 
 ## 3D implementation slices
 
-### 3D-A — Contracts and persistence foundation ← CURRENT
+### 3D-A — Contracts and persistence foundation ← VERIFICATION PENDING
+
+Implemented:
 
 - shared extraction types and adapter contracts
-- deterministic quality-decision contract
+- deterministic quality-decision contract and tests
 - queue/event vocabulary
 - `ResumeExtraction` persistence model and migration
-- integration tests for ownership/idempotency/state boundaries
+- modular Prisma schema-folder configuration
+- integration coverage for source immutability, stable execution identity, candidate-scoped ownership lookup, and cascade cleanup
 
-### 3D-B — Native PDF/DOCX extraction
+Closure requires the local root quality gate to pass with the new migration and generated Prisma client.
+
+### 3D-B — Native PDF/DOCX extraction ← NEXT
 
 - PDF text/page extraction adapter
 - DOCX OOXML text extraction adapter
@@ -217,12 +202,4 @@ Verify at minimum:
 
 ## Non-goals
 
-Phase 3D does not:
-
-- identify skills, employers, education, or contact fields
-- calculate candidate/job match scores
-- call an LLM to interpret the resume
-- update Career Passport data
-- expose extracted text to recruiters
-
-Those boundaries prevent extraction infrastructure from becoming an opaque parsing or hiring-decision system.
+Phase 3D does not identify skills, employers, education, or contact fields; calculate candidate/job match scores; call an LLM to interpret the resume; update Career Passport data; or expose extracted text to recruiters. Those boundaries prevent extraction infrastructure from becoming an opaque parsing or hiring-decision system.

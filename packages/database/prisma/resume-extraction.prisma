@@ -1,0 +1,39 @@
+enum ResumeExtractionMethod {
+  NATIVE_PDF
+  NATIVE_DOCX
+  OCR
+}
+
+enum ResumeExtractionStatus {
+  STARTED
+  COMPLETED
+  FAILED
+}
+
+/// Rebuildable, candidate-private derived output from one immutable ResumeVersion.
+/// The database migration owns the FK to ResumeVersion. We deliberately keep the
+/// Prisma model unidirectional so resume extraction can remain a separate schema
+/// module without coupling the Phase 3 source-artifact model to derived payloads.
+model ResumeExtraction {
+  id                String                 @id @default(uuid()) @db.Uuid
+  resumeVersionId   String                 @db.Uuid
+  extractionMethod  ResumeExtractionMethod
+  extractorName     String
+  extractorVersion  String
+  schemaVersion     String                 @default("resume-document-v1")
+  pipelineVersion   String
+  status            ResumeExtractionStatus @default(STARTED)
+  qualityMetadata   Json?
+  documentJson      Json?
+  documentObjectKey String?
+  textChecksumSha256 String?
+  failureCode       String?
+  startedAt         DateTime               @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@unique([resumeVersionId, pipelineVersion, extractorName, extractorVersion, extractionMethod])
+  @@index([resumeVersionId, createdAt(sort: Desc)])
+  @@index([status, updatedAt])
+}

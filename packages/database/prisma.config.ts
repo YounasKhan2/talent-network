@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
+  // Prisma 7 supports multi-file schemas. Keep the source artifact model and
+  // rebuildable derived resume models in separate files as Phase 3 grows.
+  schema: 'prisma',
   migrations: {
     path: 'prisma/migrations',
   },
