@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
-    "test": "pnpm --filter @talent-network/resume-extraction build && tsx --test src/*.test.ts"
+    "test": "pnpm --filter @talent-network/resume-extraction build && pnpm --filter @talent-network/resume-parsing build && tsx --test src/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.888.0",
@@ -17,6 +17,7 @@
     "@talent-network/database": "workspace:*",
     "@talent-network/observability": "workspace:*",
     "@talent-network/resume-extraction": "workspace:*",
+    "@talent-network/resume-parsing": "workspace:*",
     "@talent-network/resume-security": "workspace:*",
     "bullmq": "^5.58.0",
     "ioredis": "^5.7.0"
