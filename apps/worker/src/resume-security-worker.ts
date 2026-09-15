@@ -1,5 +1,9 @@
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
-import type { DatabaseClient, PrismaInputJsonValue } from '@talent-network/database';
+import {
+  DATABASE_JSON_DB_NULL,
+  type DatabaseClient,
+  type PrismaInputJsonValue,
+} from '@talent-network/database';
 import {
   type MalwareScanner,
   type ResumeSecurityJobData,
@@ -45,6 +49,7 @@ export async function processResumeSecurityJob(
     data: {
       processingState: 'VALIDATING',
       failureCode: null,
+      failureMetadata: DATABASE_JSON_DB_NULL,
     },
   });
 
@@ -57,6 +62,7 @@ export async function processResumeSecurityJob(
       data: {
         processingState: 'VALIDATING',
         failureCode: null,
+        failureMetadata: DATABASE_JSON_DB_NULL,
       },
     });
   }
@@ -136,6 +142,7 @@ export async function processResumeSecurityJob(
       processingState: 'SCANNING',
       checksumSha256: validation.checksumSha256,
       failureCode: null,
+      failureMetadata: DATABASE_JSON_DB_NULL,
     },
   });
   if (movedToScanning.count === 0) return;
@@ -174,6 +181,7 @@ export async function processResumeSecurityJob(
       data: {
         processingState: 'EXTRACTING',
         failureCode: null,
+        failureMetadata: DATABASE_JSON_DB_NULL,
       },
     });
     if (advanced.count === 0) return;
