@@ -2,8 +2,11 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { parseWorkerEnv } from '@talent-network/config';
 import { createDatabaseClient } from '@talent-network/database';
 import {
+  HttpResumeOcrEngine,
   RESUME_EXTRACTION_QUEUE,
+  RESUME_OCR_QUEUE,
   type ResumeExtractionJobData,
+  type ResumeOcrJobData,
 } from '@talent-network/resume-extraction';
 import { createLogger } from '@talent-network/observability';
 import {
@@ -14,6 +17,7 @@ import {
 import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { processResumeExtractionJob } from './resume-extraction-worker.js';
+import { processResumeOcrJob } from './resume-ocr-worker.js';
 import { processResumeSecurityJob } from './resume-security-worker.js';
 
 async function main(): Promise<void> {
@@ -94,6 +98,39 @@ async function main(): Promise<void> {
     },
   );
 
+  const resumeOcrWorker = env.OCR_HTTP_ENDPOINT
+    ? new Worker<ResumeOcrJobData>(
+        RESUME_OCR_QUEUE,
+        async (job) => {
+          const maxAttempts = job.opts.attempts ?? 1;
+          const finalAttempt = job.attemptsMade + 1 >= maxAttempts;
+          const engine = new HttpResumeOcrEngine({
+            endpoint: env.OCR_HTTP_ENDPOINT,
+            timeoutMs: env.OCR_HTTP_TIMEOUT_MS,
+            ...(env.OCR_HTTP_TOKEN ? { bearerToken: env.OCR_HTTP_TOKEN } : {}),
+          });
+          await processResumeOcrJob(
+            job.data,
+            {
+              database,
+              storage,
+              bucket: env.S3_BUCKET,
+              engine,
+            },
+            {
+              finalAttempt,
+              retryAttempt: job.attemptsMade > 0,
+            },
+          );
+        },
+        {
+          connection: redis,
+          concurrency: 1,
+          lockDuration: 120_000,
+        },
+      )
+    : null;
+
   resumeSecurityWorker.on('completed', (job) => {
     logger.info(
       { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
@@ -132,10 +169,32 @@ async function main(): Promise<void> {
     );
   });
 
+  resumeOcrWorker?.on('completed', (job) => {
+    logger.info(
+      { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
+      'Resume OCR job completed',
+    );
+  });
+  resumeOcrWorker?.on('failed', (job, error) => {
+    logger.error(
+      {
+        jobId: job?.id,
+        resumeVersionId: job?.data.resumeVersionId,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err: error,
+      },
+      'Resume OCR job failed',
+    );
+  });
+
+  const queues = [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE];
+  if (resumeOcrWorker) queues.push(RESUME_OCR_QUEUE);
   logger.info(
     {
       scanner: scannerVersion,
-      queues: [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE],
+      queues,
+      ocrEnabled: resumeOcrWorker !== null,
     },
     'Worker runtime ready',
   );
@@ -144,6 +203,7 @@ async function main(): Promise<void> {
     logger.info({ signal }, 'Worker shutting down');
     await resumeSecurityWorker.close();
     await resumeExtractionWorker.close();
+    await resumeOcrWorker?.close();
     await database.$disconnect();
     storage.destroy();
     await redis.quit();
