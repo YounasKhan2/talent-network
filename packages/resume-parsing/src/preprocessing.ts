@@ -164,7 +164,7 @@ export function detectSections(fragments: ResumeSourceFragment[]): ResumePreproc
 
 export function buildBoundedChunks(
   fragments: ResumeSourceFragment[],
-  maximumChunkCharacters = RESUME_PREPROCESSING_LIMITS.maximumChunkCharacters,
+  maximumChunkCharacters: number = RESUME_PREPROCESSING_LIMITS.maximumChunkCharacters,
 ): ResumePreprocessedChunk[] {
   if (!Number.isInteger(maximumChunkCharacters) || maximumChunkCharacters <= 0) {
     throw new Error('maximumChunkCharacters must be a positive integer.');
