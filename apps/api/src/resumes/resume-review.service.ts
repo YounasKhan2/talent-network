@@ -108,10 +108,7 @@ export class ResumeReviewService {
   }
 }
 
-function readBlockingReason(
-  processingState: string | null,
-  hasProposal: boolean,
-): string | null {
+function readBlockingReason(processingState: string | null, hasProposal: boolean): string | null {
   if (!processingState) return 'RESUME_VERSION_NOT_AVAILABLE';
   if (processingState === 'READY_FOR_REVIEW' && hasProposal) return null;
   if (processingState === 'FAILED_TERMINAL') return 'PROCESSING_FAILED_TERMINAL';
