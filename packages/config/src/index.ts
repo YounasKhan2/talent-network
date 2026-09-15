@@ -30,6 +30,12 @@ const malwareScannerSchema = z.object({
   CLAMAV_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 });
 
+const ocrSchema = z.object({
+  OCR_HTTP_ENDPOINT: z.string().url().optional(),
+  OCR_HTTP_TOKEN: z.string().min(1).optional(),
+  OCR_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+});
+
 const apiEnvSchema = commonSchema
   .merge(databaseSchema)
   .merge(redisSchema)
@@ -43,7 +49,8 @@ const workerEnvSchema = commonSchema
   .merge(databaseSchema)
   .merge(redisSchema)
   .merge(storageSchema)
-  .merge(malwareScannerSchema);
+  .merge(malwareScannerSchema)
+  .merge(ocrSchema);
 const schedulerEnvSchema = commonSchema.merge(databaseSchema).merge(redisSchema);
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
