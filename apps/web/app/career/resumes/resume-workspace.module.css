@@ -1,0 +1,341 @@
+.shell {
+  display: grid;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 24px;
+}
+
+.header h1,
+.reviewHeader h2,
+.sectionHeading h3,
+.state h1,
+.compactState h1 {
+  margin: 0;
+}
+
+.header p {
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.phaseBadge,
+.statusPill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: var(--surface-soft);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.workspaceGrid {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.resumeList,
+.reviewPane,
+.emptyState,
+.state,
+.compactState {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 24px;
+}
+
+.resumeList {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  position: sticky;
+  top: 92px;
+}
+
+.listHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 6px 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.resumeCard,
+.resumeCardActive {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.resumeCard:hover {
+  background: var(--surface-soft);
+}
+
+.resumeCardActive {
+  border-color: var(--line-strong, var(--line));
+  background: var(--surface-soft);
+}
+
+.resumeCard span,
+.resumeCardActive span,
+.kicker,
+.claimCard span,
+.compareCard span,
+.metrics span,
+.sectionCounts span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.resumeCard strong,
+.resumeCardActive strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumeCard small,
+.resumeCardActive small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.reviewPane {
+  padding: 24px;
+  min-width: 0;
+}
+
+.reviewHeader,
+.sectionHeading,
+.compareTitle,
+.reviewActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.reviewHeader p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.metrics article,
+.sectionCounts div {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.metrics strong {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  border-radius: 16px;
+}
+
+.notice p,
+.emptyState p,
+.reviewActions p,
+.compactState p,
+.state p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  margin-top: 26px;
+  padding-top: 24px;
+}
+
+.sectionHeading small {
+  color: var(--muted);
+}
+
+.claimGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.claimCard,
+.compareCard {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--surface-soft);
+}
+
+.claimCard > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.claimCard > strong {
+  display: block;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+
+.claimCard footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.compareGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.compareCard {
+  display: grid;
+  gap: 14px;
+}
+
+.compareCard > div:not(.compareTitle) {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.compareCard p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.compareTitle span {
+  font-size: 11px;
+}
+
+.sectionCounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sectionCounts strong {
+  font-size: 22px;
+}
+
+.reviewActions {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.reviewActions p {
+  max-width: 620px;
+  margin: 6px 0 0;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.actionButtons button {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.emptyState,
+.state,
+.compactState {
+  padding: 30px;
+}
+
+.compactState {
+  border: 0;
+  padding: 16px 0;
+}
+
+@media (max-width: 980px) {
+  .workspaceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resumeList {
+    position: static;
+  }
+
+  .metrics,
+  .sectionCounts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .claimGrid,
+  .compareGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .header,
+  .reviewHeader,
+  .sectionHeading,
+  .reviewActions {
+    flex-direction: column;
+  }
+
+  .metrics,
+  .sectionCounts {
+    grid-template-columns: 1fr;
+  }
+
+  .actionButtons {
+    justify-content: flex-start;
+  }
+}
