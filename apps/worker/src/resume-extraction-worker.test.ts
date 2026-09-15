@@ -12,7 +12,8 @@ import { processResumeExtractionJob } from './resume-extraction-worker.js';
 const VERSION_ID = '11111111-1111-4111-8111-111111111111';
 const RESUME_ID = '22222222-2222-4222-8222-222222222222';
 const PIPELINE_VERSION = 'resume-pipeline-v1';
-const PRIVATE_TEXT = 'Senior TypeScript engineer with PostgreSQL, Redis, NestJS and React experience.';
+const PRIVATE_TEXT =
+  'Senior TypeScript engineer with professional experience building production web applications using NestJS, React, PostgreSQL and Redis. Experienced in API design, background processing, testing, observability and secure cloud deployment workflows.';
 const SOURCE_BYTES = Buffer.from('private resume bytes', 'utf8');
 
 void test('sufficient native extraction persists derived document and advances to parsing', async () => {
@@ -101,7 +102,8 @@ void test('extractor failure becomes terminal without leaking private text into 
   await processResumeExtractionJob(job(), fixture.dependencies(extractor));
 
   assert.equal(fixture.state.processingState, 'FAILED_TERMINAL');
-  assert.equal(fixture.state.failureCode, privateFailureText.slice(0, 120));
+  assert.equal(fixture.state.failureCode, 'RESUME_EXTRACTION_PARSE_FAILED');
+  assertNoPrivateText(fixture.state.failureMetadata, PRIVATE_TEXT);
   assertNoPrivateText(fixture.auditEvents, PRIVATE_TEXT);
   assertNoPrivateText(fixture.outboxEvents, PRIVATE_TEXT);
 });
