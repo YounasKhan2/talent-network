@@ -191,6 +191,18 @@ void test('Phase 3E parse persistence is candidate-owned, source-bound, and rebu
       );
     });
 
+    await t.test('execution pipeline version must match the source resume', async () => {
+      await assert.rejects(
+        () =>
+          repository.getOrCreateStartedExecution({
+            ...baseExecution,
+            pipelineVersion: 'stale-pipeline-v0',
+          }),
+        (error) =>
+          error instanceof ResumeParseSourceError && error.code === 'PIPELINE_VERSION_MISMATCH',
+      );
+    });
+
     await t.test('candidate-scoped parse lookup does not cross the privacy boundary', async () => {
       const owned = await repository.findOwnedParseResult({
         candidateId: primaryCandidate.id,
