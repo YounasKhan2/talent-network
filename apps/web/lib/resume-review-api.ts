@@ -110,6 +110,15 @@ export interface CandidateResumeReviewResponse {
   review: {
     available: boolean;
     blockingReason: string | null;
+    record: {
+      id: string;
+      decision: 'PENDING' | 'ACCEPTED' | 'EDITED' | 'IGNORED';
+      candidateEdits: unknown;
+      appliedProfileVersionId: string | null;
+      decidedAt: string | null;
+      createdAt: string;
+      updatedAt: string;
+    } | null;
   };
 }
 
@@ -125,12 +134,33 @@ export interface ResumeUploadAuthorization {
   };
 }
 
+export type ResumeReviewDecisionRequest =
+  | { decision: 'ACCEPT' }
+  | { decision: 'IGNORE' }
+  | {
+      decision: 'EDIT';
+      edits: {
+        headline?: string | null;
+        summary?: string | null;
+      };
+    };
+
 export function listCandidateResumes(): Promise<CandidateResumeListItem[]> {
   return apiRequest<CandidateResumeListItem[]>('/candidate/resumes');
 }
 
 export function getCandidateResumeReview(resumeId: string): Promise<CandidateResumeReviewResponse> {
   return apiRequest<CandidateResumeReviewResponse>(`/candidate/resumes/${resumeId}/review`);
+}
+
+export function decideCandidateResumeReview(
+  resumeId: string,
+  input: ResumeReviewDecisionRequest,
+): Promise<CandidateResumeReviewResponse> {
+  return apiRequest<CandidateResumeReviewResponse>(`/candidate/resumes/${resumeId}/review/decision`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function authorizeCandidateResumeUpload(input: {
