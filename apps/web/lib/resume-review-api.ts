@@ -153,6 +153,14 @@ export function getCandidateResumeReview(resumeId: string): Promise<CandidateRes
   return apiRequest<CandidateResumeReviewResponse>(`/candidate/resumes/${resumeId}/review`);
 }
 
+export function deleteCandidateResume(
+  resumeId: string,
+): Promise<{ deleted: true; resumeId: string }> {
+  return apiRequest<{ deleted: true; resumeId: string }>(`/candidate/resumes/${resumeId}`, {
+    method: 'DELETE',
+  });
+}
+
 export function decideCandidateResumeReview(
   resumeId: string,
   input: ResumeReviewDecisionRequest,
