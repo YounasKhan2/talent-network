@@ -20,11 +20,18 @@ const PDF_MIME_TYPE = 'application/pdf';
 
 type PdfTextItem = {
   str: string;
-  hasEOL?: boolean;
+  hasEOL: boolean;
 };
 
 function isPdfTextItem(item: unknown): item is PdfTextItem {
-  return Boolean(item && typeof item === 'object' && 'str' in item);
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    'str' in item &&
+    typeof (item as { str?: unknown }).str === 'string' &&
+    'hasEOL' in item &&
+    typeof (item as { hasEOL?: unknown }).hasEOL === 'boolean'
+  );
 }
 
 export class PdfJsResumeExtractor implements ResumeExtractor {
