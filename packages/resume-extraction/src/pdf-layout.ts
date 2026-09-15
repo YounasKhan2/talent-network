@@ -93,10 +93,10 @@ export function reconstructPdfPageText(
   const positioned = items
     .map((item, sourceItemIndex): PositionedTextItem | null => {
       if (item.kind !== 'TEXT' || !item.str.trim()) return null;
-      const x = item.transform[4];
-      const y = item.transform[5];
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-      return { sourceItemIndex, item, x: x ?? 0, y: y ?? 0 };
+      const x = finiteCoordinate(item.transform[4]);
+      const y = finiteCoordinate(item.transform[5]);
+      if (x === null || y === null) return null;
+      return { sourceItemIndex, item, x, y };
     })
     .filter((item): item is PositionedTextItem => item !== null);
 
@@ -219,6 +219,10 @@ function numberArray(value: unknown): number[] {
 
 function finiteNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function finiteCoordinate(value: number | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function median(values: readonly number[]): number {
