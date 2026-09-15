@@ -12,7 +12,6 @@ import {
   ResumeProposalValidationError,
   preprocessResumeDocument,
   validateResumeProposal,
-  type ParsedResume,
   type ResumeParseJobData,
   type ResumeParser,
 } from '@talent-network/resume-parsing';
@@ -222,14 +221,17 @@ export async function processResumeParseJob(
           resourceId: version.id,
           metadata: {
             resumeId: version.resumeId,
-            resumeExtractionId: sourceExtraction.id,
             resumeParseResultId: parseResult.id,
+            sourceResumeExtractionId: sourceExtraction.id,
             processingPipelineVersion: version.processingPipelineVersion,
             parserName: parser.name,
             parserVersion: parser.version,
             schemaVersion: PARSED_RESUME_SCHEMA_VERSION,
-            claimCount: validation.claimCount,
-            evidenceCount: validation.evidenceCount,
+            parserPolicyVersion: draft.parsedResume.parser.parserPolicyVersion,
+            evidencePolicyVersion: draft.parsedResume.parser.evidencePolicyVersion,
+            promptVersion,
+            provider: draft.parsedResume.parser.provider ?? null,
+            model: draft.parsedResume.parser.model ?? null,
             nextStage: 'READY_FOR_REVIEW',
           },
         },
@@ -243,8 +245,8 @@ export async function processResumeParseJob(
           payload: {
             resumeId: version.resumeId,
             resumeVersionId: version.id,
-            resumeExtractionId: sourceExtraction.id,
             resumeParseResultId: parseResult.id,
+            sourceResumeExtractionId: sourceExtraction.id,
             processingPipelineVersion: version.processingPipelineVersion,
             nextStage: 'READY_FOR_REVIEW',
           },
@@ -252,12 +254,13 @@ export async function processResumeParseJob(
       });
     });
   } catch (error: unknown) {
-    const classification = classifyParseFailure(error);
+    const retryable = error instanceof ResumeAiGatewayError && error.retryable;
+    const failureCode = safeParseFailureCode(error);
     await database.resumeParseResult.update({
       where: { id: parseResult.id },
       data: {
         status: 'FAILED',
-        failureCode: classification.code,
+        failureCode,
         completedAt: new Date(),
       },
     });
@@ -265,12 +268,36 @@ export async function processResumeParseJob(
       database,
       version,
       parseResult.id,
-      classification.code,
-      classification.retryable,
-      classification.retryable ? execution.finalAttempt === true : true,
+      failureCode,
+      retryable,
+      retryable ? execution.finalAttempt === true : true,
     );
-    if (classification.retryable && execution.finalAttempt !== true) throw error;
+    if (retryable && execution.finalAttempt !== true) throw error;
   }
+}
+
+function readResumeDocument(value: unknown, resumeVersionId: string): ResumeDocument {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ResumeProposalValidationError('Resume extraction document is missing.');
+  }
+  const document = value as unknown as ResumeDocument;
+  if (document.resumeVersionId !== resumeVersionId) {
+    throw new ResumeProposalValidationError('Resume extraction document identity mismatch.');
+  }
+  return document;
+}
+
+function readParserPromptVersion(parser: ResumeParser): string {
+  const value = 'promptVersion' in parser ? (parser as { promptVersion?: unknown }).promptVersion : null;
+  return typeof value === 'string' && value.length > 0 ? value : 'none';
+}
+
+function safeParseFailureCode(error: unknown): string {
+  if (error instanceof ResumeAiGatewayError) {
+    return error.retryable ? 'RESUME_PARSE_PROVIDER_RETRYABLE' : 'RESUME_PARSE_PROVIDER_TERMINAL';
+  }
+  if (error instanceof ResumeProposalValidationError) return 'RESUME_PARSE_PROPOSAL_INVALID';
+  return 'RESUME_PARSE_FAILED';
 }
 
 async function markParseFailure(
@@ -284,6 +311,7 @@ async function markParseFailure(
   const failureMetadata: ResumeFailureMetadata = {
     stage: 'PARSING',
     reason: failureCode,
+    ...(parseResultId ? { resumeParseResultId: parseResultId } : {}),
   };
 
   if (retryable && !finalAttempt) {
@@ -320,12 +348,13 @@ async function markParseFailure(
         resourceId: version.id,
         metadata: {
           resumeId: version.resumeId,
-          ...(parseResultId ? { resumeParseResultId: parseResultId } : {}),
+          resumeParseResultId: parseResultId,
           failureCode,
           processingPipelineVersion: version.processingPipelineVersion,
         },
       },
     });
+
     await transaction.outboxEvent.create({
       data: {
         aggregateType: 'ResumeVersion',
@@ -334,7 +363,7 @@ async function markParseFailure(
         payload: {
           resumeId: version.resumeId,
           resumeVersionId: version.id,
-          ...(parseResultId ? { resumeParseResultId: parseResultId } : {}),
+          resumeParseResultId: parseResultId,
           failureCode,
         },
       },
@@ -342,40 +371,6 @@ async function markParseFailure(
   });
 }
 
-function classifyParseFailure(error: unknown): { code: string; retryable: boolean } {
-  if (error instanceof ResumeAiGatewayError) {
-    return {
-      code: error.retryable ? 'RESUME_PARSE_PROVIDER_RETRYABLE' : 'RESUME_PARSE_OUTPUT_INVALID',
-      retryable: error.retryable,
-    };
-  }
-  if (error instanceof ResumeProposalValidationError) {
-    return { code: 'RESUME_PARSE_EVIDENCE_INVALID', retryable: false };
-  }
-  return { code: 'RESUME_PARSE_FAILED', retryable: false };
-}
-
-function readParserPromptVersion(parser: ResumeParser): string {
-  const candidate = (parser as ResumeParser & { promptVersion?: unknown }).promptVersion;
-  return typeof candidate === 'string' && candidate.length > 0 ? candidate : 'none';
-}
-
-function readResumeDocument(value: unknown, resumeVersionId: string): ResumeDocument {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Resume parse source document is missing.');
-  }
-  const document = value as Partial<ResumeDocument>;
-  if (
-    typeof document.schemaVersion !== 'string' ||
-    document.resumeVersionId !== resumeVersionId ||
-    typeof document.text !== 'string' ||
-    !Array.isArray(document.pages)
-  ) {
-    throw new Error('Resume parse source document is invalid.');
-  }
-  return value as ResumeDocument;
-}
-
 function toInputJson(value: unknown): PrismaInputJsonValue {
-  return JSON.parse(JSON.stringify(value)) as PrismaInputJsonValue;
+  return value as PrismaInputJsonValue;
 }
