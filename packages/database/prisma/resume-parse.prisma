@@ -1,0 +1,41 @@
+enum ResumeParseStatus {
+  STARTED
+  COMPLETED
+  FAILED
+}
+
+/// Candidate-private structured proposal derived from one completed ResumeExtraction.
+/// This is rebuildable parser output, not authoritative Career Passport state.
+/// Foreign keys are owned by the migration to keep derived Phase 3 modules loosely coupled.
+model ResumeParseResult {
+  id                        String            @id @default(uuid()) @db.Uuid
+  resumeVersionId           String            @db.Uuid
+  sourceExtractionId        String            @db.Uuid
+  pipelineVersion           String
+  parserName                String
+  parserVersion             String
+  schemaVersion             String            @default("parsed-resume-v1")
+  parserPolicyVersion       String            @default("resume-parser-policy-v1")
+  evidencePolicyVersion     String            @default("resume-evidence-policy-v1")
+  promptVersion             String            @default("none")
+  provider                  String?
+  model                     String?
+  status                    ResumeParseStatus @default(STARTED)
+  parsedJson                Json?
+  parsedObjectKey           String?
+  evidenceMapJson           Json?
+  evidenceObjectKey         String?
+  confidenceSummary         Json?
+  warnings                  Json?
+  inputChecksumSha256       String?
+  failureCode               String?
+  startedAt                 DateTime          @default(now())
+  completedAt               DateTime?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  @@unique([resumeVersionId, sourceExtractionId, pipelineVersion, parserName, parserVersion, schemaVersion, promptVersion])
+  @@index([resumeVersionId, createdAt(sort: Desc)])
+  @@index([sourceExtractionId])
+  @@index([status, updatedAt])
+}
