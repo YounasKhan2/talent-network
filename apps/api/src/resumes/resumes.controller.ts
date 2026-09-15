@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Post, Req } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
@@ -72,6 +72,13 @@ export class ResumesController {
   async get(@Param('resumeId') resumeId: string, @Req() request: RequestLike) {
     const session = await this.authService.getSession(readSessionToken(request));
     return this.resumesService.get(session.user.id, resumeId);
+  }
+
+  @Delete(':resumeId')
+  async delete(@Param('resumeId') resumeId: string, @Req() request: RequestLike) {
+    assertCsrf(request);
+    const session = await this.authService.getSession(readSessionToken(request));
+    return this.resumesService.delete(session.user.id, resumeId);
   }
 
   @Post('upload-authorization')
