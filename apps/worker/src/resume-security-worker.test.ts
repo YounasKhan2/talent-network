@@ -9,54 +9,51 @@ const CLEAN_PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\nstartxref\n0\n%%
 const VERSION_ID = '11111111-1111-4111-8111-111111111111';
 const RESUME_ID = '22222222-2222-4222-8222-222222222222';
 
-void test(
-  'scanner failure becomes retryable and a later retry can advance to extracting',
-  async () => {
-    const fixture = createFixture('UPLOADED');
-    const failingScanner = scannerResult({
-      status: 'ERROR',
-      engine: 'clamav',
-      engineVersion: '1.4-test',
-      signature: null,
-      scannedBytes: CLEAN_PDF.length,
-      durationMs: 7,
-    });
+void test('scanner failure becomes retryable and a later retry can advance to extracting', async () => {
+  const fixture = createFixture('UPLOADED');
+  const failingScanner = scannerResult({
+    status: 'ERROR',
+    engine: 'clamav',
+    engineVersion: '1.4-test',
+    signature: null,
+    scannedBytes: CLEAN_PDF.length,
+    durationMs: 7,
+  });
 
-    await assert.rejects(() =>
-      processResumeSecurityJob(
-        { resumeVersionId: VERSION_ID },
-        fixture.dependencies(failingScanner),
-        { finalAttempt: false, retryAttempt: false },
-      ),
-    );
-
-    assert.equal(fixture.state.processingState, 'FAILED_RETRYABLE');
-    assert.equal(fixture.state.failureCode, 'MALWARE_SCANNER_UNAVAILABLE');
-    assert.notEqual(fixture.state.failureMetadata, null);
-
-    const cleanScanner = scannerResult({
-      status: 'CLEAN',
-      engine: 'clamav',
-      engineVersion: '1.4-test',
-      signature: null,
-      scannedBytes: CLEAN_PDF.length,
-      durationMs: 5,
-    });
-
-    await processResumeSecurityJob(
+  await assert.rejects(() =>
+    processResumeSecurityJob(
       { resumeVersionId: VERSION_ID },
-      fixture.dependencies(cleanScanner),
-      { finalAttempt: false, retryAttempt: true },
-    );
+      fixture.dependencies(failingScanner),
+      { finalAttempt: false, retryAttempt: false },
+    ),
+  );
 
-    assert.equal(fixture.state.processingState, 'EXTRACTING');
-    assert.equal(fixture.state.failureCode, null);
-    assert.equal(fixture.state.failureMetadata, DATABASE_JSON_DB_NULL);
-    assert.match(fixture.state.checksumSha256 ?? '', /^[a-f0-9]{64}$/);
-    assert.equal(fixture.auditActions.at(-1), 'candidate.resume.security_passed');
-    assert.equal(fixture.outboxTypes.at(-1), 'candidate.resume.security_passed');
-  },
-);
+  assert.equal(fixture.state.processingState, 'FAILED_RETRYABLE');
+  assert.equal(fixture.state.failureCode, 'MALWARE_SCANNER_UNAVAILABLE');
+  assert.notEqual(fixture.state.failureMetadata, null);
+
+  const cleanScanner = scannerResult({
+    status: 'CLEAN',
+    engine: 'clamav',
+    engineVersion: '1.4-test',
+    signature: null,
+    scannedBytes: CLEAN_PDF.length,
+    durationMs: 5,
+  });
+
+  await processResumeSecurityJob(
+    { resumeVersionId: VERSION_ID },
+    fixture.dependencies(cleanScanner),
+    { finalAttempt: false, retryAttempt: true },
+  );
+
+  assert.equal(fixture.state.processingState, 'EXTRACTING');
+  assert.equal(fixture.state.failureCode, null);
+  assert.equal(fixture.state.failureMetadata, DATABASE_JSON_DB_NULL);
+  assert.match(fixture.state.checksumSha256 ?? '', /^[a-f0-9]{64}$/);
+  assert.equal(fixture.auditActions.at(-1), 'candidate.resume.security_passed');
+  assert.equal(fixture.outboxTypes.at(-1), 'candidate.resume.security_passed');
+});
 
 void test('the final scanner failure becomes terminal and is audited', async () => {
   const fixture = createFixture('UPLOADED');
@@ -145,10 +142,7 @@ void test('invalid document is rejected before the malware scanner is called', a
     },
   };
 
-  await processResumeSecurityJob(
-    { resumeVersionId: VERSION_ID },
-    fixture.dependencies(scanner),
-  );
+  await processResumeSecurityJob({ resumeVersionId: VERSION_ID }, fixture.dependencies(scanner));
 
   assert.equal(scanCalls, 0);
   assert.equal(fixture.state.processingState, 'REJECTED');
@@ -182,10 +176,7 @@ function createFixture(initialState: ProcessingState, bytes: Buffer = CLEAN_PDF)
   const outboxTypes: string[] = [];
 
   const resumeVersion = {
-    updateMany: (input: {
-      where: Record<string, unknown>;
-      data: Partial<MutableVersionState>;
-    }) => {
+    updateMany: (input: { where: Record<string, unknown>; data: Partial<MutableVersionState> }) => {
       if (!matchesWhere(state, input.where)) return Promise.resolve({ count: 0 });
       Object.assign(state, input.data);
       return Promise.resolve({ count: 1 });

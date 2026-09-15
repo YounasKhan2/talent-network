@@ -88,7 +88,9 @@ export async function processResumeSecurityJob(
       return;
     }
 
-    throw new Error(`ResumeVersion is not ready for security processing: ${existing.processingState}`);
+    throw new Error(
+      `ResumeVersion is not ready for security processing: ${existing.processingState}`,
+    );
   }
 
   const version = await database.resumeVersion.findUniqueOrThrow({

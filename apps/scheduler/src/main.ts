@@ -1,10 +1,7 @@
 import { parseSchedulerEnv } from '@talent-network/config';
 import { createDatabaseClient } from '@talent-network/database';
 import { createLogger } from '@talent-network/observability';
-import {
-  RESUME_SECURITY_QUEUE,
-  type ResumeSecurityJobData,
-} from '@talent-network/resume-security';
+import { RESUME_SECURITY_QUEUE, type ResumeSecurityJobData } from '@talent-network/resume-security';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { dispatchResumeUploadEvents } from './resume-outbox-dispatcher.js';

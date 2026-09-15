@@ -1,8 +1,5 @@
 import type { DatabaseClient } from '@talent-network/database';
-import {
-  RESUME_SECURITY_QUEUE,
-  type ResumeSecurityJobData,
-} from '@talent-network/resume-security';
+import { RESUME_SECURITY_QUEUE, type ResumeSecurityJobData } from '@talent-network/resume-security';
 import type { Queue } from 'bullmq';
 
 const RESUME_UPLOAD_COMPLETED_EVENT = 'candidate.resume.upload_completed';

@@ -167,21 +167,24 @@ void test('Phase 3 resume foundation keeps resume versions candidate-owned and t
       },
     );
 
-    await t.test('malware-rejected resume versions cannot receive download authorization', async () => {
-      await database.resumeVersion.update({
-        where: { id: prepared.version.id },
-        data: { processingState: 'REJECTED', failureCode: 'MALWARE_DETECTED' },
-      });
+    await t.test(
+      'malware-rejected resume versions cannot receive download authorization',
+      async () => {
+        await database.resumeVersion.update({
+          where: { id: prepared.version.id },
+          data: { processingState: 'REJECTED', failureCode: 'MALWARE_DETECTED' },
+        });
 
-      await assert.rejects(
-        () => resumes.createDownloadAuthorization(primary.session.user.id, prepared.version.id),
-        (error: unknown) =>
-          error instanceof Error &&
-          'getStatus' in error &&
-          typeof (error as { getStatus?: unknown }).getStatus === 'function' &&
-          (error as { getStatus: () => number }).getStatus() === 409,
-      );
-    });
+        await assert.rejects(
+          () => resumes.createDownloadAuthorization(primary.session.user.id, prepared.version.id),
+          (error: unknown) =>
+            error instanceof Error &&
+            'getStatus' in error &&
+            typeof (error as { getStatus?: unknown }).getStatus === 'function' &&
+            (error as { getStatus: () => number }).getStatus() === 409,
+        );
+      },
+    );
 
     await t.test('writes auditable upload-prepared and upload-completed records', async () => {
       const preparedAudit = await database.auditEvent.findFirst({

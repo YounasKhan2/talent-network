@@ -92,9 +92,18 @@ importers:
       '@talent-network/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@talent-network/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@talent-network/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@talent-network/resume-security':
+        specifier: workspace:*
+        version: link:../../packages/resume-security
+      bullmq:
+        specifier: ^5.58.0
+        version: 5.81.5(supports-color@7.2.0)
       ioredis:
         specifier: ^5.7.0
         version: 5.11.1(supports-color@7.2.0)
@@ -133,12 +142,21 @@ importers:
 
   apps/worker:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.888.0
+        version: 3.1131.0
       '@talent-network/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@talent-network/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@talent-network/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@talent-network/resume-security':
+        specifier: workspace:*
+        version: link:../../packages/resume-security
       bullmq:
         specifier: ^5.58.0
         version: 5.81.5(supports-color@7.2.0)
@@ -200,6 +218,15 @@ importers:
         specifier: ^9.9.4
         version: 9.14.0
     devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/resume-security:
+    devDependencies:
+      tsx:
+        specifier: ^4.20.5
+        version: 4.23.13
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

@@ -48,9 +48,7 @@ const ZIP_EOCD_MIN_BYTES = 22;
 const ZIP_MAX_COMMENT_BYTES = 65_535;
 const ZIP_ENCRYPTED_FLAG = 0x0001;
 
-export function validateResumeDocument(
-  input: ValidateResumeDocumentInput,
-): ResumeValidationResult {
+export function validateResumeDocument(input: ValidateResumeDocumentInput): ResumeValidationResult {
   const bytes = Buffer.from(input.bytes);
 
   if (bytes.length === 0 || input.declaredSizeBytes <= 0) {
