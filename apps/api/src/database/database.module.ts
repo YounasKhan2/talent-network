@@ -4,6 +4,11 @@ import { createDatabaseClient, type DatabaseClient } from '@talent-network/datab
 
 export const DATABASE_CLIENT = Symbol('DATABASE_CLIENT');
 
+const API_DATABASE_POOL_OVERRIDES = Object.freeze({
+  max: 20,
+  connectionTimeoutMillis: 10_000,
+});
+
 @Injectable()
 class DatabaseLifecycle implements OnApplicationShutdown {
   constructor(@Inject(DATABASE_CLIENT) private readonly database: DatabaseClient) {}
@@ -20,7 +25,7 @@ class DatabaseLifecycle implements OnApplicationShutdown {
       provide: DATABASE_CLIENT,
       useFactory: (): DatabaseClient => {
         const env = parseApiEnv();
-        return createDatabaseClient(env.DATABASE_URL);
+        return createDatabaseClient(env.DATABASE_URL, API_DATABASE_POOL_OVERRIDES);
       },
     },
     DatabaseLifecycle,
