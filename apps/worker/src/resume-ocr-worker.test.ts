@@ -100,9 +100,7 @@ void test('transient OCR service failure is retryable and a later delivery can c
       if (calls === 1) {
         return Promise.reject(new Error('RESUME_OCR_SERVICE_UNAVAILABLE:HTTP_503'));
       }
-      return Promise.resolve(
-        resultWithText(input.resumeVersionId, input.mimeType, PRIVATE_TEXT),
-      );
+      return Promise.resolve(resultWithText(input.resumeVersionId, input.mimeType, PRIVATE_TEXT));
     },
   };
 
