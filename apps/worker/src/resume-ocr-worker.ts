@@ -7,9 +7,13 @@ import {
   type ResumeOcrJobData,
 } from '@talent-network/resume-extraction';
 
-const OCR_RETRYABLE_FAILURE_CODES = ['RESUME_OCR_OBJECT_READ_FAILED'] as const;
+const OCR_RETRYABLE_FAILURE_CODES = [
+  'RESUME_OCR_OBJECT_READ_FAILED',
+  'RESUME_OCR_SERVICE_UNAVAILABLE',
+] as const;
 const OCR_FAILURE_CODES = new Set([
   'RESUME_OCR_OBJECT_READ_FAILED',
+  'RESUME_OCR_SERVICE_UNAVAILABLE',
   'RESUME_OCR_RECOGNITION_FAILED',
   'RESUME_OCR_QUALITY_INSUFFICIENT',
   'RESUME_OCR_FAILED',
@@ -284,6 +288,7 @@ export async function processResumeOcrJob(
     });
   } catch (error: unknown) {
     const failureCode = safeOcrFailureCode(error);
+    const retryable = isRetryableOcrFailureCode(failureCode);
     await database.resumeExtraction.update({
       where: { id: extraction.id },
       data: {
@@ -296,9 +301,10 @@ export async function processResumeOcrJob(
       database,
       version,
       failureCode,
-      { stage: 'OCR', reason: 'OCR_ENGINE_FAILED' },
-      true,
+      { stage: 'OCR', reason: retryable ? 'OCR_SERVICE_UNAVAILABLE' : 'OCR_ENGINE_FAILED' },
+      retryable ? execution.finalAttempt === true : true,
     );
+    if (retryable && execution.finalAttempt !== true) throw error;
   }
 }
 
@@ -383,6 +389,10 @@ function safeOcrFailureCode(error: unknown): string {
   if (!(error instanceof Error)) return 'RESUME_OCR_FAILED';
   const candidate = error.message.split(':', 1)[0]?.trim();
   return candidate && OCR_FAILURE_CODES.has(candidate) ? candidate : 'RESUME_OCR_FAILED';
+}
+
+function isRetryableOcrFailureCode(failureCode: string): boolean {
+  return OCR_RETRYABLE_FAILURE_CODES.some((candidate) => candidate === failureCode);
 }
 
 function safeInfrastructureErrorReason(error: unknown): string {
