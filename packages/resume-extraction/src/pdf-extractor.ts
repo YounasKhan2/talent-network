@@ -12,32 +12,16 @@ import {
   ResumeExtractionLimitError,
   assertSourceWithinExtractionLimits,
   calculateExtractionQuality,
-  createBlocks,
   normalizeExtractedText,
 } from './normalization.js';
+import {
+  reconstructPdfPageText,
+  toResumeJsonValue,
+  toResumePdfTextContentItem,
+  toResumePdfTextStyles,
+} from './pdf-layout.js';
 
 const PDF_MIME_TYPE = 'application/pdf';
-
-type PdfTextItem = {
-  str: string;
-  hasEOL: boolean;
-};
-
-function toPdfTextItem(item: unknown): PdfTextItem | null {
-  if (typeof item !== 'object' || item === null || !('str' in item)) {
-    return null;
-  }
-
-  const candidate = item as { str?: unknown; hasEOL?: unknown };
-  if (typeof candidate.str !== 'string') {
-    return null;
-  }
-
-  return {
-    str: candidate.str,
-    hasEOL: candidate.hasEOL === true,
-  };
-}
 
 export class PdfJsResumeExtractor implements ResumeExtractor {
   readonly name = 'pdfjs-dist';
@@ -67,18 +51,57 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
 
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
-        const content = await page.getTextContent();
-        const rawText = content.items
-          .map((item) => toPdfTextItem(item))
-          .filter((item): item is PdfTextItem => item !== null)
-          .map((item) => `${item.str}${item.hasEOL ? '\n' : ' '}`)
-          .join('');
-        const text = normalizeExtractedText(rawText);
+        const viewport = page.getViewport({ scale: 1 });
+        const [content, structTree] = await Promise.all([
+          page.getTextContent({
+            includeMarkedContent: true,
+            disableNormalization: true,
+          }),
+          page.getStructTree(),
+        ]);
+        const items = content.items
+          .map((item) => toResumePdfTextContentItem(item))
+          .filter((item) => item !== null);
+        const reconstructed = reconstructPdfPageText(items);
+        const text = normalizeExtractedText(reconstructed.text);
+
+        // Reconstruction only normalizes whitespace within visual lines. Rebuild ranges after
+        // final normalization so every downstream evidence span remains truthful.
+        const lines = rebuildLineRanges(text, reconstructed.lines.map((line) => line.text));
+        const blocks = lines.map((line) => ({
+          text: line.text,
+          sourceRange: line.sourceRange,
+          boundingBox:
+            reconstructed.lines.find((candidate) => candidate.text === line.text)?.boundingBox ??
+            null,
+          sourceItemIndexes:
+            reconstructed.lines.find((candidate) => candidate.text === line.text)
+              ?.sourceItemIndexes ?? [],
+        }));
 
         pages.push({
           pageNumber,
           text,
-          blocks: createBlocks(text),
+          lines,
+          blocks,
+          nativePdf: {
+            pageNumber,
+            rotation: page.rotate,
+            userUnit: page.userUnit,
+            view: [...page.view],
+            viewport: {
+              width: viewport.width,
+              height: viewport.height,
+              rotation: viewport.rotation,
+              scale: viewport.scale,
+            },
+            textContent: {
+              items,
+              styles: toResumePdfTextStyles(content.styles),
+              lang: content.lang ?? null,
+            },
+            structTree: toResumeJsonValue(structTree),
+          },
         });
       }
 
@@ -101,4 +124,39 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
       await loadingTask.destroy();
     }
   }
+}
+
+function rebuildLineRanges(
+  pageText: string,
+  lineTexts: readonly string[],
+): Array<{
+  text: string;
+  sourceRange: { startOffset: number; endOffset: number };
+  boundingBox: null;
+  sourceItemIndexes: number[];
+}> {
+  const lines: Array<{
+    text: string;
+    sourceRange: { startOffset: number; endOffset: number };
+    boundingBox: null;
+    sourceItemIndexes: number[];
+  }> = [];
+  let cursor = 0;
+
+  for (const rawLine of lineTexts) {
+    const normalized = normalizeExtractedText(rawLine);
+    if (!normalized) continue;
+    const startOffset = pageText.indexOf(normalized, cursor);
+    if (startOffset < 0) continue;
+    const endOffset = startOffset + normalized.length;
+    lines.push({
+      text: normalized,
+      sourceRange: { startOffset, endOffset },
+      boundingBox: null,
+      sourceItemIndexes: [],
+    });
+    cursor = endOffset;
+  }
+
+  return lines;
 }
