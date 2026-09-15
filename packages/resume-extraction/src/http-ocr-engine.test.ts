@@ -11,22 +11,24 @@ const INPUT = {
 void test('HTTP OCR adapter normalizes provider pages into ResumeDocument', async () => {
   const engine = new HttpResumeOcrEngine({
     endpoint: 'http://ocr.internal/v1/recognize',
-    fetchImpl: async (_input, init) => {
+    fetchImpl: (_input, init) => {
       assert.equal(init?.method, 'POST');
       const headers = new Headers(init?.headers);
       assert.equal(headers.get('content-type'), 'application/pdf');
       assert.equal(headers.get('x-resume-version-id'), INPUT.resumeVersionId);
-      return new Response(
-        JSON.stringify({
-          pages: [
-            {
-              pageNumber: 1,
-              text: 'Alex Morgan\r\n\r\nSenior Software Engineer with TypeScript and PostgreSQL experience.',
-            },
-          ],
-          warnings: ['LOW_CONTRAST'],
-        }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            pages: [
+              {
+                pageNumber: 1,
+                text: 'Alex Morgan\r\n\r\nSenior Software Engineer with TypeScript and PostgreSQL experience.',
+              },
+            ],
+            warnings: ['LOW_CONTRAST'],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
       );
     },
   });
