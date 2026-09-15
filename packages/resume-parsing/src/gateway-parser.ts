@@ -5,7 +5,12 @@ import {
   type ResumeAiGateway,
   toPrivacySafeResumeAiInvocationMetadata,
 } from './ai-gateway.js';
-import type { ParsedResume, ParsedResumeDraft, ResumeParseInput, ResumeParser } from './contracts.js';
+import type {
+  ParsedResume,
+  ParsedResumeDraft,
+  ResumeParseInput,
+  ResumeParser,
+} from './contracts.js';
 import { ResumeStructuredOutputError, validateParsedResume } from './schema.js';
 import {
   PARSED_RESUME_SCHEMA_VERSION,

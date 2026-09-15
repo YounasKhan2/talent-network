@@ -54,7 +54,9 @@ export function validateParsedResume(
     ...(root.identityCandidate === undefined
       ? {}
       : { identityCandidate: parseIdentity(root.identityCandidate) }),
-    ...(root.headline === undefined ? {} : { headline: parseStringClaim(root.headline, 'headline') }),
+    ...(root.headline === undefined
+      ? {}
+      : { headline: parseStringClaim(root.headline, 'headline') }),
     ...(root.summary === undefined ? {} : { summary: parseStringClaim(root.summary, 'summary') }),
     experiences: array(root.experiences, 'experiences').map(parseExperience),
     education: array(root.education, 'education').map(parseEducation),
@@ -85,7 +87,9 @@ function parseParserMetadata(value: unknown): ParsedResume['parser'] {
     ...(data.promptVersion === undefined
       ? {}
       : { promptVersion: stringValue(data.promptVersion, 'parser.promptVersion') }),
-    ...(data.provider === undefined ? {} : { provider: stringValue(data.provider, 'parser.provider') }),
+    ...(data.provider === undefined
+      ? {}
+      : { provider: stringValue(data.provider, 'parser.provider') }),
     ...(data.model === undefined ? {} : { model: stringValue(data.model, 'parser.model') }),
   };
 }
@@ -93,7 +97,9 @@ function parseParserMetadata(value: unknown): ParsedResume['parser'] {
 function parseIdentity(value: unknown): ParsedIdentityCandidate {
   const data = record(value, 'identityCandidate');
   return {
-    ...(data.fullName === undefined ? {} : { fullName: parseStringClaim(data.fullName, 'fullName') }),
+    ...(data.fullName === undefined
+      ? {}
+      : { fullName: parseStringClaim(data.fullName, 'fullName') }),
     ...(data.email === undefined ? {} : { email: parseStringClaim(data.email, 'email') }),
     ...(data.phone === undefined ? {} : { phone: parseStringClaim(data.phone, 'phone') }),
   };
@@ -104,10 +110,14 @@ function parseExperience(value: unknown, index: number): ParsedExperience {
   return {
     ...(data.company === undefined ? {} : { company: parseStringClaim(data.company, 'company') }),
     ...(data.role === undefined ? {} : { role: parseStringClaim(data.role, 'role') }),
-    ...(data.location === undefined ? {} : { location: parseStringClaim(data.location, 'location') }),
+    ...(data.location === undefined
+      ? {}
+      : { location: parseStringClaim(data.location, 'location') }),
     ...(data.dates === undefined ? {} : { dates: parseDateRangeClaim(data.dates, 'dates') }),
     ...(data.summary === undefined ? {} : { summary: parseStringClaim(data.summary, 'summary') }),
-    highlights: array(data.highlights, 'highlights').map((item) => parseStringClaim(item, 'highlight')),
+    highlights: array(data.highlights, 'highlights').map((item) =>
+      parseStringClaim(item, 'highlight'),
+    ),
   };
 }
 
@@ -123,7 +133,9 @@ function parseEducation(value: unknown, index: number): ParsedEducation {
     ...(data.fieldOfStudy === undefined
       ? {}
       : { fieldOfStudy: parseStringClaim(data.fieldOfStudy, 'fieldOfStudy') }),
-    ...(data.location === undefined ? {} : { location: parseStringClaim(data.location, 'location') }),
+    ...(data.location === undefined
+      ? {}
+      : { location: parseStringClaim(data.location, 'location') }),
     ...(data.dates === undefined ? {} : { dates: parseDateRangeClaim(data.dates, 'dates') }),
     details: array(data.details, 'details').map((item) => parseStringClaim(item, 'detail')),
   };
@@ -158,8 +170,12 @@ function parseCertification(value: unknown, index: number): ParsedCertification 
   return {
     name: parseStringClaim(data.name, 'certification.name'),
     ...(data.issuer === undefined ? {} : { issuer: parseStringClaim(data.issuer, 'issuer') }),
-    ...(data.issuedAt === undefined ? {} : { issuedAt: parseStringClaim(data.issuedAt, 'issuedAt') }),
-    ...(data.expiresAt === undefined ? {} : { expiresAt: parseStringClaim(data.expiresAt, 'expiresAt') }),
+    ...(data.issuedAt === undefined
+      ? {}
+      : { issuedAt: parseStringClaim(data.issuedAt, 'issuedAt') }),
+    ...(data.expiresAt === undefined
+      ? {}
+      : { expiresAt: parseStringClaim(data.expiresAt, 'expiresAt') }),
     ...(data.credentialId === undefined
       ? {}
       : { credentialId: parseStringClaim(data.credentialId, 'credentialId') }),
@@ -207,7 +223,9 @@ function parseDateRangeClaim(value: unknown, path: string): ParsedClaim<ParsedDa
   return parseClaim(value, path, (claimValue) => {
     const data = record(claimValue, `${path}.value`);
     return {
-      ...(data.start === undefined ? {} : { start: stringValue(data.start, `${path}.value.start`) }),
+      ...(data.start === undefined
+        ? {}
+        : { start: stringValue(data.start, `${path}.value.start`) }),
       ...(data.end === undefined ? {} : { end: stringValue(data.end, `${path}.value.end`) }),
       ...(data.isCurrent === undefined
         ? {}
@@ -244,7 +262,15 @@ function parseClaim<T>(
 function parseEvidence(value: unknown, index: number): ParsedEvidence {
   const data = record(value, `evidence[${index}]`);
   const kind = stringValue(data.evidenceKind, 'evidence.evidenceKind');
-  if (!['DIRECT_TEXT', 'SECTION_CONTEXT', 'NORMALIZED_VALUE', 'DERIVED_DATE', 'DERIVED_LINK'].includes(kind)) {
+  if (
+    ![
+      'DIRECT_TEXT',
+      'SECTION_CONTEXT',
+      'NORMALIZED_VALUE',
+      'DERIVED_DATE',
+      'DERIVED_LINK',
+    ].includes(kind)
+  ) {
     fail('evidence.evidenceKind is invalid.');
   }
   const sourceRange = record(data.sourceRange, 'evidence.sourceRange');
@@ -279,7 +305,8 @@ function parseConfidenceSummary(value: unknown): ParsedResume['confidenceSummary
 }
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) fail(`${path} must be an object.`);
+  if (value === null || typeof value !== 'object' || Array.isArray(value))
+    fail(`${path} must be an object.`);
   return value as Record<string, unknown>;
 }
 
@@ -298,7 +325,8 @@ function stringValue(value: unknown, path: string): string {
 }
 
 function numberValue(value: unknown, path: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) fail(`${path} must be a finite number.`);
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    fail(`${path} must be a finite number.`);
   return value;
 }
 
