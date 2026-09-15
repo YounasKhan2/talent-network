@@ -12,6 +12,7 @@ type GuardState = 'loading' | 'ready' | 'redirecting' | 'error';
 
 const CAREER_NAVIGATION = [
   { href: '/career', label: 'Career Passport' },
+  { href: '/career/resumes', label: 'Resumes' },
   { href: '/career/evidence', label: 'Evidence' },
   { href: '/career/history', label: 'Version history' },
 ] as const;
@@ -132,6 +133,7 @@ export default function CareerWorkspaceLayout({ children }: { children: ReactNod
 }
 
 function activePageLabel(pathname: string): string {
+  if (pathname.startsWith('/career/resumes')) return 'Resumes';
   if (pathname.startsWith('/career/evidence')) return 'Evidence';
   if (pathname.startsWith('/career/history')) return 'Version history';
   return 'Career Passport';
