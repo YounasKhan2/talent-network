@@ -288,7 +288,8 @@ function readResumeDocument(value: unknown, resumeVersionId: string): ResumeDocu
 }
 
 function readParserPromptVersion(parser: ResumeParser): string {
-  const value = 'promptVersion' in parser ? (parser as { promptVersion?: unknown }).promptVersion : null;
+  const value =
+    'promptVersion' in parser ? (parser as { promptVersion?: unknown }).promptVersion : null;
   return typeof value === 'string' && value.length > 0 ? value : 'none';
 }
 
