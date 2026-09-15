@@ -1,0 +1,355 @@
+export const RESUME_PREPROCESSING_POLICY_VERSION = 'resume-preprocess-v1' as const;
+
+export const RESUME_PREPROCESSING_LIMITS = {
+  maximumChunkCharacters: 12_000,
+} as const;
+
+export type ResumeSectionKind =
+  | 'SUMMARY'
+  | 'EXPERIENCE'
+  | 'EDUCATION'
+  | 'SKILLS'
+  | 'PROJECTS'
+  | 'CERTIFICATIONS'
+  | 'LANGUAGES'
+  | 'LINKS'
+  | 'OTHER';
+
+export interface ResumePreprocessingSourceRange {
+  start: number;
+  end: number;
+}
+
+export interface ResumePreprocessingBlockInput {
+  text: string;
+  sourceRange: {
+    startOffset: number;
+    endOffset: number;
+  };
+}
+
+export interface ResumePreprocessingPageInput {
+  pageNumber: number | null;
+  text: string;
+  blocks: ResumePreprocessingBlockInput[];
+}
+
+export interface ResumePreprocessingDocumentInput {
+  schemaVersion: string;
+  resumeVersionId: string;
+  text: string;
+  pages: ResumePreprocessingPageInput[];
+}
+
+export interface ResumeSourceFragment {
+  pageNumber: number | null;
+  blockIndex: number;
+  segmentIndex: number;
+  text: string;
+  sourceRange: ResumePreprocessingSourceRange;
+}
+
+export interface ResumePreprocessedSection {
+  kind: ResumeSectionKind;
+  heading: string | null;
+  headingFragment: ResumeSourceFragment | null;
+  fragments: ResumeSourceFragment[];
+}
+
+export interface ResumePreprocessedChunk {
+  index: number;
+  text: string;
+  characterCount: number;
+  fragments: ResumeSourceFragment[];
+}
+
+export type ResumeCandidateDetectionKind = 'EMAIL' | 'PHONE' | 'URL';
+
+export interface ResumeCandidateDetection {
+  kind: ResumeCandidateDetectionKind;
+  value: string;
+  pageNumber: number | null;
+  blockIndex: number;
+  sourceRange: ResumePreprocessingSourceRange;
+}
+
+export interface PreprocessedResumeDocument {
+  preprocessingPolicyVersion: typeof RESUME_PREPROCESSING_POLICY_VERSION;
+  sourceDocumentSchemaVersion: string;
+  resumeVersionId: string;
+  sections: ResumePreprocessedSection[];
+  chunks: ResumePreprocessedChunk[];
+  candidates: ResumeCandidateDetection[];
+}
+
+const SECTION_ALIASES: ReadonlyArray<readonly [ResumeSectionKind, readonly string[]]> = [
+  ['SUMMARY', ['summary', 'profile', 'professional summary', 'professional profile', 'about me']],
+  [
+    'EXPERIENCE',
+    [
+      'experience',
+      'work experience',
+      'professional experience',
+      'employment',
+      'employment history',
+      'work history',
+    ],
+  ],
+  ['EDUCATION', ['education', 'academic background', 'academic history', 'qualifications']],
+  ['SKILLS', ['skills', 'technical skills', 'core skills', 'competencies', 'technologies']],
+  ['PROJECTS', ['projects', 'selected projects', 'personal projects']],
+  ['CERTIFICATIONS', ['certifications', 'certificates', 'licenses & certifications', 'licenses and certifications']],
+  ['LANGUAGES', ['languages', 'language']],
+  ['LINKS', ['links', 'profiles', 'online profiles']],
+];
+
+export function preprocessResumeDocument(
+  document: ResumePreprocessingDocumentInput,
+  options: { maximumChunkCharacters?: number } = {},
+): PreprocessedResumeDocument {
+  const maximumChunkCharacters =
+    options.maximumChunkCharacters ?? RESUME_PREPROCESSING_LIMITS.maximumChunkCharacters;
+
+  if (!Number.isInteger(maximumChunkCharacters) || maximumChunkCharacters <= 0) {
+    throw new Error('maximumChunkCharacters must be a positive integer.');
+  }
+
+  const fragments = flattenSourceFragments(document);
+
+  return {
+    preprocessingPolicyVersion: RESUME_PREPROCESSING_POLICY_VERSION,
+    sourceDocumentSchemaVersion: document.schemaVersion,
+    resumeVersionId: document.resumeVersionId,
+    sections: detectSections(fragments),
+    chunks: buildBoundedChunks(fragments, maximumChunkCharacters),
+    candidates: detectDeterministicCandidates(fragments),
+  };
+}
+
+export function classifyResumeSectionHeading(value: string): ResumeSectionKind | null {
+  const normalized = normalizeHeading(value);
+  if (!normalized) return null;
+
+  for (const [kind, aliases] of SECTION_ALIASES) {
+    if (aliases.includes(normalized)) return kind;
+  }
+
+  return looksLikeUnknownSectionHeading(value) ? 'OTHER' : null;
+}
+
+export function detectSections(fragments: ResumeSourceFragment[]): ResumePreprocessedSection[] {
+  const sections: ResumePreprocessedSection[] = [];
+  let current = createSection('OTHER', null, null);
+
+  const flush = (): void => {
+    if (current.fragments.length === 0) return;
+    sections.push(current);
+  };
+
+  for (const fragment of fragments) {
+    const headingKind = classifyResumeSectionHeading(fragment.text);
+    if (headingKind) {
+      flush();
+      current = createSection(headingKind, fragment.text.trim(), fragment);
+      current.fragments.push(fragment);
+      continue;
+    }
+
+    current.fragments.push(fragment);
+  }
+
+  flush();
+  return sections;
+}
+
+export function buildBoundedChunks(
+  fragments: ResumeSourceFragment[],
+  maximumChunkCharacters = RESUME_PREPROCESSING_LIMITS.maximumChunkCharacters,
+): ResumePreprocessedChunk[] {
+  if (!Number.isInteger(maximumChunkCharacters) || maximumChunkCharacters <= 0) {
+    throw new Error('maximumChunkCharacters must be a positive integer.');
+  }
+
+  const chunks: ResumePreprocessedChunk[] = [];
+  let current: ResumeSourceFragment[] = [];
+  let currentLength = 0;
+
+  const flush = (): void => {
+    if (current.length === 0) return;
+    const text = current.map((fragment) => fragment.text).join('\n\n');
+    chunks.push({
+      index: chunks.length,
+      text,
+      characterCount: text.length,
+      fragments: current,
+    });
+    current = [];
+    currentLength = 0;
+  };
+
+  for (const fragment of fragments) {
+    const boundedFragments = splitFragment(fragment, maximumChunkCharacters);
+
+    for (const boundedFragment of boundedFragments) {
+      const separatorLength = current.length === 0 ? 0 : 2;
+      const projectedLength = currentLength + separatorLength + boundedFragment.text.length;
+
+      if (current.length > 0 && projectedLength > maximumChunkCharacters) flush();
+
+      current.push(boundedFragment);
+      currentLength += (current.length === 1 ? 0 : 2) + boundedFragment.text.length;
+    }
+  }
+
+  flush();
+  return chunks;
+}
+
+export function detectDeterministicCandidates(
+  fragments: ResumeSourceFragment[],
+): ResumeCandidateDetection[] {
+  const detections: ResumeCandidateDetection[] = [];
+
+  for (const fragment of fragments) {
+    collectMatches(fragment, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, 'EMAIL', detections);
+    collectMatches(fragment, /https?:\/\/[^\s)\]}>]+/gi, 'URL', detections);
+    collectPhoneMatches(fragment, detections);
+  }
+
+  return detections;
+}
+
+function flattenSourceFragments(document: ResumePreprocessingDocumentInput): ResumeSourceFragment[] {
+  const fragments: ResumeSourceFragment[] = [];
+
+  for (const page of document.pages) {
+    page.blocks.forEach((block, blockIndex) => {
+      if (!block.text) return;
+      assertSourceRange(block);
+      fragments.push({
+        pageNumber: page.pageNumber,
+        blockIndex,
+        segmentIndex: 0,
+        text: block.text,
+        sourceRange: {
+          start: block.sourceRange.startOffset,
+          end: block.sourceRange.endOffset,
+        },
+      });
+    });
+  }
+
+  return fragments;
+}
+
+function splitFragment(
+  fragment: ResumeSourceFragment,
+  maximumChunkCharacters: number,
+): ResumeSourceFragment[] {
+  if (fragment.text.length <= maximumChunkCharacters) return [fragment];
+
+  const sourceLength = fragment.sourceRange.end - fragment.sourceRange.start;
+  if (sourceLength !== fragment.text.length) {
+    throw new Error('Cannot split a source fragment whose source range does not map 1:1 to its text.');
+  }
+
+  const result: ResumeSourceFragment[] = [];
+  let cursor = 0;
+  let segmentIndex = 0;
+
+  while (cursor < fragment.text.length) {
+    const text = fragment.text.slice(cursor, cursor + maximumChunkCharacters);
+    const start = fragment.sourceRange.start + cursor;
+    result.push({
+      ...fragment,
+      segmentIndex,
+      text,
+      sourceRange: { start, end: start + text.length },
+    });
+    cursor += text.length;
+    segmentIndex += 1;
+  }
+
+  return result;
+}
+
+function collectMatches(
+  fragment: ResumeSourceFragment,
+  pattern: RegExp,
+  kind: Exclude<ResumeCandidateDetectionKind, 'PHONE'>,
+  output: ResumeCandidateDetection[],
+): void {
+  for (const match of fragment.text.matchAll(pattern)) {
+    const index = match.index;
+    if (index === undefined || !match[0]) continue;
+    output.push({
+      kind,
+      value: match[0],
+      pageNumber: fragment.pageNumber,
+      blockIndex: fragment.blockIndex,
+      sourceRange: {
+        start: fragment.sourceRange.start + index,
+        end: fragment.sourceRange.start + index + match[0].length,
+      },
+    });
+  }
+}
+
+function collectPhoneMatches(
+  fragment: ResumeSourceFragment,
+  output: ResumeCandidateDetection[],
+): void {
+  const pattern = /(?:\+?\d[\d .()-]{6,}\d)/g;
+
+  for (const match of fragment.text.matchAll(pattern)) {
+    const index = match.index;
+    if (index === undefined || !match[0]) continue;
+    const digitCount = match[0].replace(/\D/g, '').length;
+    if (digitCount < 7 || digitCount > 15) continue;
+
+    output.push({
+      kind: 'PHONE',
+      value: match[0].trim(),
+      pageNumber: fragment.pageNumber,
+      blockIndex: fragment.blockIndex,
+      sourceRange: {
+        start: fragment.sourceRange.start + index,
+        end: fragment.sourceRange.start + index + match[0].length,
+      },
+    });
+  }
+}
+
+function createSection(
+  kind: ResumeSectionKind,
+  heading: string | null,
+  headingFragment: ResumeSourceFragment | null,
+): ResumePreprocessedSection {
+  return { kind, heading, headingFragment, fragments: [] };
+}
+
+function normalizeHeading(value: string): string {
+  return value.trim().replace(/[:：]\s*$/, '').replace(/\s+/g, ' ').toLowerCase();
+}
+
+function looksLikeUnknownSectionHeading(value: string): boolean {
+  const trimmed = value.trim().replace(/[:：]\s*$/, '');
+  if (trimmed.length < 2 || trimmed.length > 60) return false;
+  if (trimmed.includes('\n')) return false;
+  if (trimmed.split(/\s+/).length > 8) return false;
+  if (!/[A-Za-z]/.test(trimmed)) return false;
+  if (/[.!?]/.test(trimmed)) return false;
+
+  const letters = [...trimmed].filter((character) => /[A-Za-z]/.test(character));
+  return letters.length > 0 && letters.every((character) => character === character.toUpperCase());
+}
+
+function assertSourceRange(block: ResumePreprocessingBlockInput): void {
+  const { startOffset, endOffset } = block.sourceRange;
+  if (!Number.isInteger(startOffset) || !Number.isInteger(endOffset)) {
+    throw new Error('Resume source ranges must use integer offsets.');
+  }
+  if (startOffset < 0 || endOffset < startOffset) {
+    throw new Error('Resume source range is invalid.');
+  }
+}
