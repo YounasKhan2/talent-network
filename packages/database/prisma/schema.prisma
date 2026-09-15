@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -31,13 +32,6 @@ enum MembershipStatus {
   ACTIVE
   SUSPENDED
   REMOVED
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  REVOKED
-  EXPIRED
 }
 
 enum CandidateVisibility {
@@ -80,10 +74,11 @@ enum CandidateWorkMode {
 enum ResumeProcessingState {
   UPLOADING
   UPLOADED
-  VALIDATING
   SCANNING
+  SCANNED
   EXTRACTING
   OCR_REQUIRED
+  OCR_RUNNING
   PARSING
   READY_FOR_REVIEW
   APPROVED
@@ -93,20 +88,19 @@ enum ResumeProcessingState {
 }
 
 model User {
-  id                  String                    @id @default(uuid()) @db.Uuid
-  primaryEmail        String                    @unique
-  emailVerifiedAt     DateTime?
-  passwordHash        String
-  status              UserStatus                @default(ACTIVE)
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
-  sessions            Session[]
-  emailVerification   EmailVerificationToken[]
-  passwordResetTokens PasswordResetToken[]
-  memberships         OrganizationMember[]
-  invitationsSent     OrganizationInvitation[]  @relation("InvitationInviter")
-  auditEvents         AuditEvent[]               @relation("AuditActor")
-  candidate           Candidate?
+  id                          String                     @id @default(uuid()) @db.Uuid
+  email                       String                     @unique
+  passwordHash                String
+  status                      UserStatus                 @default(ACTIVE)
+  emailVerifiedAt             DateTime?
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  sessions                    Session[]
+  emailVerificationTokens     EmailVerificationToken[]
+  passwordResetTokens         PasswordResetToken[]
+  organizationMemberships     OrganizationMember[]
+  organizationInvitationsSent OrganizationInvitation[]    @relation("InvitationInviter")
+  candidate                   Candidate?
 
   @@index([status, createdAt])
 }
@@ -116,7 +110,6 @@ model Session {
   userId        String   @db.Uuid
   tokenHash     String   @unique
   expiresAt     DateTime
-  lastSeenAt    DateTime @default(now())
   createdAt     DateTime @default(now())
   rotatedAt     DateTime?
   revokedAt     DateTime?
@@ -227,8 +220,8 @@ model Candidate {
 }
 
 model CandidateProfileVersion {
-  id                         String                        @id @default(uuid()) @db.Uuid
-  candidateId                String                        @db.Uuid
+  id                         String                         @id @default(uuid()) @db.Uuid
+  candidateId                String                         @db.Uuid
   versionNumber              Int
   status                     CandidateProfileVersionStatus @default(DRAFT)
   source                     CandidateProfileSource        @default(MANUAL)
@@ -243,9 +236,9 @@ model CandidateProfileVersion {
   preferredWorkModes         CandidateWorkMode[]
   preferredEmploymentTypes   String[]
   approvedAt                 DateTime?
-  createdAt                  DateTime                      @default(now())
-  candidate                  Candidate                     @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
-  currentForCandidate        Candidate?                    @relation("CandidateCurrentProfile")
+  createdAt                  DateTime                       @default(now())
+  candidate                  Candidate                      @relation("CandidateProfileVersions", fields: [candidateId], references: [id], onDelete: Cascade)
+  currentForCandidate        Candidate?                     @relation("CandidateCurrentProfile")
   employments                CandidateEmployment[]
   education                  CandidateEducation[]
   skills                     CandidateSkill[]
@@ -255,7 +248,7 @@ model CandidateProfileVersion {
   links                      CandidateLink[]
   locationPreferences        CandidateLocationPreference[]
   customSections             CandidateCustomSection[]
-  approvedFromResumeVersions ResumeVersion[]               @relation("ResumeApprovedProfileVersion")
+  approvedFromResumeVersions ResumeVersion[]                @relation("ResumeApprovedProfileVersion")
 
   @@unique([candidateId, versionNumber])
   @@index([candidateId, createdAt(sort: Desc)])
@@ -435,25 +428,25 @@ model Resume {
 }
 
 model ResumeVersion {
-  id                       String                @id @default(uuid()) @db.Uuid
-  resumeId                 String                @db.Uuid
-  versionNumber            Int
-  processingState          ResumeProcessingState @default(UPLOADING)
-  objectKey                String                @unique
-  originalFilename         String
-  mimeType                 String
-  sizeBytes                Int
-  checksumSha256           String?
-  processingPipelineVersion String               @default("resume-pipeline-v1")
-  failureCode              String?
-  failureMetadata          Json?
-  uploadedAt               DateTime?
-  approvedProfileVersionId String?               @db.Uuid
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  resume                   Resume                @relation("ResumeVersions", fields: [resumeId], references: [id], onDelete: Cascade)
-  currentForResume         Resume?               @relation("ResumeCurrentVersion")
-  approvedProfileVersion   CandidateProfileVersion? @relation("ResumeApprovedProfileVersion", fields: [approvedProfileVersionId], references: [id], onDelete: SetNull)
+  id                        String                  @id @default(uuid()) @db.Uuid
+  resumeId                  String                  @db.Uuid
+  versionNumber             Int
+  processingState           ResumeProcessingState   @default(UPLOADING)
+  objectKey                 String                  @unique
+  originalFilename          String
+  mimeType                  String
+  sizeBytes                 Int
+  checksumSha256            String?
+  processingPipelineVersion String                  @default("resume-pipeline-v1")
+  failureCode               String?
+  failureMetadata           Json?
+  uploadedAt                DateTime?
+  approvedProfileVersionId  String?                 @db.Uuid
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  resume                    Resume                  @relation("ResumeVersions", fields: [resumeId], references: [id], onDelete: Cascade)
+  currentForResume          Resume?                 @relation("ResumeCurrentVersion")
+  approvedProfileVersion    CandidateProfileVersion? @relation("ResumeApprovedProfileVersion", fields: [approvedProfileVersionId], references: [id], onDelete: SetNull)
 
   @@unique([resumeId, versionNumber])
   @@index([resumeId, createdAt(sort: Desc)])
@@ -470,29 +463,27 @@ model AuditEvent {
   resourceType   String
   resourceId     String
   metadata       Json?
-  occurredAt     DateTime      @default(now())
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  actor          User?         @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@index([organizationId, occurredAt(sort: Desc)])
-  @@index([actorId, occurredAt(sort: Desc)])
-  @@index([resourceType, resourceId, occurredAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([resourceType, resourceId, createdAt(sort: Desc)])
 }
 
 model OutboxEvent {
-  id             String        @id @default(uuid()) @db.Uuid
-  aggregateType  String
-  aggregateId    String
+  id            String        @id @default(uuid()) @db.Uuid
   organizationId String?       @db.Uuid
-  eventType      String
-  eventVersion   Int           @default(1)
-  payload        Json
-  occurredAt     DateTime      @default(now())
-  publishedAt    DateTime?
-  attemptCount   Int           @default(0)
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  createdAt     DateTime      @default(now())
+  publishedAt   DateTime?
+  attemptCount  Int           @default(0)
+  lastAttemptAt DateTime?
+  organization  Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@index([publishedAt, occurredAt])
-  @@index([organizationId, occurredAt(sort: Desc)])
-  @@index([aggregateType, aggregateId, occurredAt(sort: Desc)])
+  @@index([publishedAt, createdAt])
+  @@index([aggregateType, aggregateId, createdAt(sort: Desc)])
 }
