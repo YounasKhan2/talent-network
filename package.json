@@ -15,6 +15,8 @@
     "test:integration:phase2a": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration:phase2a",
     "test:integration:phase2b": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration:phase2b",
     "test:integration:phase3": "pnpm --filter @talent-network/database build && pnpm --filter @talent-network/database db:deploy && pnpm --filter @talent-network/api test:integration:phase3",
+    "ocr:up": "docker compose up -d --build ocr",
+    "ocr:smoke": "docker compose exec -T ocr python smoke_test.py",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:phase1 && pnpm test:integration:phase2 && pnpm test:integration:phase2a && pnpm test:integration:phase2b && pnpm test:integration:phase3 && pnpm build"
