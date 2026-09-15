@@ -154,10 +154,7 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
 
       <section className={styles.metrics} aria-label="Resume review summary">
         <Metric label="Claims" value={confidence?.totalClaimCount ?? 0} />
-        <Metric
-          label="Low confidence"
-          value={confidence?.lowConfidenceClaimCount ?? 0}
-        />
+        <Metric label="Low confidence" value={confidence?.lowConfidenceClaimCount ?? 0} />
         <Metric
           label="Overall confidence"
           value={confidence ? `${Math.round(confidence.overall * 100)}%` : '—'}
@@ -266,7 +263,7 @@ function ClaimCard({
   sensitive = false,
 }: {
   label: string;
-  claim?: ParsedClaim<string>;
+  claim: ParsedClaim<string> | undefined;
   sensitive?: boolean;
 }) {
   return (
@@ -279,7 +276,9 @@ function ClaimCard({
       {claim ? (
         <footer>
           <span>{Math.round(claim.confidence * 100)}% confidence</span>
-          <span>{claim.evidence.length} evidence ref{claim.evidence.length === 1 ? '' : 's'}</span>
+          <span>
+            {claim.evidence.length} evidence ref{claim.evidence.length === 1 ? '' : 's'}
+          </span>
         </footer>
       ) : null}
     </article>
