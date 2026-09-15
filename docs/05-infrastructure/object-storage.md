@@ -28,6 +28,24 @@ The management console is exposed locally on port `9001`.
 
 RustFS is intentionally treated as replaceable infrastructure. Product/domain packages must not import RustFS-specific SDKs or model RustFS-specific concepts.
 
+## Local Browser CORS Bootstrap
+
+Direct browser uploads use presigned S3 URLs, so the object-storage endpoint must explicitly allow the web application's origin. Local development keeps this policy in `infrastructure/rustfs/cors.local.json` and applies it with the one-shot `rustfs-bootstrap` Compose service after RustFS becomes healthy.
+
+The local policy is intentionally narrow:
+
+- allowed origin: `http://localhost:3000`
+- allowed methods: `GET`, `HEAD`, `PUT`
+- request headers are allowed because SigV4 presigned requests can include signed S3 headers
+- `ETag` is exposed for upload/client interoperability
+- no public bucket access is granted
+
+CORS is a browser transport policy, not an authorization mechanism. Candidate ownership and signed-URL authorization remain server-side requirements.
+
+The bootstrap service creates the local bucket only when it does not already exist and then applies the CORS policy through the standard S3 API. This keeps the application storage adapter provider-neutral and makes local browser-upload behavior reproducible after `docker compose up -d`.
+
+Production deployments must provision an equivalent CORS policy for their actual web origins through infrastructure/deployment configuration. Production origins must not be replaced with an unrestricted wildcard merely to make browser uploads work.
+
 ## Why RustFS Locally
 
 RustFS provides the S3-compatible primitives required by the MVP while remaining self-hostable for development.
@@ -83,7 +101,7 @@ Requirements:
 - audit sensitive downloads/exports when appropriate
 - do not expose storage credentials to browsers
 
-Browser uploads should eventually use presigned URLs so large files do not proxy through the API application.
+Browser uploads use presigned URLs so large files do not proxy through the API application.
 
 ## Source of Truth
 
@@ -113,7 +131,7 @@ An object existing in storage does not by itself authorize access to it.
 
 For local development, `S3_BUCKET=talent-network-local` is the intended bucket name.
 
-Bucket bootstrap may be automated when the first storage adapter/resume-upload feature is implemented. Until then, bucket creation is infrastructure setup rather than application business logic.
+The one-shot local `rustfs-bootstrap` service ensures that bucket exists and applies browser CORS. This is development infrastructure setup, not application business logic.
 
 Production bucket creation must be managed through deployment/infrastructure provisioning rather than implicit runtime side effects from normal API requests.
 
