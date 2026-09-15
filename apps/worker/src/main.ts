@@ -1,6 +1,10 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { parseWorkerEnv } from '@talent-network/config';
 import { createDatabaseClient } from '@talent-network/database';
+import {
+  RESUME_EXTRACTION_QUEUE,
+  type ResumeExtractionJobData,
+} from '@talent-network/resume-extraction';
 import { createLogger } from '@talent-network/observability';
 import {
   ClamAvScanner,
@@ -9,6 +13,7 @@ import {
 } from '@talent-network/resume-security';
 import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
+import { processResumeExtractionJob } from './resume-extraction-worker.js';
 import { processResumeSecurityJob } from './resume-security-worker.js';
 
 async function main(): Promise<void> {
@@ -64,6 +69,31 @@ async function main(): Promise<void> {
     },
   );
 
+  const resumeExtractionWorker = new Worker<ResumeExtractionJobData>(
+    RESUME_EXTRACTION_QUEUE,
+    async (job) => {
+      const maxAttempts = job.opts.attempts ?? 1;
+      const finalAttempt = job.attemptsMade + 1 >= maxAttempts;
+      await processResumeExtractionJob(
+        job.data,
+        {
+          database,
+          storage,
+          bucket: env.S3_BUCKET,
+        },
+        {
+          finalAttempt,
+          retryAttempt: job.attemptsMade > 0,
+        },
+      );
+    },
+    {
+      connection: redis,
+      concurrency: 2,
+      lockDuration: 60_000,
+    },
+  );
+
   resumeSecurityWorker.on('completed', (job) => {
     logger.info(
       { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
@@ -83,11 +113,37 @@ async function main(): Promise<void> {
     );
   });
 
-  logger.info({ scanner: scannerVersion, queue: RESUME_SECURITY_QUEUE }, 'Worker runtime ready');
+  resumeExtractionWorker.on('completed', (job) => {
+    logger.info(
+      { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
+      'Resume extraction job completed',
+    );
+  });
+  resumeExtractionWorker.on('failed', (job, error) => {
+    logger.error(
+      {
+        jobId: job?.id,
+        resumeVersionId: job?.data.resumeVersionId,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err: error,
+      },
+      'Resume extraction job failed',
+    );
+  });
+
+  logger.info(
+    {
+      scanner: scannerVersion,
+      queues: [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE],
+    },
+    'Worker runtime ready',
+  );
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Worker shutting down');
     await resumeSecurityWorker.close();
+    await resumeExtractionWorker.close();
     await database.$disconnect();
     storage.destroy();
     await redis.quit();
