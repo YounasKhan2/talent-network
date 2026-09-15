@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import { DATABASE_JSON_DB_NULL, type DatabaseClient } from '@talent-network/database';
 import {
+  RESUME_DOCUMENT_SCHEMA_VERSION,
   decideResumeExtractionQuality,
   type ResumeOcrEngine,
   type ResumeOcrJobData,
@@ -141,6 +142,7 @@ export async function processResumeOcrJob(
     },
     update: {
       status: 'STARTED',
+      schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
       failureCode: null,
       completedAt: null,
     },
@@ -150,6 +152,7 @@ export async function processResumeOcrJob(
       extractorName: engine.name,
       extractorVersion: engine.version,
       extractionMethod: 'OCR',
+      schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
       status: 'STARTED',
     },
   });
@@ -192,6 +195,7 @@ export async function processResumeOcrJob(
         where: { id: extraction.id },
         data: {
           status: 'FAILED',
+          schemaVersion: result.document.schemaVersion,
           qualityMetadata: {
             ...result.document.quality,
             decision: qualityDecision.decision,
@@ -219,6 +223,7 @@ export async function processResumeOcrJob(
         where: { id: extraction.id },
         data: {
           status: 'COMPLETED',
+          schemaVersion: result.document.schemaVersion,
           qualityMetadata: {
             ...result.document.quality,
             decision: qualityDecision.decision,
