@@ -154,6 +154,24 @@ void test('deterministic contact candidates retain exact source coordinates', ()
   assert.equal(url?.blockIndex, 0);
 });
 
+void test('employment date ranges are never promoted to phone candidates', () => {
+  const fragments: ResumeSourceFragment[] = [
+    {
+      pageNumber: 1,
+      blockIndex: 4,
+      segmentIndex: 0,
+      text: 'Associate Full-Stack Developer 2025 - 2026',
+      sourceRange: { start: 200, end: 242 },
+    },
+  ];
+
+  const phones = detectDeterministicCandidates(fragments).filter(
+    (candidate) => candidate.kind === 'PHONE',
+  );
+
+  assert.deepEqual(phones, []);
+});
+
 function fixtureDocument(
   pages: ResumePreprocessingDocumentInput['pages'],
 ): ResumePreprocessingDocumentInput {
