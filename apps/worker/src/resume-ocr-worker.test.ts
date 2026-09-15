@@ -56,7 +56,9 @@ void test('OCR refuses a mismatched source extraction identity before reading pr
 });
 
 void test('OCR refuses a source extraction that was not routed to OCR_REQUIRED', async () => {
-  const fixture = createFixture('OCR_REQUIRED', { sourceQualityDecision: 'NATIVE_TEXT_SUFFICIENT' });
+  const fixture = createFixture('OCR_REQUIRED', {
+    sourceQualityDecision: 'NATIVE_TEXT_SUFFICIENT',
+  });
 
   await assert.rejects(
     () => processResumeOcrJob(job(), fixture.dependencies(engineWithText(PRIVATE_TEXT))),
@@ -141,11 +143,7 @@ void test('successful OCR events are metadata-only while private text remains in
   assert.equal(readDocumentText(fixture.ocrExtraction.documentJson), PRIVATE_TEXT);
 });
 
-type ProcessingState =
-  | 'OCR_REQUIRED'
-  | 'FAILED_RETRYABLE'
-  | 'FAILED_TERMINAL'
-  | 'PARSING';
+type ProcessingState = 'OCR_REQUIRED' | 'FAILED_RETRYABLE' | 'FAILED_TERMINAL' | 'PARSING';
 type ExtractionStatus = 'STARTED' | 'COMPLETED' | 'FAILED';
 
 interface MutableVersionState {
