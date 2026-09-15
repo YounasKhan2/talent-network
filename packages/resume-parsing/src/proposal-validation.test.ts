@@ -72,10 +72,7 @@ void test('confidence summary cannot disagree with the actual parsed claims', ()
   );
 });
 
-function parsedResumeWithSkill(input: {
-  confidence: number;
-  warnings: string[];
-}): ParsedResume {
+function parsedResumeWithSkill(input: { confidence: number; warnings: string[] }): ParsedResume {
   return {
     schemaVersion: PARSED_RESUME_SCHEMA_VERSION,
     resumeVersionId,

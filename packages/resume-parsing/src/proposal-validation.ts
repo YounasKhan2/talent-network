@@ -4,10 +4,7 @@ import type {
   ParsedResume,
   ParsedResumeConfidenceSummary,
 } from './contracts.js';
-import type {
-  PreprocessedResumeDocument,
-  ResumeSourceFragment,
-} from './preprocessing.js';
+import type { PreprocessedResumeDocument, ResumeSourceFragment } from './preprocessing.js';
 import { RESUME_PARSER_POLICY_VERSION } from './versions.js';
 
 export const RESUME_CONFIDENCE_POLICY = {
@@ -62,10 +59,7 @@ export function validateResumeProposal(
       fail(`${path} must contain at least one source evidence reference.`);
     }
 
-    if (
-      classifyResumeClaimConfidence(claim.confidence) === 'LOW' &&
-      claim.warnings.length === 0
-    ) {
+    if (classifyResumeClaimConfidence(claim.confidence) === 'LOW' && claim.warnings.length === 0) {
       fail(`${path} is low confidence and must surface a review warning.`);
     }
 
@@ -107,7 +101,8 @@ function validateEvidence(
 
   const matchingFragments = collectSourceFragments(document).filter((fragment) => {
     if (fragment.pageNumber !== evidence.pageNumber) return false;
-    if (evidence.blockIndex !== undefined && fragment.blockIndex !== evidence.blockIndex) return false;
+    if (evidence.blockIndex !== undefined && fragment.blockIndex !== evidence.blockIndex)
+      return false;
     return (
       evidence.sourceRange.start >= fragment.sourceRange.start &&
       evidence.sourceRange.end <= fragment.sourceRange.end
