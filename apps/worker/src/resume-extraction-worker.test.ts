@@ -135,11 +135,7 @@ void test('successful events contain metadata only and never raw resume text', a
 });
 
 type ProcessingState =
-  | 'EXTRACTING'
-  | 'FAILED_RETRYABLE'
-  | 'FAILED_TERMINAL'
-  | 'OCR_REQUIRED'
-  | 'PARSING';
+  'EXTRACTING' | 'FAILED_RETRYABLE' | 'FAILED_TERMINAL' | 'OCR_REQUIRED' | 'PARSING';
 
 type ExtractionStatus = 'STARTED' | 'COMPLETED' | 'FAILED';
 
@@ -169,10 +165,7 @@ interface RecordedOutboxEvent {
   payload?: unknown;
 }
 
-function createFixture(
-  initialState: ProcessingState,
-  options: { storageFailures?: number } = {},
-) {
+function createFixture(initialState: ProcessingState, options: { storageFailures?: number } = {}) {
   const state: MutableVersionState = {
     processingState: initialState,
     failureCode: null,
