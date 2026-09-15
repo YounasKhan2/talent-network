@@ -91,7 +91,7 @@ export class DeterministicResumeParser implements ResumeParser {
 
   constructor(private readonly outputFactory: (input: ResumeParseInput) => unknown) {}
 
-  async parse(input: ResumeParseInput): Promise<ParsedResumeDraft> {
+  parse(input: ResumeParseInput): Promise<ParsedResumeDraft> {
     const output = attachTrustedExecutionMetadata(this.outputFactory(input), {
       resumeVersionId: input.resumeVersionId,
       sourceExtractionId: input.sourceExtractionId,
@@ -99,12 +99,12 @@ export class DeterministicResumeParser implements ResumeParser {
       parserVersion: this.version,
     });
 
-    return {
+    return Promise.resolve({
       parsedResume: validateParsedResume(output, {
         resumeVersionId: input.resumeVersionId,
         sourceExtractionId: input.sourceExtractionId,
       }),
-    };
+    });
   }
 }
 
