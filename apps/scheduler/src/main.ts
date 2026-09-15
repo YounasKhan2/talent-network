@@ -2,13 +2,16 @@ import { parseSchedulerEnv } from '@talent-network/config';
 import { createDatabaseClient } from '@talent-network/database';
 import {
   RESUME_EXTRACTION_QUEUE,
+  RESUME_OCR_QUEUE,
   type ResumeExtractionJobData,
+  type ResumeOcrJobData,
 } from '@talent-network/resume-extraction';
 import { createLogger } from '@talent-network/observability';
 import { RESUME_SECURITY_QUEUE, type ResumeSecurityJobData } from '@talent-network/resume-security';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { dispatchResumeExtractionEvents } from './resume-extraction-outbox-dispatcher.js';
+import { dispatchResumeOcrEvents } from './resume-ocr-outbox-dispatcher.js';
 import { dispatchResumeUploadEvents } from './resume-outbox-dispatcher.js';
 
 const DISPATCH_INTERVAL_MS = 1_000;
@@ -28,6 +31,9 @@ async function main(): Promise<void> {
   const resumeExtractionQueue = new Queue<ResumeExtractionJobData>(RESUME_EXTRACTION_QUEUE, {
     connection: redis,
   });
+  const resumeOcrQueue = new Queue<ResumeOcrJobData>(RESUME_OCR_QUEUE, {
+    connection: redis,
+  });
 
   await redis.ping();
 
@@ -36,15 +42,19 @@ async function main(): Promise<void> {
     if (dispatchInFlight) return;
     dispatchInFlight = true;
     try {
-      const [securityPublished, extractionPublished] = await Promise.all([
+      const [securityPublished, extractionPublished, ocrPublished] = await Promise.all([
         dispatchResumeUploadEvents(database, resumeSecurityQueue),
         dispatchResumeExtractionEvents(database, resumeExtractionQueue),
+        dispatchResumeOcrEvents(database, resumeOcrQueue),
       ]);
       if (securityPublished > 0) {
         logger.info({ published: securityPublished }, 'Resume upload events dispatched');
       }
       if (extractionPublished > 0) {
         logger.info({ published: extractionPublished }, 'Resume extraction events dispatched');
+      }
+      if (ocrPublished > 0) {
+        logger.info({ published: ocrPublished }, 'Resume OCR events dispatched');
       }
     } catch (error: unknown) {
       logger.error({ err: error }, 'Resume outbox dispatch failed');
@@ -56,7 +66,7 @@ async function main(): Promise<void> {
   await dispatch();
   const timer = setInterval(() => void dispatch(), DISPATCH_INTERVAL_MS);
   logger.info(
-    { queues: [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE] },
+    { queues: [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE, RESUME_OCR_QUEUE] },
     'Scheduler runtime ready',
   );
 
@@ -66,6 +76,7 @@ async function main(): Promise<void> {
     while (dispatchInFlight) await new Promise((resolve) => setTimeout(resolve, 25));
     await resumeSecurityQueue.close();
     await resumeExtractionQueue.close();
+    await resumeOcrQueue.close();
     await database.$disconnect();
     await redis.quit();
     process.exit(0);
