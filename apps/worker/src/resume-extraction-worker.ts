@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto';
 import { GetObjectCommand, type S3Client } from '@aws-sdk/client-s3';
-import {
-  DATABASE_JSON_DB_NULL,
-  type DatabaseClient,
-  type PrismaInputJsonValue,
-} from '@talent-network/database';
+import { DATABASE_JSON_DB_NULL, type DatabaseClient } from '@talent-network/database';
 import {
   MammothDocxResumeExtractor,
   PdfJsResumeExtractor,
@@ -194,7 +190,7 @@ export async function processResumeExtractionJob(
             reasons: qualityDecision.reasons,
             durationMs: result.durationMs,
           },
-          documentJson: result.document as unknown as PrismaInputJsonValue,
+          documentJson: result.document,
           textChecksumSha256: checksum,
           failureCode: null,
           completedAt: new Date(),
@@ -287,7 +283,7 @@ async function markExtractionFailure(
   database: DatabaseClient,
   version: { id: string; resumeId: string; processingPipelineVersion: string },
   failureCode: string,
-  failureMetadata: PrismaInputJsonValue,
+  failureMetadata: Parameters<DatabaseClient['resumeVersion']['updateMany']>[0]['data']['failureMetadata'],
   finalAttempt: boolean,
 ): Promise<void> {
   if (!finalAttempt) {
