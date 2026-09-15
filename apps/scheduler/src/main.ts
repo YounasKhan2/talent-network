@@ -1,9 +1,14 @@
 import { parseSchedulerEnv } from '@talent-network/config';
 import { createDatabaseClient } from '@talent-network/database';
+import {
+  RESUME_EXTRACTION_QUEUE,
+  type ResumeExtractionJobData,
+} from '@talent-network/resume-extraction';
 import { createLogger } from '@talent-network/observability';
 import { RESUME_SECURITY_QUEUE, type ResumeSecurityJobData } from '@talent-network/resume-security';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
+import { dispatchResumeExtractionEvents } from './resume-extraction-outbox-dispatcher.js';
 import { dispatchResumeUploadEvents } from './resume-outbox-dispatcher.js';
 
 const DISPATCH_INTERVAL_MS = 1_000;
@@ -20,6 +25,9 @@ async function main(): Promise<void> {
   const resumeSecurityQueue = new Queue<ResumeSecurityJobData>(RESUME_SECURITY_QUEUE, {
     connection: redis,
   });
+  const resumeExtractionQueue = new Queue<ResumeExtractionJobData>(RESUME_EXTRACTION_QUEUE, {
+    connection: redis,
+  });
 
   await redis.ping();
 
@@ -28,8 +36,16 @@ async function main(): Promise<void> {
     if (dispatchInFlight) return;
     dispatchInFlight = true;
     try {
-      const published = await dispatchResumeUploadEvents(database, resumeSecurityQueue);
-      if (published > 0) logger.info({ published }, 'Resume upload events dispatched');
+      const [securityPublished, extractionPublished] = await Promise.all([
+        dispatchResumeUploadEvents(database, resumeSecurityQueue),
+        dispatchResumeExtractionEvents(database, resumeExtractionQueue),
+      ]);
+      if (securityPublished > 0) {
+        logger.info({ published: securityPublished }, 'Resume upload events dispatched');
+      }
+      if (extractionPublished > 0) {
+        logger.info({ published: extractionPublished }, 'Resume extraction events dispatched');
+      }
     } catch (error: unknown) {
       logger.error({ err: error }, 'Resume outbox dispatch failed');
     } finally {
@@ -39,13 +55,17 @@ async function main(): Promise<void> {
 
   await dispatch();
   const timer = setInterval(() => void dispatch(), DISPATCH_INTERVAL_MS);
-  logger.info({ queue: RESUME_SECURITY_QUEUE }, 'Scheduler runtime ready');
+  logger.info(
+    { queues: [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE] },
+    'Scheduler runtime ready',
+  );
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Scheduler shutting down');
     clearInterval(timer);
     while (dispatchInFlight) await new Promise((resolve) => setTimeout(resolve, 25));
     await resumeSecurityQueue.close();
+    await resumeExtractionQueue.close();
     await database.$disconnect();
     await redis.quit();
     process.exit(0);
