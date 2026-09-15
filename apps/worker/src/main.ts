@@ -188,7 +188,7 @@ async function main(): Promise<void> {
     );
   });
 
-  const queues = [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE];
+  const queues: string[] = [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE];
   if (resumeOcrWorker) queues.push(RESUME_OCR_QUEUE);
   logger.info(
     {
