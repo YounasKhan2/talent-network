@@ -30,7 +30,7 @@ export class HttpResumeOcrEngine implements ResumeOcrEngine {
   readonly version = '1';
 
   private readonly endpoint: string;
-  private readonly bearerToken?: string;
+  private readonly bearerToken: string | undefined;
   private readonly timeoutMs: number;
   private readonly maximumResponseBytes: number;
   private readonly fetchImpl: typeof fetch;
