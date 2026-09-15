@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D CLOSED / VERIFIED — 2026-09-15. Phase 3E structured parsing + evidence mapping is now CURRENT.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D CLOSED / VERIFIED — 2026-09-15. Phase 3E CLOSED / VERIFIED — 2026-09-16. Phase 3F candidate review workspace is now CURRENT.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -129,39 +129,55 @@ Verified Phase 3D baseline:
 
 Detailed closure record: [`phase-3d-extraction-ocr.md`](./phase-3d-extraction-ocr.md). Runtime procedure: [`phase-3d-runtime-acceptance.md`](./phase-3d-runtime-acceptance.md).
 
-### Phase 3E — Structured parsing + evidence mapping ← CURRENT
+### Phase 3E — Structured parsing + evidence mapping ✅ VERIFIED
 
-Phase 3E consumes only verified Phase 3D extraction output for the same candidate-owned `ResumeVersion` and converts it into a schema-validated, evidence-linked proposal.
+Phase 3E is closed. It consumes only verified Phase 3D extraction output for the same candidate-owned `ResumeVersion` and converts it into a schema-validated, evidence-linked proposal.
 
-The parser proposal is private Candidate data and must never mutate the Career Passport directly.
+The parser proposal is private Candidate data and never mutates the Career Passport directly.
 
-Current implementation slices:
+Verified implementation slices:
 
 ```text
-3E-A Contracts + persistence                  ← CURRENT
-3E-B Deterministic preprocessing + sections   pending
-3E-C Schema parser + AI Gateway seam          pending
-3E-D Evidence/confidence validation            pending
-3E-E Runtime closure                           pending
+3E-A Contracts + persistence                  ✅ VERIFIED
+3E-B Deterministic preprocessing + sections   ✅ VERIFIED
+3E-C Schema parser + AI Gateway seam          ✅ VERIFIED
+3E-D Evidence/confidence validation            ✅ VERIFIED
+3E-E Runtime closure                           ✅ VERIFIED
 ```
 
-Required deliverables:
+Delivered and verified:
 
-- explicit `ParsedResume` / parsed-claim schema
-- source evidence references back to Phase 3D document ranges/pages
-- deterministic preprocessing and section detection
-- provider-neutral parser adapter
+- explicit `ParsedResume` / `ParsedClaim` schema
+- candidate-owned `ResumeParseResult` persistence with stable execution identity
+- deterministic source-preserving preprocessing and section detection
+- bounded chunking and deterministic contact/link candidate detection
+- provider-neutral parser boundary and AI Gateway seam
 - strict structured-output validation
-- AI Gateway integration only where semantic interpretation is useful
-- parser/prompt/model/schema version metadata
-- evidence/confidence/warning semantics
-- idempotent candidate-owned `ResumeParseResult` persistence
-- privacy-safe queue/audit/outbox behavior
-- `PARSING → READY_FOR_REVIEW` runtime closure
+- source evidence references back to Phase 3D document ranges/pages
+- evidence/confidence/warning validation before readiness
+- metadata-only scheduler/outbox/worker runtime path on `resume.parse`
+- deterministic no-AI runtime parser for source-provable contact/link claims
+- duplicate-delivery idempotency
+- retry/terminal failure semantics
+- candidate-private parse persistence
+- exact `PARSING → READY_FOR_REVIEW` transition
+- zero Career Passport mutation during parsing
 
-The Phase 3E contract and closure matrix are maintained in [`phase-3e-structured-parsing-evidence.md`](./phase-3e-structured-parsing-evidence.md).
+Real runtime acceptance on 2026-09-16 verified:
 
-### Phase 3F — Candidate review workspace
+```text
+PARSING
+→ resume.parse
+→ READY_FOR_REVIEW
+```
+
+The acceptance fixture emitted two equivalent source completion events and proved they converged on one `ResumeParseResult`. It also proved private parsed values were absent from audit/outbox metadata and no `CandidateProfileVersion` was created by the parser.
+
+A live external AI provider is intentionally not required for this closure. The runtime parser currently uses deterministic source-grounded extraction where facts can be proven; semantic model-backed parsing remains pluggable through the AI Gateway seam and must pass its own provider capability gate before production use.
+
+Detailed contract and closure matrix: [`phase-3e-structured-parsing-evidence.md`](./phase-3e-structured-parsing-evidence.md).
+
+### Phase 3F — Candidate review workspace ← CURRENT
 
 Deliverables:
 
@@ -174,8 +190,9 @@ Deliverables:
 - uncertain/sensitive-value confirmation
 - candidate-approved creation of a new `RESUME_IMPORT` Career Passport version
 - traceability from approved profile version back to ResumeVersion + parse result
+- browser acceptance for upload → processing → review → approval
 
-**UI boundary:** the Candidate Workspace intentionally does not yet expose the Resume review workflow. That product surface belongs to Phase 3F after Phase 3E parsing/evidence work is verified.
+**Authority boundary:** `ResumeParseResult` remains a parser proposal. Only explicit candidate review in Phase 3F may create authoritative Career Passport state.
 
 ## State-machine rules
 
@@ -285,37 +302,35 @@ Phase 3 is not closed until all of the following are proven:
 3B Private direct object storage             ✅ CLOSED / VERIFIED
 3C Validation + malware scanning             ✅ CLOSED / VERIFIED
 3D Extraction + OCR fallback                 ✅ CLOSED / VERIFIED
-3E Structured parsing + evidence mapping     ← CURRENT
-  3E-A Contracts + persistence               🟡 CURRENT
-  3E-B Deterministic preprocessing           pending
-  3E-C Parser + AI Gateway seam              pending
-  3E-D Evidence/confidence validation        pending
-  3E-E Runtime closure                       pending
-3F Candidate review + Passport approval      pending
+3E Structured parsing + evidence mapping     ✅ CLOSED / VERIFIED
+  3E-A Contracts + persistence               ✅ VERIFIED
+  3E-B Deterministic preprocessing           ✅ VERIFIED
+  3E-C Parser + AI Gateway seam              ✅ VERIFIED
+  3E-D Evidence/confidence validation        ✅ VERIFIED
+  3E-E Runtime closure                       ✅ VERIFIED
+3F Candidate review + Passport approval      🟡 CURRENT
 ```
 
-Current Phase 3E boundary:
+Current Phase 3F boundary:
 
 ```text
-PARSING
-   │
-   ▼
-completed candidate-private ResumeExtraction
-   │
-   ▼
-deterministic preprocessing / sections
-   │
-   ▼
-schema-constrained parser
-   │
-   ▼
-evidence + confidence validation
-   │
-   ▼
-ResumeParseResult proposal
-   │
-   ▼
 READY_FOR_REVIEW
+   │
+   ▼
+candidate-private ResumeParseResult
+   │
+   ▼
+review current Passport vs proposal
+   │
+   ├── Ignore
+   ├── Edit
+   └── Accept
+          │
+          ▼
+new RESUME_IMPORT CandidateProfileVersion
+          │
+          ▼
+APPROVED
 ```
 
-Phase 3E must preserve the same Candidate ownership and privacy firewall. Parsed resume data is sensitive derived candidate data and must not be exposed to Organization membership or ordinary logs.
+Phase 3F must preserve the same Candidate ownership and privacy firewall. Parsed resume data is sensitive derived candidate data and must not be exposed to Organization membership or ordinary logs.
