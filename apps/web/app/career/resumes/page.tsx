@@ -19,13 +19,7 @@ import styles from './resume-workspace.module.css';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type UploadState =
-  | 'idle'
-  | 'authorizing'
-  | 'uploading'
-  | 'finalizing'
-  | 'processing'
-  | 'complete'
-  | 'error';
+  'idle' | 'authorizing' | 'uploading' | 'finalizing' | 'processing' | 'complete' | 'error';
 
 const ACTIVE_PROCESSING_STATES = new Set([
   'UPLOADED',
@@ -100,7 +94,11 @@ export default function CareerResumesPage() {
   const selectedProcessingState = selectedResume?.currentVersion?.processingState ?? null;
 
   useEffect(() => {
-    if (!selectedId || !selectedProcessingState || !ACTIVE_PROCESSING_STATES.has(selectedProcessingState)) {
+    if (
+      !selectedId ||
+      !selectedProcessingState ||
+      !ACTIVE_PROCESSING_STATES.has(selectedProcessingState)
+    ) {
       return;
     }
 
@@ -130,7 +128,11 @@ export default function CareerResumesPage() {
     setUploadError(null);
     setUploadFilename(file.name);
 
-    if (!ALLOWED_RESUME_UPLOAD_TYPES.includes(file.type as (typeof ALLOWED_RESUME_UPLOAD_TYPES)[number])) {
+    if (
+      !ALLOWED_RESUME_UPLOAD_TYPES.includes(
+        file.type as (typeof ALLOWED_RESUME_UPLOAD_TYPES)[number],
+      )
+    ) {
       setUploadState('error');
       setUploadError('Upload a PDF or DOCX resume.');
       return;
@@ -225,7 +227,10 @@ export default function CareerResumesPage() {
       {resumes.length === 0 ? (
         <section className={styles.emptyState}>
           <strong>No resumes yet</strong>
-          <p>Upload your first resume above. It will appear here as soon as the private upload completes.</p>
+          <p>
+            Upload your first resume above. It will appear here as soon as the private upload
+            completes.
+          </p>
         </section>
       ) : (
         <div className={styles.workspaceGrid}>
@@ -268,11 +273,16 @@ export default function CareerResumesPage() {
 }
 
 function UploadProgress({ state, error }: { state: UploadState; error: string | null }) {
-  if (state === 'idle') return <small className={styles.uploadHint}>Nothing changes your Passport on upload.</small>;
-  if (state === 'error') return <small className={styles.uploadError}>{error ?? 'Upload failed.'}</small>;
-  if (state === 'complete') return <small className={styles.uploadSuccess}>Ready for candidate review.</small>;
+  if (state === 'idle')
+    return <small className={styles.uploadHint}>Nothing changes your Passport on upload.</small>;
+  if (state === 'error')
+    return <small className={styles.uploadError}>{error ?? 'Upload failed.'}</small>;
+  if (state === 'complete')
+    return <small className={styles.uploadSuccess}>Ready for candidate review.</small>;
   if (state === 'processing') {
-    return <small className={styles.uploadProgress}>Uploaded. Secure processing is in progress…</small>;
+    return (
+      <small className={styles.uploadProgress}>Uploaded. Secure processing is in progress…</small>
+    );
   }
   return <small className={styles.uploadProgress}>{uploadStateLabel(state)}</small>;
 }
@@ -413,7 +423,10 @@ function ProcessingTimeline({ state }: { state: string }) {
   return (
     <section className={styles.processingTimeline} aria-label="Resume processing progress">
       {stages.map((stage) => (
-        <div className={stage.complete ? styles.processingStepComplete : styles.processingStep} key={stage.label}>
+        <div
+          className={stage.complete ? styles.processingStepComplete : styles.processingStep}
+          key={stage.label}
+        >
           <span aria-hidden="true" />
           <small>{stage.label}</small>
         </div>
