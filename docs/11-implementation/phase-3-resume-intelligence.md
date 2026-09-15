@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D extraction + OCR fallback is now current.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D extraction + OCR fallback is current; 3D-A contracts/persistence, 3D-B native extraction, and 3D-C quality routing are verified. 3D-D OCR fallback is now the active implementation boundary.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -134,6 +134,52 @@ Deliverables:
 - idempotent retry/recovery semantics consistent with Phase 3C
 
 OCR is a fallback, not the default path. Clean files enter this slice only from the verified `EXTRACTING` boundary.
+
+#### 3D-A — Contracts + persistence ✅ VERIFIED
+
+The normalized document/source-range contracts, derived `ResumeExtraction` persistence, stable execution identity, candidate ownership boundary, source-state constraints, and cascade behavior are covered by the Phase 3 database integration suite.
+
+#### 3D-B — Native PDF/DOCX extraction ✅ VERIFIED — 2026-09-15
+
+Verified production adapters execute against real generated binary fixtures:
+
+- PDF.js extracts native PDF text with truthful 1-based page identity and valid source ranges.
+- Mammoth extracts DOCX text while preserving the truthful absence of pagination with `pageNumber: null`.
+- sufficient native fixture text satisfies the extraction quality policy.
+- the PDF.js Node adapter passes a plain `Uint8Array`, closing the runtime `Buffer` incompatibility found by the real fixture test.
+- worker processor/state/idempotency/privacy tests and scheduler dispatch tests are green.
+
+Observed automated evidence from the root quality gate on 2026-09-15:
+
+```text
+@talent-network/resume-extraction   14/14 passed
+@talent-network/worker              12/12 passed
+@talent-network/scheduler            6/6 passed
+Phase 3 integration                 13/13 passed
+```
+
+PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synthetic PDF fixture. This remains a runtime-hardening concern for broader PDF compatibility, not a failure of the verified native extraction boundary.
+
+#### 3D-C — Deterministic quality routing ✅ VERIFIED — 2026-09-15
+
+The extraction package now verifies inclusive quality-policy boundaries and routes text-poor, below-threshold, low-page-coverage, zero-page, replacement-character-heavy, and control-character-heavy native results to OCR. Worker tests verify the corresponding state transitions and privacy behavior:
+
+```text
+sufficient native text → PARSING
+insufficient/scanned-like native text → OCR_REQUIRED
+```
+
+The worker persists the derived document before routing, emits metadata-only audit/outbox events, keeps raw resume text out of those events, remains idempotent on duplicate delivery, and supports bounded retry for private-object read failures.
+
+The complete root `pnpm check` passed after these routing tests, including formatting, linting, typechecking, package tests, Phase 1/2/2A/2B/3 database integration suites, and the production build.
+
+#### 3D-D — OCR fallback 🟡 CURRENT
+
+Next boundary: implement the provider-neutral OCR engine contract and asynchronous OCR worker path without weakening candidate ownership, source mapping, retry/idempotency, or raw-text privacy guarantees.
+
+#### 3D-E — Runtime closure ⬜ REMAINING
+
+Phase 3D remains open until real local-service acceptance proves both native and OCR branches through the complete asynchronous pipeline and the Phase 3D quality gate is closed.
 
 ### Phase 3E — Structured parsing + evidence mapping
 
@@ -271,6 +317,11 @@ Phase 3 is not closed until all of the following are proven:
 3B Private direct object storage             ✅ CLOSED / VERIFIED
 3C Validation + malware scanning             ✅ CLOSED / VERIFIED
 3D Extraction + OCR fallback                 ← CURRENT
+  3D-A Contracts + persistence               ✅ VERIFIED
+  3D-B Native PDF/DOCX extraction            ✅ VERIFIED
+  3D-C Deterministic quality routing         ✅ VERIFIED
+  3D-D OCR fallback                          🟡 CURRENT
+  3D-E Runtime closure                       pending
 3E Structured parsing + evidence mapping     pending
 3F Candidate review + Passport approval      pending
 ```
@@ -280,14 +331,16 @@ Current Phase 3D boundary:
 ```text
 EXTRACTING
    │
-   ├── native PDF extraction
-   ├── DOCX extraction
-   ├── normalized ResumeDocument + source mapping
-   ├── quality assessment
-   │      ├── sufficient → PARSING
-   │      └── insufficient/scanned → OCR_REQUIRED
+   ├── native PDF extraction ── sufficient ──→ PARSING
+   ├── DOCX extraction ───────── sufficient ──→ PARSING
    │
-   └── OCR fallback → PARSING
+   └── insufficient/scanned-like
+              ↓
+         OCR_REQUIRED
+              ↓
+        OCR fallback ← CURRENT
+              ↓
+           PARSING
 ```
 
 Phase 3D must preserve the same Candidate ownership and privacy firewall. Extracted text is sensitive derived candidate data and must not be exposed to Organization membership or ordinary logs.
