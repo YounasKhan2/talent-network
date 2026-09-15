@@ -2,7 +2,7 @@
 
 ## Status
 
-**3D-A CONTRACTS + PERSISTENCE VERIFIED. 3D-B NATIVE PDF/DOCX EXTRACTION VERIFIED. 3D-C QUALITY ROUTING VERIFIED. 3D-D OCR FALLBACK CURRENT — 2026-09-15.**
+**3D-A CONTRACTS + PERSISTENCE VERIFIED. 3D-B NATIVE PDF/DOCX EXTRACTION VERIFIED. 3D-C QUALITY ROUTING VERIFIED. 3D-D OCR FALLBACK IMPLEMENTED / RUNTIME VERIFICATION CURRENT — 2026-09-15.**
 
 Phase 3D begins only after Phase 3C has advanced a candidate-owned ResumeVersion to `EXTRACTING`. Its responsibility is to produce a rebuildable, source-aware document representation for Phase 3E. It does not infer Career Passport fields and never mutates the Passport.
 
@@ -128,7 +128,7 @@ resume.ocr
 
 `candidate.resume.security_passed` is the durable handoff from 3C to extraction. Native extraction completion emits metadata-only events such as `candidate.resume.extraction_completed` or `candidate.resume.ocr_required`; payloads must not contain raw text.
 
-Stable job identity must prevent duplicate processing from creating duplicate derived records.
+The OCR scheduler dispatcher converts `candidate.resume.ocr_required` into a stable `resume.ocr` job identity carrying `resumeVersionId + processingPipelineVersion + source extraction identity`. Duplicate delivery must not create duplicate derived records or duplicate completion events.
 
 ## Extractor interfaces
 
@@ -151,22 +151,76 @@ ResumeOcrEngine
 
 Do not hide OCR inside the PDF extractor; the `OCR_REQUIRED` state must remain observable.
 
+## Local OCR implementation
+
+The development implementation is a local HTTP sidecar under `services/ocr`:
+
+```text
+ResumeOcrEngine
+   ↓
+HttpResumeOcrEngine
+   ↓
+POST /v1/recognize
+   ↓
+FastAPI sidecar
+   ├── PyMuPDF page rendering
+   ├── Tesseract OCR
+   └── page-level JSON response
+```
+
+The sidecar is intentionally provider-neutral from the worker's perspective. A managed provider can replace the local service later without changing the worker state machine or persistence contract.
+
+Local privacy properties:
+
+- resume bytes stay on the developer machine / local Docker network
+- the OCR service never persists source files or recognized text
+- Uvicorn access logging is disabled
+- request bodies and OCR text must never enter logs
+- the worker persists OCR output only in candidate-private derived storage
+
+Runtime configuration:
+
+```env
+OCR_HTTP_ENDPOINT=http://127.0.0.1:4010/v1/recognize
+OCR_HTTP_TOKEN=talent-local-ocr-token-change-me
+OCR_HTTP_TIMEOUT_MS=60000
+```
+
+Removing `OCR_HTTP_ENDPOINT` disables `resume.ocr` consumption without changing native extraction.
+
 ## Resource limits
 
-Extraction must have explicit bounds for maximum source bytes inherited from upload policy, maximum pages, maximum normalized characters, execution timeout, OCR page count, OCR concurrency, and derived artifact size. Limit breaches must use explicit failure codes and must never silently truncate evidence that Phase 3E could mistake for a complete resume.
+Extraction has explicit bounds for maximum source bytes, maximum pages, maximum normalized characters, execution timeout, OCR page count, OCR concurrency, and derived artifact size. Limit breaches must use explicit failure codes and must never silently truncate evidence that Phase 3E could mistake for a complete resume.
+
+Local OCR defaults:
+
+```text
+source bytes                 10 MiB
+PDF pages                    100
+normalized OCR characters    500,000
+render DPI                   200
+Tesseract timeout/page       30 seconds
+BullMQ OCR concurrency       1
+```
+
+Transient OCR HTTP failures (`network`, `timeout`, `429`, `5xx`) are retryable through the existing bounded BullMQ attempts. Recognition/contract errors and insufficient OCR quality are terminal rather than looping back into OCR indefinitely.
 
 ## Verified evidence — 2026-09-15
 
-The root `pnpm check` passed after the native extraction and quality-routing work. Relevant automated evidence:
+The root `pnpm check` passed after the native extraction, quality-routing, OCR processor, OCR dispatcher, HTTP adapter, and worker runtime wiring slices. Relevant automated evidence before local sidecar runtime acceptance includes:
 
-```text
-@talent-network/resume-extraction   14/14 passed
-@talent-network/worker              12/12 passed
-@talent-network/scheduler            6/6 passed
-Phase 3 integration                 13/13 passed
-```
+- native PDF/DOCX extraction and deterministic quality routing
+- OCR source-identity validation
+- OCR persistence as a separate derived `ResumeExtraction`
+- `OCR_REQUIRED → PARSING` processor behavior with injected OCR results
+- duplicate-delivery idempotency
+- metadata-only audit/outbox events
+- private-object retry recovery
+- transient OCR-service retry recovery
+- HTTP adapter timeout/status/response-boundary behavior
+- scheduler dispatch with stable OCR job identity
 
-The real native fixture tests execute PDF.js and Mammoth against generated binary PDF/DOCX files. PDF page numbers are truthful, DOCX pagination is not fabricated, source ranges are validated, and sufficient text passes the deterministic quality policy. The worker tests verify `PARSING`/`OCR_REQUIRED` routing, retry behavior, duplicate-delivery idempotency, and metadata-only audit/outbox events.
+The real native fixture tests execute PDF.js and Mammoth against generated binary PDF/DOCX files. PDF page numbers are truthful, DOCX pagination is not fabricated, source ranges are validated, and sufficient text passes the deterministic quality policy.
 
 PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synthetic PDF fixture. Broader font compatibility remains a runtime-hardening concern for 3D-E rather than a blocker for 3D-B.
 
@@ -199,16 +253,32 @@ PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synth
 - metadata-only audit/outbox events
 - duplicate-delivery idempotency and bounded storage-read retry coverage
 
-### 3D-D — OCR fallback ← CURRENT
+### 3D-D — OCR fallback 🟡 IMPLEMENTED / RUNTIME VERIFICATION CURRENT
 
-- OCR adapter boundary
-- local/provider implementation selected deliberately
-- bounded OCR worker path
-- OCR result normalization into the same ResumeDocument schema
-- `OCR_REQUIRED → PARSING`
-- retry/terminal behavior
+Implemented:
 
-### 3D-E — Runtime closure
+- provider-neutral `ResumeOcrEngine`
+- stable `resume.ocr` queue/job identity
+- scheduler outbox dispatcher
+- provider-neutral OCR worker processor
+- source extraction identity/eligibility validation
+- separate OCR `ResumeExtraction` persistence
+- metadata-only audit/outbox completion/failure events
+- bounded retry/terminal behavior
+- HTTP OCR adapter with response/time/size/page limits
+- optional worker runtime subscription
+- local FastAPI + PyMuPDF + Tesseract OCR sidecar
+- deterministic scanned-PDF smoke harness
+
+Still required before `VERIFIED`:
+
+- build/start the real OCR container
+- run the scanned-PDF smoke test against Tesseract
+- observe the real application queue/state path `OCR_REQUIRED → resume.ocr → PARSING`
+- confirm private OCR text is absent from logs/audit/outbox at runtime
+- rerun root `pnpm check` after any acceptance fixes
+
+### 3D-E — Runtime closure ← NEXT ACCEPTANCE BOUNDARY
 
 Verify at minimum:
 
@@ -220,6 +290,23 @@ Verify at minimum:
 6. no raw text appears in audit/outbox/logs
 7. retries are idempotent
 8. root `pnpm check` is green
+
+Local OCR smoke commands:
+
+```bash
+docker compose up -d --build ocr
+docker compose ps ocr
+docker compose exec -T ocr python smoke_test.py
+```
+
+To materialize the deterministic scanned fixture for application-level acceptance:
+
+```bash
+docker compose exec -T ocr python smoke_test.py --output /tmp/scanned-resume.pdf
+docker compose cp ocr:/tmp/scanned-resume.pdf packages/resume-extraction/test-fixtures/scanned-resume.pdf
+```
+
+See [`services/ocr/README.md`](../../services/ocr/README.md) for the local service contract and acceptance notes.
 
 ## Non-goals
 
