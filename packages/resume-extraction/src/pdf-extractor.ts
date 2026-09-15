@@ -54,7 +54,8 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
 
     assertSourceWithinExtractionLimits(input.bytes);
     const startedAt = performance.now();
-    const loadingTask = getDocument({ data: input.bytes.slice(), useWorkerFetch: false });
+    const data = Uint8Array.from(input.bytes);
+    const loadingTask = getDocument({ data, useWorkerFetch: false });
     const pdf = await loadingTask.promise;
 
     try {
