@@ -50,11 +50,9 @@ async def recognize(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid content-length header.") from None
 
-    payload = await request.body()
+    payload = await _read_bounded_body(request)
     if len(payload) == 0:
         raise HTTPException(status_code=400, detail="OCR source is empty.")
-    if len(payload) > MAX_SOURCE_BYTES:
-        raise HTTPException(status_code=413, detail="OCR source exceeds size limit.")
 
     async with ocr_semaphore:
         try:
@@ -65,6 +63,19 @@ async def recognize(
             raise HTTPException(status_code=502, detail="OCR engine failed.") from error
         except RuntimeError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+async def _read_bounded_body(request: Request) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        if not chunk:
+            continue
+        total += len(chunk)
+        if total > MAX_SOURCE_BYTES:
+            raise HTTPException(status_code=413, detail="OCR source exceeds size limit.")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _authorize(authorization: str | None) -> None:
