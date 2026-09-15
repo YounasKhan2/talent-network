@@ -23,7 +23,10 @@ function assertFixtureText(text: string): void {
   assert.match(text, /automated testing/i);
 }
 
-function assertValidBlocks(text: string, blocks: Array<{ text: string; sourceRange: { startOffset: number; endOffset: number } }>): void {
+function assertValidBlocks(
+  text: string,
+  blocks: Array<{ text: string; sourceRange: { startOffset: number; endOffset: number } }>,
+): void {
   for (const block of blocks) {
     const { startOffset, endOffset } = block.sourceRange;
     assert.ok(startOffset >= 0);
@@ -56,7 +59,10 @@ void test('real native PDF fixture extracts through PDF.js with truthful page se
     assertValidBlocks(page.text, page.blocks);
   });
 
-  assert.equal(decideResumeExtractionQuality(result.document.quality).decision, 'ACCEPT');
+  assert.equal(
+    decideResumeExtractionQuality(result.document.quality).decision,
+    'NATIVE_TEXT_SUFFICIENT',
+  );
 });
 
 void test('real DOCX fixture extracts through Mammoth without fabricated pagination', async () => {
@@ -79,5 +85,8 @@ void test('real DOCX fixture extracts through Mammoth without fabricated paginat
   assert.ok(result.document.quality.nonWhitespaceCharacterCount >= 120);
   assertValidBlocks(result.document.pages[0]?.text ?? '', result.document.pages[0]?.blocks ?? []);
 
-  assert.equal(decideResumeExtractionQuality(result.document.quality).decision, 'ACCEPT');
+  assert.equal(
+    decideResumeExtractionQuality(result.document.quality).decision,
+    'NATIVE_TEXT_SUFFICIENT',
+  );
 });
