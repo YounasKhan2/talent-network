@@ -19,3 +19,4 @@ uploads/
 .tmp/
 packages/resume-extraction/test-fixtures/synthetic-resume.pdf
 packages/resume-extraction/test-fixtures/synthetic-resume.docx
+packages/resume-extraction/test-fixtures/scanned-resume.pdf
