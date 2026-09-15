@@ -10,6 +10,11 @@ import {
 } from '@talent-network/resume-extraction';
 import { createLogger } from '@talent-network/observability';
 import {
+  LocalDeterministicResumeParser,
+  RESUME_PARSE_QUEUE,
+  type ResumeParseJobData,
+} from '@talent-network/resume-parsing';
+import {
   ClamAvScanner,
   RESUME_SECURITY_QUEUE,
   type ResumeSecurityJobData,
@@ -18,6 +23,7 @@ import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { processResumeExtractionJob } from './resume-extraction-worker.js';
 import { processResumeOcrJob } from './resume-ocr-worker.js';
+import { processResumeParseJob } from './resume-parse-worker.js';
 import { processResumeSecurityJob } from './resume-security-worker.js';
 
 async function main(): Promise<void> {
@@ -50,6 +56,7 @@ async function main(): Promise<void> {
         ...(env.OCR_HTTP_TOKEN ? { bearerToken: env.OCR_HTTP_TOKEN } : {}),
       })
     : null;
+  const resumeParser = new LocalDeterministicResumeParser();
 
   await redis.ping();
   const scannerVersion = await scanner.getVersion();
@@ -133,6 +140,30 @@ async function main(): Promise<void> {
       )
     : null;
 
+  const resumeParseWorker = new Worker<ResumeParseJobData>(
+    RESUME_PARSE_QUEUE,
+    async (job) => {
+      const maxAttempts = job.opts.attempts ?? 1;
+      const finalAttempt = job.attemptsMade + 1 >= maxAttempts;
+      await processResumeParseJob(
+        job.data,
+        {
+          database,
+          parser: resumeParser,
+        },
+        {
+          finalAttempt,
+          retryAttempt: job.attemptsMade > 0,
+        },
+      );
+    },
+    {
+      connection: redis,
+      concurrency: 2,
+      lockDuration: 60_000,
+    },
+  );
+
   resumeSecurityWorker.on('completed', (job) => {
     logger.info(
       { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
@@ -190,13 +221,36 @@ async function main(): Promise<void> {
     );
   });
 
-  const queues: string[] = [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE];
+  resumeParseWorker.on('completed', (job) => {
+    logger.info(
+      { jobId: job.id, resumeVersionId: job.data.resumeVersionId },
+      'Resume parse job completed',
+    );
+  });
+  resumeParseWorker.on('failed', (job, error) => {
+    logger.error(
+      {
+        jobId: job?.id,
+        resumeVersionId: job?.data.resumeVersionId,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err: error,
+      },
+      'Resume parse job failed',
+    );
+  });
+
+  const queues: string[] = [RESUME_SECURITY_QUEUE, RESUME_EXTRACTION_QUEUE, RESUME_PARSE_QUEUE];
   if (resumeOcrWorker) queues.push(RESUME_OCR_QUEUE);
   logger.info(
     {
       scanner: scannerVersion,
       queues,
       ocrEnabled: resumeOcrWorker !== null,
+      resumeParser: {
+        name: resumeParser.name,
+        version: resumeParser.version,
+      },
     },
     'Worker runtime ready',
   );
@@ -206,6 +260,7 @@ async function main(): Promise<void> {
     await resumeSecurityWorker.close();
     await resumeExtractionWorker.close();
     await resumeOcrWorker?.close();
+    await resumeParseWorker.close();
     await database.$disconnect();
     storage.destroy();
     await redis.quit();
