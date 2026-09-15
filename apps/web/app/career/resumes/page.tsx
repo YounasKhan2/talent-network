@@ -7,6 +7,7 @@ import {
   MAX_RESUME_UPLOAD_BYTES,
   authorizeCandidateResumeUpload,
   completeCandidateResumeUpload,
+  decideCandidateResumeReview,
   getCandidateResumeReview,
   listCandidateResumes,
   putCandidateResumeFile,
@@ -14,12 +15,14 @@ import {
   type CandidateResumeReviewResponse,
   type ParsedClaim,
   type ParsedResumeProposal,
+  type ResumeReviewDecisionRequest,
 } from '../../../lib/resume-review-api';
 import styles from './resume-workspace.module.css';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type UploadState =
   'idle' | 'authorizing' | 'uploading' | 'finalizing' | 'processing' | 'complete' | 'error';
+type DecisionState = 'idle' | 'submitting' | 'success' | 'error';
 
 const ACTIVE_PROCESSING_STATES = new Set([
   'UPLOADED',
@@ -168,6 +171,12 @@ export default function CareerResumesPage() {
     }
   }
 
+  async function handleReviewUpdated(nextReview: CandidateResumeReviewResponse) {
+    setReview(nextReview);
+    const rows = await listCandidateResumes();
+    setResumes(rows);
+  }
+
   const uploadBusy = ['authorizing', 'uploading', 'finalizing'].includes(uploadState);
 
   if (state === 'loading') return <WorkspaceState title="Loading your resumes…" />;
@@ -257,7 +266,7 @@ export default function CareerResumesPage() {
             {reviewLoading ? (
               <WorkspaceState title="Loading review proposal…" compact />
             ) : review ? (
-              <ReviewPanel review={review} />
+              <ReviewPanel review={review} onUpdated={handleReviewUpdated} />
             ) : (
               <WorkspaceState
                 title="Select a resume to review."
@@ -287,11 +296,47 @@ function UploadProgress({ state, error }: { state: UploadState; error: string | 
   return <small className={styles.uploadProgress}>{uploadStateLabel(state)}</small>;
 }
 
-function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
+function ReviewPanel({
+  review,
+  onUpdated,
+}: {
+  review: CandidateResumeReviewResponse;
+  onUpdated: (review: CandidateResumeReviewResponse) => Promise<void>;
+}) {
   const parsed = review.proposal?.parsedJson ?? null;
   const confidence = parsed?.confidenceSummary;
   const profile = review.passport.currentProfileVersion;
   const counts = useMemo(() => summarizeProposal(parsed), [parsed]);
+  const [editing, setEditing] = useState(false);
+  const [headline, setHeadline] = useState('');
+  const [summary, setSummary] = useState('');
+  const [decisionState, setDecisionState] = useState<DecisionState>('idle');
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEditing(false);
+    setDecisionState('idle');
+    setDecisionError(null);
+    setHeadline(claimValue(parsed?.headline) ?? profile?.headline ?? '');
+    setSummary(claimValue(parsed?.summary) ?? profile?.summary ?? '');
+  }, [review.resume.id, review.review.record?.decision, parsed, profile]);
+
+  const finalDecision = review.review.record?.decision ?? null;
+  const canDecide = review.review.available && finalDecision === null;
+
+  async function submitDecision(input: ResumeReviewDecisionRequest) {
+    setDecisionState('submitting');
+    setDecisionError(null);
+    try {
+      const nextReview = await decideCandidateResumeReview(review.resume.id, input);
+      await onUpdated(nextReview);
+      setEditing(false);
+      setDecisionState('success');
+    } catch (caught) {
+      setDecisionError(readError(caught));
+      setDecisionState('error');
+    }
+  }
 
   return (
     <>
@@ -316,12 +361,14 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
         <Metric label="Parser" value={review.proposal?.parserName ?? 'Pending'} />
       </section>
 
-      {!review.review.available ? (
+      {!review.review.available && !finalDecision ? (
         <section className={styles.notice}>
           <strong>Review is not available yet.</strong>
           <p>{readBlockingReason(review.review.blockingReason)}</p>
         </section>
       ) : null}
+
+      {finalDecision ? <ReviewDecisionNotice review={review} decision={finalDecision} /> : null}
 
       {parsed ? (
         <>
@@ -338,6 +385,10 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
               <ClaimCard label="Email" claim={parsed.identityCandidate?.email} sensitive />
               <ClaimCard label="Phone" claim={parsed.identityCandidate?.phone} sensitive />
             </div>
+            <p className={styles.identityNote}>
+              Contact claims are review evidence only. Accepting a resume does not silently change
+              your login email or account identity.
+            </p>
           </section>
 
           <section className={styles.section}>
@@ -346,7 +397,7 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
                 <span className={styles.kicker}>Proposal vs authority</span>
                 <h3>Career Passport comparison</h3>
               </div>
-              <small>Read-only in 3F-B</small>
+              <small>Candidate-controlled import</small>
             </div>
             <div className={styles.compareGrid}>
               <CompareCard
@@ -380,25 +431,106 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
             </div>
           </section>
 
+          {editing ? (
+            <section className={styles.editPanel}>
+              <div>
+                <span className={styles.kicker}>Edit before import</span>
+                <h3>Review Passport values</h3>
+                <p>
+                  These edits are stored with the review decision and become part of the new
+                  RESUME_IMPORT Passport version.
+                </p>
+              </div>
+              <label>
+                <span>Headline</span>
+                <input
+                  maxLength={180}
+                  onChange={(event) => setHeadline(event.currentTarget.value)}
+                  value={headline}
+                />
+              </label>
+              <label>
+                <span>Summary</span>
+                <textarea
+                  maxLength={4000}
+                  onChange={(event) => setSummary(event.currentTarget.value)}
+                  rows={6}
+                  value={summary}
+                />
+              </label>
+            </section>
+          ) : null}
+
           <section className={styles.reviewActions}>
             <div>
-              <strong>Candidate approval is required</strong>
+              <strong>{finalDecision ? 'Review completed' : 'Candidate approval is required'}</strong>
               <p>
-                Accept / Edit / Ignore remain disabled until their versioning and traceability
-                contract is implemented in 3F-C/3F-D.
+                {finalDecision
+                  ? readDecisionSummary(finalDecision)
+                  : 'Accept imports detected career data, Edit lets you adjust reviewable values first, and Ignore leaves your Career Passport unchanged.'}
               </p>
+              {decisionError ? <small className={styles.actionError}>{decisionError}</small> : null}
             </div>
-            <div className={styles.actionButtons}>
-              <button disabled type="button">
-                Ignore
-              </button>
-              <button disabled type="button">
-                Edit proposal
-              </button>
-              <button disabled type="button">
-                Accept changes
-              </button>
-            </div>
+            {!finalDecision ? (
+              <div className={styles.actionButtons}>
+                <button
+                  disabled={!canDecide || decisionState === 'submitting'}
+                  onClick={() => {
+                    if (window.confirm('Ignore this resume proposal without changing your Career Passport?')) {
+                      void submitDecision({ decision: 'IGNORE' });
+                    }
+                  }}
+                  type="button"
+                >
+                  Ignore
+                </button>
+                {editing ? (
+                  <>
+                    <button
+                      disabled={decisionState === 'submitting'}
+                      onClick={() => setEditing(false)}
+                      type="button"
+                    >
+                      Cancel edit
+                    </button>
+                    <button
+                      className={styles.primaryAction}
+                      disabled={decisionState === 'submitting'}
+                      onClick={() =>
+                        void submitDecision({
+                          decision: 'EDIT',
+                          edits: {
+                            headline: headline.trim() || null,
+                            summary: summary.trim() || null,
+                          },
+                        })
+                      }
+                      type="button"
+                    >
+                      {decisionState === 'submitting' ? 'Applying…' : 'Apply edited proposal'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      disabled={!canDecide || decisionState === 'submitting'}
+                      onClick={() => setEditing(true)}
+                      type="button"
+                    >
+                      Edit proposal
+                    </button>
+                    <button
+                      className={styles.primaryAction}
+                      disabled={!canDecide || decisionState === 'submitting'}
+                      onClick={() => void submitDecision({ decision: 'ACCEPT' })}
+                      type="button"
+                    >
+                      {decisionState === 'submitting' ? 'Applying…' : 'Accept changes'}
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : null}
           </section>
         </>
       ) : (
@@ -408,6 +540,27 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
         </section>
       )}
     </>
+  );
+}
+
+function ReviewDecisionNotice({
+  review,
+  decision,
+}: {
+  review: CandidateResumeReviewResponse;
+  decision: 'PENDING' | 'ACCEPTED' | 'EDITED' | 'IGNORED';
+}) {
+  return (
+    <section className={styles.decisionNotice}>
+      <div>
+        <span className={styles.kicker}>Review decision</span>
+        <strong>{readableState(decision)}</strong>
+      </div>
+      <p>{readDecisionSummary(decision)}</p>
+      {review.review.record?.appliedProfileVersionId ? (
+        <small>Passport version: {review.review.record.appliedProfileVersionId}</small>
+      ) : null}
+    </section>
   );
 }
 
@@ -573,6 +726,7 @@ function hasReachedProcessingStage(state: string, stage: number): boolean {
     PARSING: 2,
     READY_FOR_REVIEW: 4,
     APPROVED: 4,
+    REJECTED: 4,
   };
   return (rank[state] ?? -1) >= stage;
 }
@@ -585,14 +739,29 @@ function readableState(value: string): string {
     .join(' ');
 }
 
+function readDecisionSummary(decision: string): string {
+  switch (decision) {
+    case 'ACCEPTED':
+      return 'The grounded resume proposal was merged into a new RESUME_IMPORT Career Passport version.';
+    case 'EDITED':
+      return 'Your reviewed edits and grounded resume proposal were applied to a new RESUME_IMPORT Career Passport version.';
+    case 'IGNORED':
+      return 'This proposal was ignored. Your Career Passport was not changed.';
+    default:
+      return 'This review has not been finalized yet.';
+  }
+}
+
 function readBlockingReason(reason: string | null): string {
   switch (reason) {
     case 'PROCESSING_FAILED_TERMINAL':
       return 'Processing failed and this resume needs attention before it can be reviewed.';
     case 'RESUME_REJECTED':
       return 'This resume was rejected during processing.';
+    case 'REVIEW_IGNORED':
+      return 'This resume proposal was ignored and did not change your Career Passport.';
     case 'REVIEW_ALREADY_APPROVED':
-      return 'This resume review has already been approved.';
+      return 'This resume review has already been applied to your Career Passport.';
     case 'PARSE_PROPOSAL_NOT_AVAILABLE':
       return 'The resume reached review state, but its completed proposal is unavailable.';
     case 'PROCESSING_IN_PROGRESS':
