@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  decideResumeExtractionQuality,
-  type ResumeExtractionQuality,
-} from './index.js';
+import { decideResumeExtractionQuality, type ResumeExtractionQuality } from './index.js';
 
 const healthyQuality = (): ResumeExtractionQuality => ({
   characterCount: 1200,
