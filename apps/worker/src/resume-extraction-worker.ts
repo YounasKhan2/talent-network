@@ -18,6 +18,10 @@ const EXTRACTION_FAILURE_CODES = new Set([
   'RESUME_EXTRACTION_FAILED',
 ]);
 
+type ResumeFailureMetadata = NonNullable<
+  Parameters<DatabaseClient['resumeVersion']['updateMany']>[0]['data']['failureMetadata']
+>;
+
 export interface ResumeExtractionProcessorDependencies {
   database: DatabaseClient;
   storage: S3Client;
@@ -283,9 +287,7 @@ async function markExtractionFailure(
   database: DatabaseClient,
   version: { id: string; resumeId: string; processingPipelineVersion: string },
   failureCode: string,
-  failureMetadata: Parameters<
-    DatabaseClient['resumeVersion']['updateMany']
-  >[0]['data']['failureMetadata'],
+  failureMetadata: ResumeFailureMetadata,
   finalAttempt: boolean,
 ): Promise<void> {
   if (!finalAttempt) {
