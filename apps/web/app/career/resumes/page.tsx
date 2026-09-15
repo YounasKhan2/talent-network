@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../../lib/api';
 import {
+  ALLOWED_RESUME_UPLOAD_TYPES,
+  MAX_RESUME_UPLOAD_BYTES,
+  authorizeCandidateResumeUpload,
+  completeCandidateResumeUpload,
   getCandidateResumeReview,
   listCandidateResumes,
+  putCandidateResumeFile,
   type CandidateResumeListItem,
   type CandidateResumeReviewResponse,
   type ParsedClaim,
@@ -13,14 +18,37 @@ import {
 import styles from './resume-workspace.module.css';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type UploadState =
+  | 'idle'
+  | 'authorizing'
+  | 'uploading'
+  | 'finalizing'
+  | 'processing'
+  | 'complete'
+  | 'error';
+
+const ACTIVE_PROCESSING_STATES = new Set([
+  'UPLOADED',
+  'SCANNING',
+  'SCANNED',
+  'EXTRACTING',
+  'OCR_REQUIRED',
+  'OCR_RUNNING',
+  'PARSING',
+  'FAILED_RETRYABLE',
+]);
 
 export default function CareerResumesPage() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [resumes, setResumes] = useState<CandidateResumeListItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [review, setReview] = useState<CandidateResumeReviewResponse | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadFilename, setUploadFilename] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -68,6 +96,78 @@ export default function CareerResumesPage() {
     };
   }, [selectedId]);
 
+  const selectedResume = resumes.find((resume) => resume.id === selectedId) ?? null;
+  const selectedProcessingState = selectedResume?.currentVersion?.processingState ?? null;
+
+  useEffect(() => {
+    if (!selectedId || !selectedProcessingState || !ACTIVE_PROCESSING_STATES.has(selectedProcessingState)) {
+      return;
+    }
+
+    let active = true;
+    const timer = window.setInterval(() => {
+      void Promise.all([listCandidateResumes(), getCandidateResumeReview(selectedId)])
+        .then(([rows, nextReview]) => {
+          if (!active) return;
+          setResumes(rows);
+          setReview(nextReview);
+          if (nextReview.review.available) setUploadState('complete');
+        })
+        .catch((caught) => {
+          if (active) setError(readError(caught));
+        });
+    }, 2500);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [selectedId, selectedProcessingState]);
+
+  async function handleSelectedFile(file: File | undefined) {
+    if (!file) return;
+
+    setUploadError(null);
+    setUploadFilename(file.name);
+
+    if (!ALLOWED_RESUME_UPLOAD_TYPES.includes(file.type as (typeof ALLOWED_RESUME_UPLOAD_TYPES)[number])) {
+      setUploadState('error');
+      setUploadError('Upload a PDF or DOCX resume.');
+      return;
+    }
+    if (file.size <= 0 || file.size > MAX_RESUME_UPLOAD_BYTES) {
+      setUploadState('error');
+      setUploadError('Resume files must be larger than 0 bytes and no more than 10 MB.');
+      return;
+    }
+
+    try {
+      setUploadState('authorizing');
+      const authorization = await authorizeCandidateResumeUpload({
+        title: titleFromFilename(file.name),
+        originalFilename: file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+      });
+
+      setUploadState('uploading');
+      await putCandidateResumeFile(authorization, file);
+
+      setUploadState('finalizing');
+      await completeCandidateResumeUpload(authorization.resumeVersionId);
+
+      const rows = await listCandidateResumes();
+      setResumes(rows);
+      setSelectedId(authorization.resumeId);
+      setUploadState('processing');
+    } catch (caught) {
+      setUploadState('error');
+      setUploadError(readError(caught));
+    }
+  }
+
+  const uploadBusy = ['authorizing', 'uploading', 'finalizing'].includes(uploadState);
+
   if (state === 'loading') return <WorkspaceState title="Loading your resumes…" />;
   if (state === 'error') {
     return <WorkspaceState title="We could not load your resume workspace." detail={error} />;
@@ -80,20 +180,52 @@ export default function CareerResumesPage() {
           <p className="eyebrow">Resume intelligence</p>
           <h1>Resume review</h1>
           <p>
-            Resume parsing creates a private proposal. Nothing here changes your Career Passport
-            until you explicitly review and approve it.
+            Upload a private resume, follow its processing status, then review detected career data
+            before anything can change your Career Passport.
           </p>
         </div>
         <div className={styles.phaseBadge}>Phase 3F · Review</div>
       </header>
 
+      <section className={styles.uploadPanel} aria-label="Upload resume">
+        <div>
+          <span className={styles.kicker}>Private import</span>
+          <h2>Upload a resume</h2>
+          <p>
+            PDF or DOCX, up to 10 MB. The original file stays in private object storage and is never
+            exposed to organization workspaces.
+          </p>
+          {uploadFilename ? <small>Selected: {uploadFilename}</small> : null}
+        </div>
+        <div className={styles.uploadControls}>
+          <input
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            aria-label="Choose resume file"
+            className={styles.fileInput}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              void handleSelectedFile(file);
+            }}
+            ref={fileInputRef}
+            type="file"
+          />
+          <button
+            className={styles.uploadButton}
+            disabled={uploadBusy}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            {uploadBusy ? uploadStateLabel(uploadState) : 'Upload resume'}
+          </button>
+          <UploadProgress state={uploadState} error={uploadError} />
+        </div>
+      </section>
+
       {resumes.length === 0 ? (
         <section className={styles.emptyState}>
           <strong>No resumes yet</strong>
-          <p>
-            Resume upload UI is the next part of this workspace. The backend upload pipeline is
-            already available and remains candidate-private.
-          </p>
+          <p>Upload your first resume above. It will appear here as soon as the private upload completes.</p>
         </section>
       ) : (
         <div className={styles.workspaceGrid}>
@@ -135,6 +267,16 @@ export default function CareerResumesPage() {
   );
 }
 
+function UploadProgress({ state, error }: { state: UploadState; error: string | null }) {
+  if (state === 'idle') return <small className={styles.uploadHint}>Nothing changes your Passport on upload.</small>;
+  if (state === 'error') return <small className={styles.uploadError}>{error ?? 'Upload failed.'}</small>;
+  if (state === 'complete') return <small className={styles.uploadSuccess}>Ready for candidate review.</small>;
+  if (state === 'processing') {
+    return <small className={styles.uploadProgress}>Uploaded. Secure processing is in progress…</small>;
+  }
+  return <small className={styles.uploadProgress}>{uploadStateLabel(state)}</small>;
+}
+
 function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
   const parsed = review.proposal?.parsedJson ?? null;
   const confidence = parsed?.confidenceSummary;
@@ -151,6 +293,8 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
         </div>
         <StatusPill state={review.version?.processingState ?? 'UNKNOWN'} />
       </div>
+
+      <ProcessingTimeline state={review.version?.processingState ?? 'UNKNOWN'} />
 
       <section className={styles.metrics} aria-label="Resume review summary">
         <Metric label="Claims" value={confidence?.totalClaimCount ?? 0} />
@@ -192,7 +336,7 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
                 <span className={styles.kicker}>Proposal vs authority</span>
                 <h3>Career Passport comparison</h3>
               </div>
-              <small>Read-only in 3F-A</small>
+              <small>Read-only in 3F-B</small>
             </div>
             <div className={styles.compareGrid}>
               <CompareCard
@@ -230,8 +374,8 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
             <div>
               <strong>Candidate approval is required</strong>
               <p>
-                Accept / Edit / Ignore controls are intentionally disabled until the mutation and
-                traceability contract is implemented in the next 3F slice.
+                Accept / Edit / Ignore remain disabled until their versioning and traceability
+                contract is implemented in 3F-C/3F-D.
               </p>
             </div>
             <div className={styles.actionButtons}>
@@ -254,6 +398,27 @@ function ReviewPanel({ review }: { review: CandidateResumeReviewResponse }) {
         </section>
       )}
     </>
+  );
+}
+
+function ProcessingTimeline({ state }: { state: string }) {
+  const stages = [
+    { label: 'Uploaded', complete: hasReachedProcessingStage(state, 0) },
+    { label: 'Security', complete: hasReachedProcessingStage(state, 1) },
+    { label: 'Extracted', complete: hasReachedProcessingStage(state, 2) },
+    { label: 'Parsed', complete: hasReachedProcessingStage(state, 3) },
+    { label: 'Review', complete: hasReachedProcessingStage(state, 4) },
+  ];
+
+  return (
+    <section className={styles.processingTimeline} aria-label="Resume processing progress">
+      {stages.map((stage) => (
+        <div className={stage.complete ? styles.processingStepComplete : styles.processingStep} key={stage.label}>
+          <span aria-hidden="true" />
+          <small>{stage.label}</small>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -362,6 +527,43 @@ function claimValue(claim?: ParsedClaim<string>): string | null {
   return claim?.value ?? null;
 }
 
+function titleFromFilename(filename: string): string {
+  return filename.replace(/\.(pdf|docx)$/i, '').trim() || 'Imported resume';
+}
+
+function uploadStateLabel(state: UploadState): string {
+  switch (state) {
+    case 'authorizing':
+      return 'Preparing secure upload…';
+    case 'uploading':
+      return 'Uploading privately…';
+    case 'finalizing':
+      return 'Verifying upload…';
+    case 'processing':
+      return 'Processing resume…';
+    case 'complete':
+      return 'Ready for review';
+    default:
+      return 'Upload resume';
+  }
+}
+
+function hasReachedProcessingStage(state: string, stage: number): boolean {
+  const rank: Record<string, number> = {
+    UPLOADING: -1,
+    UPLOADED: 0,
+    SCANNING: 0,
+    SCANNED: 1,
+    EXTRACTING: 1,
+    OCR_REQUIRED: 1,
+    OCR_RUNNING: 1,
+    PARSING: 2,
+    READY_FOR_REVIEW: 4,
+    APPROVED: 4,
+  };
+  return (rank[state] ?? -1) >= stage;
+}
+
 function readableState(value: string): string {
   return value
     .toLowerCase()
@@ -381,7 +583,7 @@ function readBlockingReason(reason: string | null): string {
     case 'PARSE_PROPOSAL_NOT_AVAILABLE':
       return 'The resume reached review state, but its completed proposal is unavailable.';
     case 'PROCESSING_IN_PROGRESS':
-      return 'Processing is still in progress. The proposal will become available when parsing completes.';
+      return 'Processing is still in progress. This page refreshes the private status automatically.';
     default:
       return 'A completed review proposal is not available yet.';
   }
