@@ -1,6 +1,7 @@
 import type {
   ParsedCertification,
   ParsedClaim,
+  ParsedDateRange,
   ParsedEducation,
   ParsedEvidence,
   ParsedExperience,
@@ -12,7 +13,11 @@ import type {
   ParsedResume,
   ParsedSkill,
 } from './contracts.js';
-import { PARSED_RESUME_SCHEMA_VERSION } from './versions.js';
+import {
+  PARSED_RESUME_SCHEMA_VERSION,
+  RESUME_EVIDENCE_POLICY_VERSION,
+  RESUME_PARSER_POLICY_VERSION,
+} from './versions.js';
 
 export class ResumeStructuredOutputError extends Error {
   constructor(message: string) {
@@ -41,7 +46,7 @@ export function validateParsedResume(
     fail('ParsedResume.sourceExtractionId does not match the parse input.');
   }
 
-  const parsed: ParsedResume = {
+  return {
     schemaVersion: PARSED_RESUME_SCHEMA_VERSION,
     resumeVersionId: stringValue(root.resumeVersionId, 'ParsedResume.resumeVersionId'),
     sourceExtractionId: stringValue(root.sourceExtractionId, 'ParsedResume.sourceExtractionId'),
@@ -62,17 +67,21 @@ export function validateParsedResume(
     warnings: stringArray(root.warnings, 'warnings'),
     confidenceSummary: parseConfidenceSummary(root.confidenceSummary),
   };
-
-  return parsed;
 }
 
 function parseParserMetadata(value: unknown): ParsedResume['parser'] {
   const data = record(value, 'parser');
+  if (data.parserPolicyVersion !== RESUME_PARSER_POLICY_VERSION) {
+    fail('parser.parserPolicyVersion is unsupported.');
+  }
+  if (data.evidencePolicyVersion !== RESUME_EVIDENCE_POLICY_VERSION) {
+    fail('parser.evidencePolicyVersion is unsupported.');
+  }
   return {
     name: stringValue(data.name, 'parser.name'),
     version: stringValue(data.version, 'parser.version'),
-    parserPolicyVersion: literalString(data.parserPolicyVersion, 'parser.parserPolicyVersion'),
-    evidencePolicyVersion: literalString(data.evidencePolicyVersion, 'parser.evidencePolicyVersion'),
+    parserPolicyVersion: RESUME_PARSER_POLICY_VERSION,
+    evidencePolicyVersion: RESUME_EVIDENCE_POLICY_VERSION,
     ...(data.promptVersion === undefined
       ? {}
       : { promptVersion: stringValue(data.promptVersion, 'parser.promptVersion') }),
@@ -194,7 +203,7 @@ function parseStringClaim(value: unknown, path: string): ParsedClaim<string> {
   return parseClaim(value, path, (claimValue) => stringValue(claimValue, `${path}.value`));
 }
 
-function parseDateRangeClaim(value: unknown, path: string): ParsedClaim<ParsedExperience['dates'] extends ParsedClaim<infer T> ? T : never> {
+function parseDateRangeClaim(value: unknown, path: string): ParsedClaim<ParsedDateRange> {
   return parseClaim(value, path, (claimValue) => {
     const data = record(claimValue, `${path}.value`);
     return {
@@ -220,7 +229,12 @@ function parseClaim<T>(
     value: parseValue(data.value),
     ...(data.normalizedValue === undefined
       ? {}
-      : { normalizedValue: parseNormalizedValue(data.normalizedValue, `${path}.normalizedValue`) }),
+      : {
+          normalizedValue:
+            typeof data.normalizedValue === 'string'
+              ? data.normalizedValue
+              : parseValue(data.normalizedValue),
+        }),
     confidence,
     evidence: array(data.evidence, `${path}.evidence`).map(parseEvidence),
     warnings: stringArray(data.warnings, `${path}.warnings`),
@@ -264,12 +278,6 @@ function parseConfidenceSummary(value: unknown): ParsedResume['confidenceSummary
   };
 }
 
-function parseNormalizedValue(value: unknown, path: string): string | object {
-  if (typeof value === 'string') return value;
-  if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value;
-  fail(`${path} must be a string or object.`);
-}
-
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) fail(`${path} must be an object.`);
   return value as Record<string, unknown>;
@@ -287,10 +295,6 @@ function stringArray(value: unknown, path: string): string[] {
 function stringValue(value: unknown, path: string): string {
   if (typeof value !== 'string' || value.length === 0) fail(`${path} must be a non-empty string.`);
   return value;
-}
-
-function literalString<T extends string>(value: unknown, path: string): T {
-  return stringValue(value, path) as T;
 }
 
 function numberValue(value: unknown, path: string): number {
