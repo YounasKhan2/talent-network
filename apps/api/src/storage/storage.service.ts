@@ -78,7 +78,7 @@ export class StorageService {
         Key: input.objectKey,
         ...(input.downloadFilename
           ? {
-              ResponseContentDisposition: `attachment; filename=\"${sanitizeFilename(input.downloadFilename)}\"`,
+              ResponseContentDisposition: `attachment; filename="${sanitizeFilename(input.downloadFilename)}"`,
             }
           : {}),
       }),
