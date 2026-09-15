@@ -98,7 +98,10 @@ const SECTION_ALIASES: ReadonlyArray<readonly [ResumeSectionKind, readonly strin
   ['EDUCATION', ['education', 'academic background', 'academic history', 'qualifications']],
   ['SKILLS', ['skills', 'technical skills', 'core skills', 'competencies', 'technologies']],
   ['PROJECTS', ['projects', 'selected projects', 'personal projects']],
-  ['CERTIFICATIONS', ['certifications', 'certificates', 'licenses & certifications', 'licenses and certifications']],
+  [
+    'CERTIFICATIONS',
+    ['certifications', 'certificates', 'licenses & certifications', 'licenses and certifications'],
+  ],
   ['LANGUAGES', ['languages', 'language']],
   ['LINKS', ['links', 'profiles', 'online profiles']],
 ];
@@ -219,7 +222,9 @@ export function detectDeterministicCandidates(
   return detections;
 }
 
-function flattenSourceFragments(document: ResumePreprocessingDocumentInput): ResumeSourceFragment[] {
+function flattenSourceFragments(
+  document: ResumePreprocessingDocumentInput,
+): ResumeSourceFragment[] {
   const fragments: ResumeSourceFragment[] = [];
 
   for (const page of document.pages) {
@@ -250,7 +255,9 @@ function splitFragment(
 
   const sourceLength = fragment.sourceRange.end - fragment.sourceRange.start;
   if (sourceLength !== fragment.text.length) {
-    throw new Error('Cannot split a source fragment whose source range does not map 1:1 to its text.');
+    throw new Error(
+      'Cannot split a source fragment whose source range does not map 1:1 to its text.',
+    );
   }
 
   const result: ResumeSourceFragment[] = [];
@@ -329,7 +336,11 @@ function createSection(
 }
 
 function normalizeHeading(value: string): string {
-  return value.trim().replace(/[:：]\s*$/, '').replace(/\s+/g, ' ').toLowerCase();
+  return value
+    .trim()
+    .replace(/[:：]\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
 }
 
 function looksLikeUnknownSectionHeading(value: string): boolean {

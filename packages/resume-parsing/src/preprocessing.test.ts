@@ -154,7 +154,9 @@ void test('deterministic contact candidates retain exact source coordinates', ()
   assert.equal(url?.blockIndex, 0);
 });
 
-function fixtureDocument(pages: ResumePreprocessingDocumentInput['pages']): ResumePreprocessingDocumentInput {
+function fixtureDocument(
+  pages: ResumePreprocessingDocumentInput['pages'],
+): ResumePreprocessingDocumentInput {
   return {
     schemaVersion: 'resume-document-v1',
     resumeVersionId: 'resume-version-id',
@@ -174,7 +176,10 @@ function page(
   };
 }
 
-function block(text: string, startOffset: number): ResumePreprocessingDocumentInput['pages'][number]['blocks'][number] {
+function block(
+  text: string,
+  startOffset: number,
+): ResumePreprocessingDocumentInput['pages'][number]['blocks'][number] {
   return {
     text,
     sourceRange: { startOffset, endOffset: startOffset + text.length },
