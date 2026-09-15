@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D extraction + OCR fallback is current; 3D-A contracts/persistence, 3D-B native extraction, and 3D-C quality routing are verified. 3D-D OCR fallback is now the active implementation boundary.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D extraction + OCR fallback is current; 3D-A contracts/persistence, 3D-B native extraction, and 3D-C quality routing are verified. 3D-D OCR fallback is implemented and has passed the automated repository gate plus real local OCR-service smoke acceptance. 3D-E persisted application-runtime closure is now the active acceptance boundary.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -173,13 +173,48 @@ The worker persists the derived document before routing, emits metadata-only aud
 
 The complete root `pnpm check` passed after these routing tests, including formatting, linting, typechecking, package tests, Phase 1/2/2A/2B/3 database integration suites, and the production build.
 
-#### 3D-D — OCR fallback 🟡 CURRENT
+#### 3D-D — OCR fallback 🟡 IMPLEMENTED / APPLICATION-RUNTIME VERIFICATION CURRENT
 
-Next boundary: implement the provider-neutral OCR engine contract and asynchronous OCR worker path without weakening candidate ownership, source mapping, retry/idempotency, or raw-text privacy guarantees.
+Implemented:
 
-#### 3D-E — Runtime closure ⬜ REMAINING
+- provider-neutral `ResumeOcrEngine`
+- stable `resume.ocr` queue/job identity and scheduler outbox dispatch
+- provider-neutral OCR worker processor
+- source-extraction identity and eligibility validation
+- separate OCR `ResumeExtraction` persistence
+- metadata-only OCR audit/outbox completion/failure events
+- bounded retry/terminal behavior
+- retryable service-unavailable handling for network/timeout/429/5xx responses
+- HTTP OCR adapter with response/time/size/page bounds
+- optional runtime OCR queue subscription
+- local FastAPI + PyMuPDF + Tesseract OCR sidecar
+- deterministic image-only scanned-PDF smoke harness
 
-Phase 3D remains open until real local-service acceptance proves both native and OCR branches through the complete asynchronous pipeline and the Phase 3D quality gate is closed.
+Observed runtime evidence on 2026-09-15:
+
+```text
+OCR Docker service → healthy
+real Tesseract scanned-PDF smoke → passed
+recognized characters → 332 on page 1
+scanned fixture → packages/resume-extraction/test-fixtures/scanned-resume.pdf
+root pnpm check → passed
+```
+
+This proves the real local OCR service and adapter boundary. 3D-D is not yet marked verified because the persisted Talent Network application path still needs to be observed end to end:
+
+```text
+OCR_REQUIRED
+→ candidate.resume.ocr_required
+→ resume.ocr
+→ OCR ResumeExtraction COMPLETED
+→ PARSING
+```
+
+Detailed evidence and remaining closure criteria are maintained in `docs/11-implementation/phase-3d-extraction-ocr.md`.
+
+#### 3D-E — Runtime closure 🟡 CURRENT ACCEPTANCE BOUNDARY
+
+Phase 3D remains open until real local-service acceptance proves the persisted native and OCR branches through the complete asynchronous application pipeline. The OCR engine/service itself has passed local runtime smoke acceptance; the remaining proof is the database/outbox/queue/worker state path and runtime privacy checks.
 
 ### Phase 3E — Structured parsing + evidence mapping
 
@@ -209,6 +244,8 @@ Deliverables:
 - uncertain/sensitive-value confirmation
 - candidate-approved creation of a new `RESUME_IMPORT` Career Passport version
 - traceability from approved profile version back to ResumeVersion + parse result
+
+**UI boundary:** the current Candidate Workspace intentionally does not yet expose Resume upload/review navigation. That product surface belongs to Phase 3F after Phase 3E parsing/evidence work. Phase 3D runtime acceptance must use the real backend/storage/outbox/queue pipeline rather than assuming a Resume UI already exists.
 
 ## State-machine rules
 
@@ -320,8 +357,8 @@ Phase 3 is not closed until all of the following are proven:
   3D-A Contracts + persistence               ✅ VERIFIED
   3D-B Native PDF/DOCX extraction            ✅ VERIFIED
   3D-C Deterministic quality routing         ✅ VERIFIED
-  3D-D OCR fallback                          🟡 CURRENT
-  3D-E Runtime closure                       pending
+  3D-D OCR fallback                          🟡 IMPLEMENTED / APP-RUNTIME VERIFICATION
+  3D-E Runtime closure                       🟡 CURRENT ACCEPTANCE
 3E Structured parsing + evidence mapping     pending
 3F Candidate review + Passport approval      pending
 ```
@@ -338,7 +375,9 @@ EXTRACTING
               ↓
          OCR_REQUIRED
               ↓
-        OCR fallback ← CURRENT
+        OCR fallback implemented
+              ↓
+       persisted app-runtime proof ← CURRENT
               ↓
            PARSING
 ```
