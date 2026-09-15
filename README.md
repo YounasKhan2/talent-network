@@ -22,10 +22,10 @@ Talent Network is a documentation-led, production-oriented employment operating 
   3C Validation + Malware Scanning          ✅ VERIFIED
   3D Extraction + OCR                       🟡 CURRENT
     3D-A Contracts + Persistence            ✅ VERIFIED
-    3D-B Native PDF/DOCX Extraction         🟡 IN PROGRESS
-    3D-C Quality Routing                    ⬜ REMAINING
-    3D-D OCR Fallback                       ⬜ REMAINING
-    3D-E Runtime Closure                    ⬜ REMAINING
+    3D-B Native PDF/DOCX Extraction         ✅ VERIFIED
+    3D-C Quality Routing                    ✅ VERIFIED
+    3D-D OCR Fallback                       🟡 IMPLEMENTED / APP-RUNTIME VERIFICATION
+    3D-E Runtime Closure                    🟡 CURRENT ACCEPTANCE
   3E Structured Parsing + Evidence          ⬜ REMAINING
   3F Candidate Review Workspace             ⬜ REMAINING
 4 Employer + Jobs                           ⬜ REMAINING
@@ -101,13 +101,23 @@ MVP Production Hardening + Launch           ⬜ REMAINING
 - [x] native PDF.js adapter with real page identity
 - [x] native DOCX adapter without fabricated pagination
 - [x] private `resume.extract` asynchronous handoff and worker foundation
-- [x] initial native-extractor and scheduler-dispatch boundary tests
-- [ ] complete worker processor/state/idempotency/privacy tests
-- [ ] verify real PDF and DOCX extraction fixtures end-to-end
-- [ ] close deterministic sufficient-text → `PARSING` routing
-- [ ] close text-poor/scanned → `OCR_REQUIRED` routing
-- [ ] implement provider-neutral OCR engine and OCR worker path
-- [ ] runtime acceptance and complete Phase 3D quality gate
+- [x] worker processor/state/idempotency/privacy tests
+- [x] real generated PDF/DOCX extraction fixtures
+- [x] deterministic sufficient-text → `PARSING` routing
+- [x] text-poor/scanned-like → `OCR_REQUIRED` routing
+- [x] provider-neutral OCR engine, scheduler dispatcher and OCR worker path
+- [x] bounded transient OCR-service retry handling
+- [x] HTTP OCR adapter with response/time/size/page limits
+- [x] local FastAPI + PyMuPDF + Tesseract OCR sidecar
+- [x] real local OCR container health check
+- [x] real image-only scanned-PDF OCR smoke test (`332` recognized characters on page 1)
+- [x] deterministic scanned fixture materialized for application acceptance
+- [x] complete repository `pnpm check` green after OCR implementation
+- [ ] verify persisted application path `OCR_REQUIRED → candidate.resume.ocr_required → resume.ocr → OCR ResumeExtraction COMPLETED → PARSING`
+- [ ] verify runtime logs/audit/outbox contain no raw OCR text during that real path
+- [ ] close Phase 3D runtime quality gate
+
+> **UI boundary:** Resume upload/history/review navigation is intentionally not part of the current Career UI yet. That product surface belongs to **Phase 3F — Candidate Review Workspace** after structured parsing/evidence work in Phase 3E. Phase 3D runtime closure uses the real backend/storage/outbox/queue pipeline rather than an invented UI route.
 
 **3E — Structured parsing + evidence mapping · ⬜ Remaining**
 
@@ -118,7 +128,10 @@ MVP Production Hardening + Launch           ⬜ REMAINING
 
 **3F — Candidate review workspace · ⬜ Remaining**
 
+- [ ] Resume destination in Candidate Workspace navigation
+- [ ] resume upload/history/list and processing progress
 - [ ] review proposed Career Passport changes
+- [ ] current Passport vs proposed-value comparison
 - [ ] Accept / Edit / Ignore workflow
 - [ ] accepted changes use normal Passport versioning
 - [ ] browser acceptance for complete upload → review journey
@@ -350,6 +363,9 @@ packages/
 ├── observability/  structured logging foundation
 ├── resume-security/    validation and malware-scanning contracts/adapters
 └── resume-extraction/  native extraction, quality and OCR-facing contracts
+
+services/
+└── ocr/            local provider-neutral OCR sidecar (FastAPI + PyMuPDF + Tesseract)
 ```
 
 Additional domain packages are created only when implementation genuinely needs them. Empty future-domain packages are intentionally avoided.
@@ -361,15 +377,16 @@ PostgreSQL  → transactional source of truth
 Redis       → cache, coordination and queue infrastructure
 RustFS      → local S3-compatible object storage
 ClamAV      → malware scanning
+OCR sidecar → local scanned-PDF OCR fallback
 Prisma      → migrations and database client
 BullMQ      → asynchronous processing queues
 pnpm        → workspace/package management
 Turborepo   → repository task orchestration
 ```
 
-RustFS is a **local infrastructure choice**, not an application dependency. Application code must use the generic S3-compatible storage contract so production storage can later move to RustFS, AWS S3, Cloudflare R2, or another validated S3-compatible provider without rewriting business logic.
+RustFS is a **local infrastructure choice**, not an application dependency. Application code must use the generic S3-compatible storage contract so production storage can later move to RustFS, AWS S3, Cloudflare R2, or another validated S3-compatible provider without rewriting business logic. The OCR worker likewise depends on the provider-neutral `ResumeOcrEngine` boundary; the local sidecar can be replaced by another validated OCR provider without rewriting the worker state machine.
 
-See [`docs/05-infrastructure/object-storage.md`](./docs/05-infrastructure/object-storage.md).
+See [`docs/05-infrastructure/object-storage.md`](./docs/05-infrastructure/object-storage.md) and [`services/ocr/README.md`](./services/ocr/README.md).
 
 ---
 
@@ -397,6 +414,7 @@ Local services:
 ```text
 Web               http://localhost:3000
 API               http://localhost:4000
+OCR               http://localhost:4010
 PostgreSQL        localhost:5432
 Redis             localhost:6379
 RustFS S3 API     http://localhost:9000
