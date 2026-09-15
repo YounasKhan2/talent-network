@@ -285,14 +285,14 @@ function assertPublishedOutboxEvent(
   assert(event.attemptCount > 0, `Expected ${expected} publication attemptCount > 0.`);
 }
 
-function assertEvent<T extends Record<string, unknown>>(
-  events: T[],
+function assertEvent(
+  events: Array<Record<string, unknown>>,
   expected: string,
-  key: keyof T = 'eventType' as keyof T,
+  key = 'eventType',
 ): void {
   assert(
     events.some((event) => event[key] === expected),
-    `Expected ${String(key)}=${expected}.`,
+    `Expected ${key}=${expected}.`,
   );
 }
 
