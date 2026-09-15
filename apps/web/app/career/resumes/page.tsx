@@ -8,6 +8,7 @@ import {
   authorizeCandidateResumeUpload,
   completeCandidateResumeUpload,
   decideCandidateResumeReview,
+  deleteCandidateResume,
   getCandidateResumeReview,
   listCandidateResumes,
   putCandidateResumeFile,
@@ -46,6 +47,7 @@ export default function CareerResumesPage() {
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadFilename, setUploadFilename] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -99,6 +101,7 @@ export default function CareerResumesPage() {
   useEffect(() => {
     if (
       !selectedId ||
+      deletingId === selectedId ||
       !selectedProcessingState ||
       !ACTIVE_PROCESSING_STATES.has(selectedProcessingState)
     ) {
@@ -123,7 +126,7 @@ export default function CareerResumesPage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [selectedId, selectedProcessingState]);
+  }, [deletingId, selectedId, selectedProcessingState]);
 
   async function handleSelectedFile(file: File | undefined) {
     if (!file) return;
@@ -175,6 +178,34 @@ export default function CareerResumesPage() {
     setReview(nextReview);
     const rows = await listCandidateResumes();
     setResumes(rows);
+  }
+
+  async function handleDeleteResume(resumeId: string, title: string) {
+    if (
+      !window.confirm(
+        `Delete “${title}”? The private resume file and derived extraction/parse data will be permanently removed. Career Passport history already created from this resume will remain.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(resumeId);
+    setError(null);
+    try {
+      await deleteCandidateResume(resumeId);
+      const rows = await listCandidateResumes();
+      setResumes(rows);
+      setUploadFilename(null);
+      setUploadState('idle');
+      if (selectedId === resumeId) {
+        setReview(null);
+        setSelectedId(rows[0]?.id ?? null);
+      }
+    } catch (caught) {
+      setError(readError(caught));
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   const uploadBusy = ['authorizing', 'uploading', 'finalizing'].includes(uploadState);
@@ -233,6 +264,8 @@ export default function CareerResumesPage() {
         </div>
       </section>
 
+      {error ? <p className={styles.workspaceError}>{error}</p> : null}
+
       {resumes.length === 0 ? (
         <section className={styles.emptyState}>
           <strong>No resumes yet</strong>
@@ -266,7 +299,12 @@ export default function CareerResumesPage() {
             {reviewLoading ? (
               <WorkspaceState title="Loading review proposal…" compact />
             ) : review ? (
-              <ReviewPanel review={review} onUpdated={handleReviewUpdated} />
+              <ReviewPanel
+                deleting={deletingId === review.resume.id}
+                onDelete={handleDeleteResume}
+                onUpdated={handleReviewUpdated}
+                review={review}
+              />
             ) : (
               <WorkspaceState
                 title="Select a resume to review."
@@ -299,9 +337,13 @@ function UploadProgress({ state, error }: { state: UploadState; error: string | 
 function ReviewPanel({
   review,
   onUpdated,
+  onDelete,
+  deleting,
 }: {
   review: CandidateResumeReviewResponse;
   onUpdated: (review: CandidateResumeReviewResponse) => Promise<void>;
+  onDelete: (resumeId: string, title: string) => Promise<void>;
+  deleting: boolean;
 }) {
   const parsed = review.proposal?.parsedJson ?? null;
   const confidence = parsed?.confidenceSummary;
@@ -346,7 +388,17 @@ function ReviewPanel({
           <h2>{review.resume.title}</h2>
           <p>{review.version?.originalFilename ?? 'No uploaded file metadata available.'}</p>
         </div>
-        <StatusPill state={review.version?.processingState ?? 'UNKNOWN'} />
+        <div className={styles.reviewHeaderActions}>
+          <StatusPill state={review.version?.processingState ?? 'UNKNOWN'} />
+          <button
+            className={styles.deleteResumeButton}
+            disabled={deleting}
+            onClick={() => void onDelete(review.resume.id, review.resume.title)}
+            type="button"
+          >
+            {deleting ? 'Deleting…' : 'Delete resume'}
+          </button>
+        </div>
       </div>
 
       <ProcessingTimeline state={review.version?.processingState ?? 'UNKNOWN'} />
