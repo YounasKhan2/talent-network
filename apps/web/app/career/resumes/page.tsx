@@ -463,7 +463,9 @@ function ReviewPanel({
 
           <section className={styles.reviewActions}>
             <div>
-              <strong>{finalDecision ? 'Review completed' : 'Candidate approval is required'}</strong>
+              <strong>
+                {finalDecision ? 'Review completed' : 'Candidate approval is required'}
+              </strong>
               <p>
                 {finalDecision
                   ? readDecisionSummary(finalDecision)
@@ -476,7 +478,11 @@ function ReviewPanel({
                 <button
                   disabled={!canDecide || decisionState === 'submitting'}
                   onClick={() => {
-                    if (window.confirm('Ignore this resume proposal without changing your Career Passport?')) {
+                    if (
+                      window.confirm(
+                        'Ignore this resume proposal without changing your Career Passport?',
+                      )
+                    ) {
                       void submitDecision({ decision: 'IGNORE' });
                     }
                   }}

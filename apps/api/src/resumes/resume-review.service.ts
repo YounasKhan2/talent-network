@@ -19,9 +19,7 @@ export interface ResumeReviewEdits {
 }
 
 export type ResumeReviewDecisionInput =
-  | { decision: 'ACCEPT' }
-  | { decision: 'EDIT'; edits: ResumeReviewEdits }
-  | { decision: 'IGNORE' };
+  { decision: 'ACCEPT' } | { decision: 'EDIT'; edits: ResumeReviewEdits } | { decision: 'IGNORE' };
 
 const passportVersionInclude = {
   employments: { orderBy: { sortOrder: 'asc' as const } },
@@ -264,11 +262,11 @@ export class ResumeReviewService {
             headline:
               edits.headline !== undefined
                 ? edits.headline
-                : readStringClaim(proposal.headline) ?? currentProfile.headline,
+                : (readStringClaim(proposal.headline) ?? currentProfile.headline),
             summary:
               edits.summary !== undefined
                 ? edits.summary
-                : readStringClaim(proposal.summary) ?? currentProfile.summary,
+                : (readStringClaim(proposal.summary) ?? currentProfile.summary),
             availabilityStatus: currentProfile.availabilityStatus,
             availableFrom: currentProfile.availableFrom,
             compensationCurrency: currentProfile.compensationCurrency,
@@ -285,10 +283,7 @@ export class ResumeReviewService {
             skills: { create: mergeSkills(currentProfile.skills, proposal.skills) },
             projects: { create: mergeProjects(currentProfile.projects, proposal.projects) },
             certifications: {
-              create: mergeCertifications(
-                currentProfile.certifications,
-                proposal.certifications,
-              ),
+              create: mergeCertifications(currentProfile.certifications, proposal.certifications),
             },
             languages: { create: mergeLanguages(currentProfile.languages, proposal.languages) },
             links: { create: mergeLinks(currentProfile.links, proposal.links) },
@@ -512,7 +507,11 @@ function readStringClaim(value: unknown): string | null {
   return claim && typeof claim.value === 'string' && claim.value.trim() ? claim.value.trim() : null;
 }
 
-function readDateRange(value: unknown): { start: Date | null; end: Date | null; isCurrent: boolean } {
+function readDateRange(value: unknown): {
+  start: Date | null;
+  end: Date | null;
+  isCurrent: boolean;
+} {
   const claim = asRecord(value);
   const range = asRecord(claim?.value);
   return {

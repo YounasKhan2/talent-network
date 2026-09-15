@@ -2,10 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common'
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
-import {
-  ResumeReviewService,
-  type ResumeReviewDecisionInput,
-} from './resume-review.service.js';
+import { ResumeReviewService, type ResumeReviewDecisionInput } from './resume-review.service.js';
 import { ResumesService } from './resumes.service.js';
 
 const uploadAuthorizationSchema = z

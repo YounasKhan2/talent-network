@@ -107,10 +107,7 @@ void test('Phase 3F candidate review is private, explicit, traceable, and idempo
       const review = await service.getReview(owner.id, readFixture.resume.id);
       const serialized = JSON.stringify(review);
       assert.equal(serialized.includes(readFixture.version.objectKey), false);
-      assert.equal(
-        serialized.includes(`RAW_PRIVATE_EXTRACTION_TEXT_${readFixture.suffix}`),
-        false,
-      );
+      assert.equal(serialized.includes(`RAW_PRIVATE_EXTRACTION_TEXT_${readFixture.suffix}`), false);
       assert.equal(serialized.includes('candidate.private@example.com'), true);
     });
 
@@ -136,39 +133,42 @@ void test('Phase 3F candidate review is private, explicit, traceable, and idempo
       assert.equal(review.review.record?.appliedProfileVersionId, null);
     });
 
-    await t.test('accept creates one traceable RESUME_IMPORT version and duplicate retry is idempotent', async () => {
-      const first = await service.decide(owner.id, acceptFixture.resume.id, {
-        decision: 'ACCEPT',
-      });
-      const appliedId = first.review.record?.appliedProfileVersionId;
-      assert.ok(appliedId);
+    await t.test(
+      'accept creates one traceable RESUME_IMPORT version and duplicate retry is idempotent',
+      async () => {
+        const first = await service.decide(owner.id, acceptFixture.resume.id, {
+          decision: 'ACCEPT',
+        });
+        const appliedId = first.review.record?.appliedProfileVersionId;
+        assert.ok(appliedId);
 
-      const imported = await database.candidateProfileVersion.findUniqueOrThrow({
-        where: { id: appliedId },
-      });
-      const sourceVersion = await database.resumeVersion.findUniqueOrThrow({
-        where: { id: acceptFixture.version.id },
-      });
-      assert.equal(imported.source, 'RESUME_IMPORT');
-      assert.equal(imported.status, 'APPROVED');
-      assert.equal(imported.headline, 'Imported headline');
-      assert.equal(imported.summary, 'Imported summary');
-      assert.equal(sourceVersion.processingState, 'APPROVED');
-      assert.equal(sourceVersion.approvedProfileVersionId, imported.id);
-      assert.equal(first.review.record?.decision, 'ACCEPTED');
+        const imported = await database.candidateProfileVersion.findUniqueOrThrow({
+          where: { id: appliedId },
+        });
+        const sourceVersion = await database.resumeVersion.findUniqueOrThrow({
+          where: { id: acceptFixture.version.id },
+        });
+        assert.equal(imported.source, 'RESUME_IMPORT');
+        assert.equal(imported.status, 'APPROVED');
+        assert.equal(imported.headline, 'Imported headline');
+        assert.equal(imported.summary, 'Imported summary');
+        assert.equal(sourceVersion.processingState, 'APPROVED');
+        assert.equal(sourceVersion.approvedProfileVersionId, imported.id);
+        assert.equal(first.review.record?.decision, 'ACCEPTED');
 
-      const beforeRetryCount = await database.candidateProfileVersion.count({
-        where: { candidateId: candidate.id },
-      });
-      const retry = await service.decide(owner.id, acceptFixture.resume.id, {
-        decision: 'ACCEPT',
-      });
-      const afterRetryCount = await database.candidateProfileVersion.count({
-        where: { candidateId: candidate.id },
-      });
-      assert.equal(afterRetryCount, beforeRetryCount);
-      assert.equal(retry.review.record?.appliedProfileVersionId, imported.id);
-    });
+        const beforeRetryCount = await database.candidateProfileVersion.count({
+          where: { candidateId: candidate.id },
+        });
+        const retry = await service.decide(owner.id, acceptFixture.resume.id, {
+          decision: 'ACCEPT',
+        });
+        const afterRetryCount = await database.candidateProfileVersion.count({
+          where: { candidateId: candidate.id },
+        });
+        assert.equal(afterRetryCount, beforeRetryCount);
+        assert.equal(retry.review.record?.appliedProfileVersionId, imported.id);
+      },
+    );
 
     await t.test('edit stores candidate overrides in a new RESUME_IMPORT version', async () => {
       const review = await service.decide(owner.id, editFixture.resume.id, {
@@ -202,7 +202,9 @@ void test('Phase 3F candidate review is private, explicit, traceable, and idempo
       });
       const outboxEvents = await database.outboxEvent.findMany({
         where: {
-          eventType: { in: ['candidate.passport.resume_imported', 'candidate.resume.review_ignored'] },
+          eventType: {
+            in: ['candidate.passport.resume_imported', 'candidate.resume.review_ignored'],
+          },
         },
       });
       const serialized = JSON.stringify({ auditEvents, outboxEvents });

@@ -157,10 +157,13 @@ export function decideCandidateResumeReview(
   resumeId: string,
   input: ResumeReviewDecisionRequest,
 ): Promise<CandidateResumeReviewResponse> {
-  return apiRequest<CandidateResumeReviewResponse>(`/candidate/resumes/${resumeId}/review/decision`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return apiRequest<CandidateResumeReviewResponse>(
+    `/candidate/resumes/${resumeId}/review/decision`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function authorizeCandidateResumeUpload(input: {
