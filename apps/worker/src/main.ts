@@ -43,6 +43,13 @@ async function main(): Promise<void> {
     port: env.CLAMAV_PORT,
     timeoutMs: env.CLAMAV_TIMEOUT_MS,
   });
+  const ocrEngine = env.OCR_HTTP_ENDPOINT
+    ? new HttpResumeOcrEngine({
+        endpoint: env.OCR_HTTP_ENDPOINT,
+        timeoutMs: env.OCR_HTTP_TIMEOUT_MS,
+        ...(env.OCR_HTTP_TOKEN ? { bearerToken: env.OCR_HTTP_TOKEN } : {}),
+      })
+    : null;
 
   await redis.ping();
   const scannerVersion = await scanner.getVersion();
@@ -98,24 +105,19 @@ async function main(): Promise<void> {
     },
   );
 
-  const resumeOcrWorker = env.OCR_HTTP_ENDPOINT
+  const resumeOcrWorker = ocrEngine
     ? new Worker<ResumeOcrJobData>(
         RESUME_OCR_QUEUE,
         async (job) => {
           const maxAttempts = job.opts.attempts ?? 1;
           const finalAttempt = job.attemptsMade + 1 >= maxAttempts;
-          const engine = new HttpResumeOcrEngine({
-            endpoint: env.OCR_HTTP_ENDPOINT,
-            timeoutMs: env.OCR_HTTP_TIMEOUT_MS,
-            ...(env.OCR_HTTP_TOKEN ? { bearerToken: env.OCR_HTTP_TOKEN } : {}),
-          });
           await processResumeOcrJob(
             job.data,
             {
               database,
               storage,
               bucket: env.S3_BUCKET,
-              engine,
+              engine: ocrEngine,
             },
             {
               finalAttempt,
