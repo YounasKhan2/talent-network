@@ -99,18 +99,26 @@ export class ResumeReviewService {
       },
       review: {
         available: currentVersion?.processingState === 'READY_FOR_REVIEW' && parseResult !== null,
-        blockingReason: readBlockingReason(currentVersion?.processingState ?? null, parseResult !== null),
+        blockingReason: readBlockingReason(
+          currentVersion?.processingState ?? null,
+          parseResult !== null,
+        ),
       },
     };
   }
 }
 
-function readBlockingReason(processingState: string | null, hasProposal: boolean): string | null {
+function readBlockingReason(
+  processingState: string | null,
+  hasProposal: boolean,
+): string | null {
   if (!processingState) return 'RESUME_VERSION_NOT_AVAILABLE';
   if (processingState === 'READY_FOR_REVIEW' && hasProposal) return null;
   if (processingState === 'FAILED_TERMINAL') return 'PROCESSING_FAILED_TERMINAL';
   if (processingState === 'REJECTED') return 'RESUME_REJECTED';
   if (processingState === 'APPROVED') return 'REVIEW_ALREADY_APPROVED';
-  if (!hasProposal && processingState === 'READY_FOR_REVIEW') return 'PARSE_PROPOSAL_NOT_AVAILABLE';
+  if (!hasProposal && processingState === 'READY_FOR_REVIEW') {
+    return 'PARSE_PROPOSAL_NOT_AVAILABLE';
+  }
   return 'PROCESSING_IN_PROGRESS';
 }
