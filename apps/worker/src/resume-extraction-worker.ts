@@ -15,6 +15,12 @@ import {
 } from '@talent-network/resume-extraction';
 
 const EXTRACTION_RETRYABLE_FAILURE_CODES = ['RESUME_EXTRACTION_OBJECT_READ_FAILED'] as const;
+const EXTRACTION_FAILURE_CODES = new Set([
+  'RESUME_EXTRACTION_UNSUPPORTED_MIME_TYPE',
+  'RESUME_EXTRACTION_OBJECT_READ_FAILED',
+  'RESUME_EXTRACTION_PARSE_FAILED',
+  'RESUME_EXTRACTION_FAILED',
+]);
 
 export interface ResumeExtractionProcessorDependencies {
   database: DatabaseClient;
@@ -156,7 +162,7 @@ export async function processResumeExtractionJob(
       database,
       version,
       'RESUME_EXTRACTION_OBJECT_READ_FAILED',
-      { stage: 'EXTRACTING', reason: safeErrorMessage(error) },
+      { stage: 'EXTRACTING', reason: safeInfrastructureErrorReason(error) },
       execution.finalAttempt === true,
     );
     throw error;
@@ -250,11 +256,12 @@ export async function processResumeExtractionJob(
       });
     });
   } catch (error: unknown) {
+    const failureCode = safeExtractionFailureCode(error);
     await database.resumeExtraction.update({
       where: { id: extraction.id },
       data: {
         status: 'FAILED',
-        failureCode: safeExtractionFailureCode(error),
+        failureCode,
         completedAt: new Date(),
       },
     });
@@ -262,8 +269,8 @@ export async function processResumeExtractionJob(
     await markExtractionFailure(
       database,
       version,
-      safeExtractionFailureCode(error),
-      { stage: 'EXTRACTING', reason: safeErrorMessage(error) },
+      failureCode,
+      { stage: 'EXTRACTING', reason: 'EXTRACTOR_FAILED' },
       true,
     );
   }
@@ -341,12 +348,14 @@ async function markExtractionFailure(
 }
 
 function safeExtractionFailureCode(error: unknown): string {
-  if (error instanceof Error && error.message.startsWith('RESUME_EXTRACTION_')) {
-    return error.message.slice(0, 120);
-  }
-  return 'RESUME_EXTRACTION_FAILED';
+  if (!(error instanceof Error)) return 'RESUME_EXTRACTION_FAILED';
+  const candidate = error.message.split(':', 1)[0]?.trim();
+  return candidate && EXTRACTION_FAILURE_CODES.has(candidate)
+    ? candidate
+    : 'RESUME_EXTRACTION_FAILED';
 }
 
-function safeErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message.slice(0, 300) : 'unknown error';
+function safeInfrastructureErrorReason(error: unknown): string {
+  if (!(error instanceof Error)) return 'OBJECT_READ_FAILED';
+  return error.name && error.name !== 'Error' ? error.name.slice(0, 80) : 'OBJECT_READ_FAILED';
 }
