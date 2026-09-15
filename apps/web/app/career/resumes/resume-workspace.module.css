@@ -112,9 +112,15 @@
 }
 
 .uploadError,
-.actionError {
+.actionError,
+.workspaceError {
   color: var(--danger, #b42318);
   font-weight: 700;
+}
+
+.workspaceError {
+  margin: 0;
+  padding: 0 4px;
 }
 
 .workspaceGrid {
@@ -212,6 +218,35 @@
   justify-content: space-between;
   gap: 18px;
   align-items: flex-start;
+}
+
+.reviewHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.deleteResumeButton {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--danger, #b42318);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.deleteResumeButton:hover:not(:disabled) {
+  border-color: currentColor;
+}
+
+.deleteResumeButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .reviewHeader p {
@@ -526,6 +561,10 @@
   .sectionHeading,
   .reviewActions {
     flex-direction: column;
+  }
+
+  .reviewHeaderActions {
+    justify-content: flex-start;
   }
 
   .uploadPanel {
