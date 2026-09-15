@@ -89,6 +89,41 @@ void test('private object read failure is retryable and a later OCR retry can co
   assert.equal(fixture.ocrExtraction.status, 'COMPLETED');
 });
 
+void test('transient OCR service failure is retryable and a later delivery can complete', async () => {
+  const fixture = createFixture('OCR_REQUIRED');
+  let calls = 0;
+  const engine: ResumeOcrEngine = {
+    name: 'fixture-ocr',
+    version: '1.0.0',
+    recognize: (input) => {
+      calls += 1;
+      if (calls === 1) {
+        return Promise.reject(new Error('RESUME_OCR_SERVICE_UNAVAILABLE:HTTP_503'));
+      }
+      return Promise.resolve(resultWithText(input.resumeVersionId, input.mimeType, PRIVATE_TEXT));
+    },
+  };
+
+  await assert.rejects(() =>
+    processResumeOcrJob(job(), fixture.dependencies(engine), {
+      finalAttempt: false,
+      retryAttempt: false,
+    }),
+  );
+  assert.equal(fixture.state.processingState, 'FAILED_RETRYABLE');
+  assert.equal(fixture.state.failureCode, 'RESUME_OCR_SERVICE_UNAVAILABLE');
+  assert.equal(fixture.auditEvents.length, 0);
+  assert.equal(fixture.outboxEvents.length, 0);
+
+  await processResumeOcrJob(job(), fixture.dependencies(engine), {
+    finalAttempt: false,
+    retryAttempt: true,
+  });
+  assert.equal(calls, 2);
+  assert.equal(fixture.state.processingState, 'PARSING');
+  assert.equal(fixture.ocrExtraction.status, 'COMPLETED');
+});
+
 void test('insufficient OCR quality fails terminal instead of looping back to OCR', async () => {
   const fixture = createFixture('OCR_REQUIRED');
 
@@ -300,27 +335,30 @@ function engineWithText(text: string, onRecognize?: () => void): ResumeOcrEngine
     version: '1.0.0',
     recognize: (input) => {
       onRecognize?.();
-      const result: ResumeExtractionResult = {
-        document: {
-          schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
-          resumeVersionId: input.resumeVersionId,
-          sourceMimeType: input.mimeType,
-          extractionMethod: 'OCR',
-          extractor: { name: 'fixture-ocr', version: '1.0.0' },
-          text,
-          pages: [
-            {
-              pageNumber: 1,
-              text,
-              blocks: [{ text, sourceRange: { startOffset: 0, endOffset: text.length } }],
-            },
-          ],
-          quality: qualityFor(text),
-        },
-        durationMs: 5,
-      };
-      return Promise.resolve(result);
+      return Promise.resolve(resultWithText(input.resumeVersionId, input.mimeType, text));
     },
+  };
+}
+
+function resultWithText(resumeVersionId: string, mimeType: string, text: string): ResumeExtractionResult {
+  return {
+    document: {
+      schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
+      resumeVersionId,
+      sourceMimeType: mimeType,
+      extractionMethod: 'OCR',
+      extractor: { name: 'fixture-ocr', version: '1.0.0' },
+      text,
+      pages: [
+        {
+          pageNumber: 1,
+          text,
+          blocks: [{ text, sourceRange: { startOffset: 0, endOffset: text.length } }],
+        },
+      ],
+      quality: qualityFor(text),
+    },
+    durationMs: 5,
   };
 }
 
