@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng curl \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng curl fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -14,6 +14,7 @@ COPY services/ocr/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/ocr/app.py ./app.py
+COPY services/ocr/smoke_test.py ./smoke_test.py
 
 RUN useradd --create-home --uid 10001 appuser
 USER appuser
