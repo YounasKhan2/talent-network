@@ -249,6 +249,81 @@ export class ResumesService {
     return resume;
   }
 
+  async delete(userId: string, resumeId: string) {
+    const resume = await this.database.resume.findFirst({
+      where: { id: resumeId, candidate: { userId } },
+      select: {
+        id: true,
+        candidateId: true,
+        versions: { select: { id: true, objectKey: true } },
+      },
+    });
+    if (!resume) throw new NotFoundException({ code: 'RESUME_NOT_FOUND' });
+
+    const versionIds = resume.versions.map((version) => version.id);
+    const [extractions, parseResults] = await Promise.all([
+      versionIds.length
+        ? this.database.resumeExtraction.findMany({
+            where: { resumeVersionId: { in: versionIds } },
+            select: { documentObjectKey: true },
+          })
+        : Promise.resolve([]),
+      versionIds.length
+        ? this.database.resumeParseResult.findMany({
+            where: { resumeVersionId: { in: versionIds } },
+            select: { parsedObjectKey: true, evidenceObjectKey: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const objectKeys = new Set<string>();
+    for (const version of resume.versions) objectKeys.add(version.objectKey);
+    for (const extraction of extractions) {
+      if (extraction.documentObjectKey) objectKeys.add(extraction.documentObjectKey);
+    }
+    for (const result of parseResults) {
+      if (result.parsedObjectKey) objectKeys.add(result.parsedObjectKey);
+      if (result.evidenceObjectKey) objectKeys.add(result.evidenceObjectKey);
+    }
+
+    await this.storage.ensureBucketExists();
+    for (const objectKey of objectKeys) {
+      await this.storage.deleteObject(objectKey);
+    }
+
+    await this.database.$transaction(async (transaction) => {
+      const deleted = await transaction.resume.deleteMany({
+        where: { id: resume.id, candidateId: resume.candidateId },
+      });
+      if (deleted.count === 0) throw new NotFoundException({ code: 'RESUME_NOT_FOUND' });
+
+      await writeAuditEvent(transaction, {
+        actorType: 'USER',
+        actorId: userId,
+        action: 'candidate.resume.deleted',
+        resourceType: 'Resume',
+        resourceId: resume.id,
+        metadata: {
+          candidateId: resume.candidateId,
+          versionCount: versionIds.length,
+          privateObjectCount: objectKeys.size,
+        },
+      });
+      await writeOutboxEvent(transaction, {
+        aggregateType: 'Resume',
+        aggregateId: resume.id,
+        eventType: 'candidate.resume.deleted',
+        payload: {
+          candidateId: resume.candidateId,
+          resumeId: resume.id,
+          versionCount: versionIds.length,
+        },
+      });
+    });
+
+    return { deleted: true, resumeId: resume.id };
+  }
+
   async assertVersionOwnedByUser(userId: string, resumeVersionId: string) {
     const version = await this.database.resumeVersion.findFirst({
       where: {
