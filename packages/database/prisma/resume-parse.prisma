@@ -33,6 +33,7 @@ model ResumeParseResult {
   completedAt               DateTime?
   createdAt                 DateTime          @default(now())
   updatedAt                 DateTime          @updatedAt
+  review                    ResumeReview?
 
   @@unique([resumeVersionId, sourceExtractionId, pipelineVersion, parserName, parserVersion, schemaVersion, promptVersion], map: "resume_parse_execution_key")
   @@index([resumeVersionId, createdAt(sort: Desc)])
