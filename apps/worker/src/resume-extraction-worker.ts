@@ -4,6 +4,7 @@ import { DATABASE_JSON_DB_NULL, type DatabaseClient } from '@talent-network/data
 import {
   MammothDocxResumeExtractor,
   PdfJsResumeExtractor,
+  RESUME_DOCUMENT_SCHEMA_VERSION,
   decideResumeExtractionQuality,
   type ResumeExtractionJobData,
   type ResumeExtractionMethod,
@@ -133,6 +134,7 @@ export async function processResumeExtractionJob(
     },
     update: {
       status: 'STARTED',
+      schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
       failureCode: null,
       completedAt: null,
     },
@@ -142,6 +144,7 @@ export async function processResumeExtractionJob(
       extractorName: extractor.name,
       extractorVersion: extractor.version,
       extractionMethod,
+      schemaVersion: RESUME_DOCUMENT_SCHEMA_VERSION,
       status: 'STARTED',
     },
   });
@@ -187,6 +190,7 @@ export async function processResumeExtractionJob(
         where: { id: extraction.id },
         data: {
           status: 'COMPLETED',
+          schemaVersion: result.document.schemaVersion,
           qualityMetadata: {
             ...result.document.quality,
             decision: qualityDecision.decision,
