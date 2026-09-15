@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D extraction + OCR fallback is current; 3D-A contracts/persistence, 3D-B native extraction, and 3D-C quality routing are verified. 3D-D OCR fallback is implemented and has passed the automated repository gate plus real local OCR-service smoke acceptance. 3D-E persisted application-runtime closure is now the active acceptance boundary.**
+**Phase 3A CLOSED / VERIFIED — 2026-09-15. Phase 3B CLOSED / VERIFIED — 2026-09-15. Phase 3C CLOSED / VERIFIED — 2026-09-15. Phase 3D CLOSED / VERIFIED — 2026-09-15. Phase 3E structured parsing + evidence mapping is now CURRENT.**
 
 Phase 3 turns candidate-owned resume files into reviewed, structured proposals that can safely create a new Career Passport version only after explicit candidate approval.
 
@@ -75,161 +75,91 @@ Normal resume bytes travel browser → private object storage; the NestJS API do
 
 ### Phase 3C — Validation and malware scanning ✅ VERIFIED
 
-Delivered:
+Delivered deterministic PDF/DOCX structural validation, file-size enforcement, encrypted/corrupt/unsupported-file rejection, SHA-256 generation, provider-neutral malware-scanner contracts, ClamAV INSTREAM integration, isolated BullMQ processing, transactional-outbox dispatch, bounded retry/terminal classification, interrupted-worker recovery, guarded state transitions, quarantine/download denial, and privacy-safe audit/outbox events.
 
-- deterministic PDF/DOCX structural validation
-- file-size and stored-size enforcement
-- encrypted/corrupt/unsupported-file rejection
-- SHA-256 generation
-- provider-neutral malware-scanner contract
-- ClamAV INSTREAM adapter
-- isolated BullMQ worker path
-- transactional-outbox scheduler dispatch
-- bounded retry and terminal failure classification
-- interrupted-worker recovery
-- guarded duplicate/concurrent state transitions
-- malware logical quarantine and signed-download denial
-- audit/outbox security events without raw resume content
+Runtime acceptance on 2026-09-15 proved both clean and EICAR branches through real local services. Detailed closure record: [`phase-3c-security-processing.md`](./phase-3c-security-processing.md).
 
-Runtime acceptance on 2026-09-15 proved both branches through real local services:
+### Phase 3D — Extraction + OCR fallback ✅ VERIFIED
 
-```text
-Clean browser PDF
-→ RustFS HTTP 200
-→ UPLOADED + uploadedAt
-→ VALIDATING
-→ SCANNING + checksumSha256
-→ ClamAV CLEAN
-→ EXTRACTING
-```
+Phase 3D is closed. It delivered and verified:
+
+- normalized `ResumeDocument` and source-range contracts
+- candidate-private derived `ResumeExtraction` persistence
+- native PDF.js extraction with truthful page identity
+- native DOCX extraction without fabricated pagination
+- deterministic quality routing
+- observable `OCR_REQUIRED` fallback
+- provider-neutral OCR engine boundary
+- scheduler and worker queue handoffs
+- local FastAPI + PyMuPDF + Tesseract sidecar
+- bounded retry/idempotency semantics
+- metadata-only audit/outbox behavior
+- real scanned-PDF OCR runtime acceptance
+
+The real application runtime verified:
 
 ```text
-Harmless EICAR PDF
-→ RustFS HTTP 200
-→ UPLOADED + uploadedAt
-→ VALIDATING
-→ SCANNING + checksumSha256
-→ ClamAV Eicar-Signature
-→ REJECTED / MALWARE_DETECTED
-→ download authorization HTTP 409 / RESUME_SECURITY_QUARANTINED
-```
-
-The complete root `pnpm check` was green before runtime closure. Scanner-unavailable bounded retry/final terminalization is covered by automated worker tests.
-
-Detailed closure record: `docs/11-implementation/phase-3c-security-processing.md`.
-
-### Phase 3D — Extraction + OCR fallback ← CURRENT
-
-Deliverables:
-
-- native PDF text extractor
-- DOCX extractor
-- normalized internal `ResumeDocument` representation
-- extraction quality signals
-- OCR fallback interface
-- page/source mapping
-- resource/time limits
-- rebuildable derived artifacts
-- asynchronous `resume.extract` / `resume.ocr` processing contracts
-- idempotent retry/recovery semantics consistent with Phase 3C
-
-OCR is a fallback, not the default path. Clean files enter this slice only from the verified `EXTRACTING` boundary.
-
-#### 3D-A — Contracts + persistence ✅ VERIFIED
-
-The normalized document/source-range contracts, derived `ResumeExtraction` persistence, stable execution identity, candidate ownership boundary, source-state constraints, and cascade behavior are covered by the Phase 3 database integration suite.
-
-#### 3D-B — Native PDF/DOCX extraction ✅ VERIFIED — 2026-09-15
-
-Verified production adapters execute against real generated binary fixtures:
-
-- PDF.js extracts native PDF text with truthful 1-based page identity and valid source ranges.
-- Mammoth extracts DOCX text while preserving the truthful absence of pagination with `pageNumber: null`.
-- sufficient native fixture text satisfies the extraction quality policy.
-- the PDF.js Node adapter passes a plain `Uint8Array`, closing the runtime `Buffer` incompatibility found by the real fixture test.
-- worker processor/state/idempotency/privacy tests and scheduler dispatch tests are green.
-
-Observed automated evidence from the root quality gate on 2026-09-15:
-
-```text
-@talent-network/resume-extraction   14/14 passed
-@talent-network/worker              12/12 passed
-@talent-network/scheduler            6/6 passed
-Phase 3 integration                 13/13 passed
-```
-
-PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synthetic PDF fixture. This remains a runtime-hardening concern for broader PDF compatibility, not a failure of the verified native extraction boundary.
-
-#### 3D-C — Deterministic quality routing ✅ VERIFIED — 2026-09-15
-
-The extraction package now verifies inclusive quality-policy boundaries and routes text-poor, below-threshold, low-page-coverage, zero-page, replacement-character-heavy, and control-character-heavy native results to OCR. Worker tests verify the corresponding state transitions and privacy behavior:
-
-```text
-sufficient native text → PARSING
-insufficient/scanned-like native text → OCR_REQUIRED
-```
-
-The worker persists the derived document before routing, emits metadata-only audit/outbox events, keeps raw resume text out of those events, remains idempotent on duplicate delivery, and supports bounded retry for private-object read failures.
-
-The complete root `pnpm check` passed after these routing tests, including formatting, linting, typechecking, package tests, Phase 1/2/2A/2B/3 database integration suites, and the production build.
-
-#### 3D-D — OCR fallback 🟡 IMPLEMENTED / APPLICATION-RUNTIME VERIFICATION CURRENT
-
-Implemented:
-
-- provider-neutral `ResumeOcrEngine`
-- stable `resume.ocr` queue/job identity and scheduler outbox dispatch
-- provider-neutral OCR worker processor
-- source-extraction identity and eligibility validation
-- separate OCR `ResumeExtraction` persistence
-- metadata-only OCR audit/outbox completion/failure events
-- bounded retry/terminal behavior
-- retryable service-unavailable handling for network/timeout/429/5xx responses
-- HTTP OCR adapter with response/time/size/page bounds
-- optional runtime OCR queue subscription
-- local FastAPI + PyMuPDF + Tesseract OCR sidecar
-- deterministic image-only scanned-PDF smoke harness
-
-Observed runtime evidence on 2026-09-15:
-
-```text
-OCR Docker service → healthy
-real Tesseract scanned-PDF smoke → passed
-recognized characters → 332 on page 1
-scanned fixture → packages/resume-extraction/test-fixtures/scanned-resume.pdf
-root pnpm check → passed
-```
-
-This proves the real local OCR service and adapter boundary. 3D-D is not yet marked verified because the persisted Talent Network application path still needs to be observed end to end:
-
-```text
-OCR_REQUIRED
-→ candidate.resume.ocr_required
-→ resume.ocr
-→ OCR ResumeExtraction COMPLETED
+EXTRACTING
+→ OCR_REQUIRED
 → PARSING
 ```
 
-Detailed evidence and remaining closure criteria are maintained in `docs/11-implementation/phase-3d-extraction-ocr.md`.
+with separate completed derived records:
 
-#### 3D-E — Runtime closure 🟡 CURRENT ACCEPTANCE BOUNDARY
+```text
+NATIVE_PDF COMPLETED pdfjs-dist@6.3.289
+OCR        COMPLETED http-ocr-service@1
+```
 
-Phase 3D remains open until real local-service acceptance proves the persisted native and OCR branches through the complete asynchronous application pipeline. The OCR engine/service itself has passed local runtime smoke acceptance; the remaining proof is the database/outbox/queue/worker state path and runtime privacy checks.
+and durable event flow:
 
-### Phase 3E — Structured parsing + evidence mapping
+```text
+candidate.resume.security_passed
+→ candidate.resume.ocr_required
+→ candidate.resume.ocr_completed
+```
 
-Deliverables:
+Scheduler publication for both extraction and OCR handoffs passed. Known OCR fixture text was absent from audit/outbox metadata, and the complete root `pnpm check` passed after runtime acceptance.
 
-- explicit ParsedResume schema
-- deterministic preprocessing/section detection
-- schema-constrained parser adapter
-- AI Gateway integration only where useful
+Verified Phase 3D baseline:
+
+```text
+0621076b31ae91b9ee9dda106d4e04e3fcc3fdb6
+```
+
+Detailed closure record: [`phase-3d-extraction-ocr.md`](./phase-3d-extraction-ocr.md). Runtime procedure: [`phase-3d-runtime-acceptance.md`](./phase-3d-runtime-acceptance.md).
+
+### Phase 3E — Structured parsing + evidence mapping ← CURRENT
+
+Phase 3E consumes only verified Phase 3D extraction output for the same candidate-owned `ResumeVersion` and converts it into a schema-validated, evidence-linked proposal.
+
+The parser proposal is private Candidate data and must never mutate the Career Passport directly.
+
+Current implementation slices:
+
+```text
+3E-A Contracts + persistence                  ← CURRENT
+3E-B Deterministic preprocessing + sections   pending
+3E-C Schema parser + AI Gateway seam          pending
+3E-D Evidence/confidence validation            pending
+3E-E Runtime closure                           pending
+```
+
+Required deliverables:
+
+- explicit `ParsedResume` / parsed-claim schema
+- source evidence references back to Phase 3D document ranges/pages
+- deterministic preprocessing and section detection
+- provider-neutral parser adapter
+- strict structured-output validation
+- AI Gateway integration only where semantic interpretation is useful
 - parser/prompt/model/schema version metadata
-- field confidence and warnings
-- source evidence mapping back to document ranges/pages
-- idempotent parse result persistence
+- evidence/confidence/warning semantics
+- idempotent candidate-owned `ResumeParseResult` persistence
+- privacy-safe queue/audit/outbox behavior
+- `PARSING → READY_FOR_REVIEW` runtime closure
 
-The parser must never emit an opaque hiring score.
+The Phase 3E contract and closure matrix are maintained in [`phase-3e-structured-parsing-evidence.md`](./phase-3e-structured-parsing-evidence.md).
 
 ### Phase 3F — Candidate review workspace
 
@@ -245,7 +175,7 @@ Deliverables:
 - candidate-approved creation of a new `RESUME_IMPORT` Career Passport version
 - traceability from approved profile version back to ResumeVersion + parse result
 
-**UI boundary:** the current Candidate Workspace intentionally does not yet expose Resume upload/review navigation. That product surface belongs to Phase 3F after Phase 3E parsing/evidence work. Phase 3D runtime acceptance must use the real backend/storage/outbox/queue pipeline rather than assuming a Resume UI already exists.
+**UI boundary:** the Candidate Workspace intentionally does not yet expose the Resume review workflow. That product surface belongs to Phase 3F after Phase 3E parsing/evidence work is verified.
 
 ## State-machine rules
 
@@ -272,9 +202,11 @@ EXTRACTING
 
 Failures use bounded `FAILED_RETRYABLE` re-entry or `FAILED_TERMINAL`. `APPROVED`, `REJECTED`, and `FAILED_TERMINAL` are terminal states.
 
+Phase 3E owns only the `PARSING → READY_FOR_REVIEW` boundary. Phase 3F candidate action owns approval.
+
 ## Data ownership
 
-Resume files and processing metadata belong to the Candidate context.
+Resume files and all extraction/parse/review metadata belong to the Candidate context.
 
 ```text
 Session
@@ -282,17 +214,16 @@ Session
 → Candidate where Candidate.userId = Session.userId
 → Resume where Resume.candidateId = Candidate.id
 → ResumeVersion
+→ ResumeExtraction / ResumeParseResult
 ```
 
-Organization membership must not grant access to private resume files, extracted text, parsed proposals, processing history, or review decisions. Future application submission will intentionally share a selected immutable ResumeVersion through an Application snapshot rather than granting live access to the candidate's Resume workspace.
+Organization membership must not grant access to private resume files, extracted text, parsed proposals, processing history, or review decisions. Future application submission will intentionally share selected immutable versions through an Application snapshot rather than granting live access to the candidate's Resume workspace.
 
 ## Versioning contract
 
-A Resume is the logical candidate-owned artifact. A ResumeVersion represents one immutable uploaded source plus rebuildable processing outputs. Stable processing identity remains:
+A Resume is the logical candidate-owned artifact. A ResumeVersion represents one immutable uploaded source plus rebuildable processing outputs.
 
-```text
-resumeVersionId + processingPipelineVersion
-```
+Stable processing identities must include versioned source/configuration inputs. Extraction and parsing outputs must remain reproducible and independently rebuildable.
 
 Reprocessing must not create duplicate proposals or duplicate Career Passport versions.
 
@@ -327,7 +258,7 @@ Retries must be bounded and idempotent.
 
 Phase 3 instrumentation must evolve to expose uploads, validation failures, malware rejection rate, extraction success/failure, OCR fallback rate, parse success/failure, stage p50/p95/p99, retries, queue depth, review outcomes, and AI/provider usage/cost where applicable.
 
-Raw resume text and sensitive candidate content must not be emitted into ordinary application logs.
+Raw resume text, parsed sensitive values, and model prompt/response content must not be emitted into ordinary application logs.
 
 ## Phase 3 quality gate
 
@@ -345,7 +276,7 @@ Phase 3 is not closed until all of the following are proven:
 10. raw resume data remains isolated from organization membership
 11. local RustFS path is verified without provider-specific domain coupling
 12. queue/backlog and processing duration are observable
-13. `pnpm check` plus Phase 3 database/browser verification are green
+13. `pnpm check` plus Phase 3 database/browser/runtime verification are green
 
 ## Current implementation checkpoint
 
@@ -353,33 +284,38 @@ Phase 3 is not closed until all of the following are proven:
 3A Resume domain + state machine             ✅ CLOSED / VERIFIED
 3B Private direct object storage             ✅ CLOSED / VERIFIED
 3C Validation + malware scanning             ✅ CLOSED / VERIFIED
-3D Extraction + OCR fallback                 ← CURRENT
-  3D-A Contracts + persistence               ✅ VERIFIED
-  3D-B Native PDF/DOCX extraction            ✅ VERIFIED
-  3D-C Deterministic quality routing         ✅ VERIFIED
-  3D-D OCR fallback                          🟡 IMPLEMENTED / APP-RUNTIME VERIFICATION
-  3D-E Runtime closure                       🟡 CURRENT ACCEPTANCE
-3E Structured parsing + evidence mapping     pending
+3D Extraction + OCR fallback                 ✅ CLOSED / VERIFIED
+3E Structured parsing + evidence mapping     ← CURRENT
+  3E-A Contracts + persistence               🟡 CURRENT
+  3E-B Deterministic preprocessing           pending
+  3E-C Parser + AI Gateway seam              pending
+  3E-D Evidence/confidence validation        pending
+  3E-E Runtime closure                       pending
 3F Candidate review + Passport approval      pending
 ```
 
-Current Phase 3D boundary:
+Current Phase 3E boundary:
 
 ```text
-EXTRACTING
+PARSING
    │
-   ├── native PDF extraction ── sufficient ──→ PARSING
-   ├── DOCX extraction ───────── sufficient ──→ PARSING
+   ▼
+completed candidate-private ResumeExtraction
    │
-   └── insufficient/scanned-like
-              ↓
-         OCR_REQUIRED
-              ↓
-        OCR fallback implemented
-              ↓
-       persisted app-runtime proof ← CURRENT
-              ↓
-           PARSING
+   ▼
+deterministic preprocessing / sections
+   │
+   ▼
+schema-constrained parser
+   │
+   ▼
+evidence + confidence validation
+   │
+   ▼
+ResumeParseResult proposal
+   │
+   ▼
+READY_FOR_REVIEW
 ```
 
-Phase 3D must preserve the same Candidate ownership and privacy firewall. Extracted text is sensitive derived candidate data and must not be exposed to Organization membership or ordinary logs.
+Phase 3E must preserve the same Candidate ownership and privacy firewall. Parsed resume data is sensitive derived candidate data and must not be exposed to Organization membership or ordinary logs.
