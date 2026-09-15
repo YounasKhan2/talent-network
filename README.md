@@ -4,36 +4,223 @@
 
 Talent Network is a documentation-led, production-oriented employment operating system designed around structured hiring signal, explainable matching, reusable candidate data, and high-quality recruiter workflows.
 
-## Project Status
+## MVP Delivery Tracker
 
-| Area                                   | Status               |
-| -------------------------------------- | -------------------- |
-| Product blueprint                      | ✅ Complete          |
-| Architecture baseline                  | ✅ Complete          |
-| Security / scale / data specifications | ✅ Complete          |
-| UX / information architecture          | ✅ Complete          |
-| Monorepo bootstrap                     | ✅ Complete          |
-| Engineering foundation                 | ✅ Complete          |
-| Phase 1 backend foundation             | ✅ Verified          |
-| Phase 1 authenticated web experience   | ✅ Verified          |
-| Career Passport initial foundation     | ✅ Verified          |
-| Identity / workspace context hardening | ✅ Phase 2A closed   |
-| Career Passport expansion              | ✅ Phase 2B verified |
-| Resume Intelligence                    | 🟡 Phase 3 current   |
+> **This is a living implementation tracker, not a marketing roadmap.** Keep it synchronized with verified repository state while developing. A checkbox moves to complete only after its phase/slice quality gate is actually verified; implementation alone is not enough. Detailed acceptance criteria remain in [`docs/11-implementation/mvp-implementation-plan.md`](./docs/11-implementation/mvp-implementation-plan.md) and the phase-specific implementation documents.
 
-**Current implementation phase:** Phase 3 — Resume Intelligence.
+### Current position
 
-Phase 1 is closed after repository quality-gate verification plus browser-tested signup/login, organization onboarding, email verification, password recovery, invitation acceptance/revocation, multi-workspace switching, and permission-aware owner/recruiter behavior.
+```text
+0 Engineering Foundation                    ✅ VERIFIED
+1 Identity + Organizations                  ✅ VERIFIED
+2 Candidate Career Passport                 ✅ VERIFIED
+  2A Identity / Workspace Context           ✅ VERIFIED
+  2B Career Passport Expansion              ✅ VERIFIED
+3 Resume Intelligence                       🟡 IN PROGRESS
+  3A Resume Domain + Processing Contract    ✅ VERIFIED
+  3B Private Object Storage + Upload        ✅ VERIFIED
+  3C Validation + Malware Scanning          ✅ VERIFIED
+  3D Extraction + OCR                       🟡 CURRENT
+    3D-A Contracts + Persistence            ✅ VERIFIED
+    3D-B Native PDF/DOCX Extraction         🟡 IN PROGRESS
+    3D-C Quality Routing                    ⬜ REMAINING
+    3D-D OCR Fallback                       ⬜ REMAINING
+    3D-E Runtime Closure                    ⬜ REMAINING
+  3E Structured Parsing + Evidence          ⬜ REMAINING
+  3F Candidate Review Workspace             ⬜ REMAINING
+4 Employer + Jobs                           ⬜ REMAINING
+5 Job Discovery                             ⬜ REMAINING
+6 Applications                              ⬜ REMAINING
+7 Matching / Screening V1                   ⬜ REMAINING
+8 Recruiter Applicant Workspace             ⬜ REMAINING
+9 Interviews + Notifications                ⬜ REMAINING
+10 Admin / Verification / Moderation        ⬜ REMAINING
+11 Billing Foundation                       ⬜ REMAINING
+MVP Production Hardening + Launch           ⬜ REMAINING
+```
 
-The initial Career Passport foundation is verified with database-backed integration coverage for initialization, versioned professional-profile updates, section preservation, experience/education versioning, and privacy state remaining separate from profile versions.
+### Phase 0 — Engineering Foundation · ✅ Verified
 
-Phase 2A Identity & Workspace Context Hardening is closed after explicit Career activation, account-context discovery, reusable Career/Organization switching, last-active context restoration, stale-workspace fallback, mixed-context browser verification, and Candidate/Organization privacy-firewall regression coverage. A single human may safely hold a private Career identity and memberships in one or more hiring organizations without turning UI context into an authorization boundary.
+- [x] pnpm/Turborepo monorepo and shared TypeScript configuration
+- [x] formatting, linting, typecheck, tests and production-build quality gates
+- [x] PostgreSQL, Redis and local S3-compatible object storage
+- [x] environment validation, migrations, structured logging and health/readiness endpoints
+- [x] API, Web, Worker and Scheduler runtime boundaries
+- [x] local-first verification workflow; hosted CI remains optional rather than an MVP dependency
 
-Phase 2B Candidate Career Passport Expansion is **CLOSED / VERIFIED** after the complete local quality gate and final browser acceptance pass. It includes canonical and custom Passport sections, ordered edit/remove/reorder behavior, immutable-style professional versions, candidate-owned version history, derived evidence indicators, the reusable Candidate Workspace shell, preserved Organization/Career context switching, and responsive navigation while maintaining the Phase 2A privacy firewall.
+### Phase 1 — Identity + Organizations · ✅ Verified
 
-Phase 3 now begins Resume Intelligence: secure resume upload, object storage, malware scanning, text extraction with OCR fallback, structured parsing, provenance/confidence handling, and candidate-reviewed proposed Career Passport changes. Resume parsing must never silently mutate the Career Passport.
+- [x] signup/login/logout and rotating session foundation
+- [x] email verification and password recovery
+- [x] organization creation, membership and invitations
+- [x] reusable permission evaluation and tenant enforcement
+- [x] multi-workspace switching and permission-aware navigation
+- [x] audit/outbox and authentication rate-limit foundations
+- [x] backend integration and browser acceptance coverage
 
-The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, and deployment decisions.
+### Phase 2 — Candidate Career Passport · ✅ Verified
+
+- [x] canonical structured Candidate identity
+- [x] versioned professional profile state
+- [x] experience, education and extensible Passport sections
+- [x] privacy state separated from professional versions
+- [x] Candidate/Organization privacy firewall
+- [x] Career vs Organization context hardening without permanent account type
+- [x] Candidate Workspace shell, version history and evidence indicators
+- [x] Phase 2A and Phase 2B regression/browser acceptance
+
+### Phase 3 — Resume Intelligence · 🟡 In progress
+
+**3A — Resume domain + processing contract · ✅ Verified**
+
+- [x] candidate-owned Resume / immutable ResumeVersion foundation
+- [x] explicit processing state machine and pipeline version
+- [x] candidate ownership and cross-candidate isolation
+
+**3B — Private object storage + direct upload · ✅ Verified**
+
+- [x] provider-neutral S3 adapter
+- [x] private presigned upload/download
+- [x] upload completion metadata verification
+- [x] local RustFS browser CORS bootstrap
+
+**3C — Validation + malware scanning · ✅ Verified**
+
+- [x] PDF/DOCX structural validation
+- [x] ClamAV adapter and isolated `resume.scan` queue
+- [x] checksum generation
+- [x] bounded retry/terminal failure semantics
+- [x] infected-file logical quarantine and download denial
+- [x] clean and EICAR runtime acceptance
+
+**3D — Extraction + OCR · 🟡 Current**
+
+- [x] ResumeDocument/source-range contracts
+- [x] deterministic extraction quality policy
+- [x] derived ResumeExtraction persistence and idempotency boundary
+- [x] native PDF.js adapter with real page identity
+- [x] native DOCX adapter without fabricated pagination
+- [x] private `resume.extract` asynchronous handoff and worker foundation
+- [x] initial native-extractor and scheduler-dispatch boundary tests
+- [ ] complete worker processor/state/idempotency/privacy tests
+- [ ] verify real PDF and DOCX extraction fixtures end-to-end
+- [ ] close deterministic sufficient-text → `PARSING` routing
+- [ ] close text-poor/scanned → `OCR_REQUIRED` routing
+- [ ] implement provider-neutral OCR engine and OCR worker path
+- [ ] runtime acceptance and complete Phase 3D quality gate
+
+**3E — Structured parsing + evidence mapping · ⬜ Remaining**
+
+- [ ] schema-validated structured resume parser
+- [ ] AI Gateway integration where semantic interpretation is useful
+- [ ] provenance/confidence and evidence mapping
+- [ ] parser outputs remain proposals, never authoritative Passport mutations
+
+**3F — Candidate review workspace · ⬜ Remaining**
+
+- [ ] review proposed Career Passport changes
+- [ ] Accept / Edit / Ignore workflow
+- [ ] accepted changes use normal Passport versioning
+- [ ] browser acceptance for complete upload → review journey
+
+### Phase 4 — Employer + Jobs · ⬜ Remaining
+
+- [ ] organization/company profile and verification-state foundation
+- [ ] structured job drafts and requirements
+- [ ] required/preferred criteria, compensation and work-mode policy
+- [ ] screening questions and hiring pipeline selection
+- [ ] publish/unpublish/close lifecycle and job versions
+- [ ] public job projection/page with tenant-safe internal separation
+
+### Phase 5 — Job Discovery · ⬜ Remaining
+
+- [ ] server-side job search and structured filters
+- [ ] indexed PostgreSQL search foundation
+- [ ] cursor pagination and URL-backed search state
+- [ ] job detail and candidate-safe company information
+- [ ] basic recommendation retrieval
+- [ ] responsive candidate discovery UX
+
+### Phase 6 — Applications · ⬜ Remaining
+
+- [ ] idempotent application submission
+- [ ] immutable submitted Career Passport snapshot
+- [ ] pinned submitted ResumeVersion
+- [ ] screening answers and application stage/history
+- [ ] candidate application timeline
+- [ ] employer applicant projection with strict tenant boundaries
+
+### Phase 7 — Matching / Screening V1 · ⬜ Remaining
+
+- [ ] hard eligibility and structured requirement matching
+- [ ] experience/role relevance and preference compatibility
+- [ ] semantic representation behind explicit versioned contracts
+- [ ] candidate evidence and confidence separated from score
+- [ ] versioned/reproducible scoring results
+- [ ] evidence-linked AI explanations without opaque AI auto-rejection
+
+### Phase 8 — Recruiter Applicant Workspace · ⬜ Remaining
+
+- [ ] dense applicant table and purpose-built list endpoint
+- [ ] filters, sorting and cursor loading
+- [ ] configurable columns foundation
+- [ ] split-pane candidate detail preserving list context
+- [ ] stage moves, shortlist, notes and activity
+- [ ] keyboard workflow and authorization for every row/action
+
+### Phase 9 — Interviews + Notifications · ⬜ Remaining
+
+- [ ] interview scheduling model, participants and status
+- [ ] candidate-safe interview details
+- [ ] queued/idempotent email and in-app notifications
+- [ ] timezone and retry/failure behavior
+- [ ] internal-note privacy guarantees
+
+### Phase 10 — Admin / Verification / Moderation · ⬜ Remaining
+
+- [ ] user/organization operational lookup
+- [ ] company verification queue
+- [ ] job moderation
+- [ ] audit explorer foundation
+- [ ] support-safe account context
+- [ ] separately authorized and audited admin actions
+
+### Phase 11 — Billing Foundation · ⬜ Remaining
+
+- [ ] plans and entitlements model
+- [ ] provider-neutral subscription adapter
+- [ ] verified/idempotent billing webhooks
+- [ ] feature entitlement enforcement
+- [ ] billing audit trail
+
+### MVP Production Hardening + Launch · ⬜ Remaining
+
+- [ ] realistic performance fixtures and load validation
+- [ ] applicant-list, job-search, application-burst and resume-queue load tests
+- [ ] worker/queue failure and recovery verification
+- [ ] backup/restore and deployment/rollback runbooks
+- [ ] production observability/alerts and operational dashboards
+- [ ] security/privacy/tenant regression pass
+- [ ] critical browser/E2E journeys
+- [ ] architecture/API/README/ADR consistency audit
+
+### Beyond MVP — intentionally separate
+
+These are architectural future seams, **not unfinished MVP work**: advanced Talent CRM, assessment marketplace, sophisticated scorecards, offer approvals, referrals, salary intelligence, Private Talent Mode, workflow automation builder, Slack/Teams integrations, SSO/SCIM, HRIS integrations, campus/university portals, native mobile apps, a dedicated search cluster, event-streaming platform and Kubernetes. They should be promoted into the MVP only when customer validation or measured scale justifies them.
+
+### Mandatory tracker maintenance
+
+For every implementation slice, contributors and coding agents must:
+
+1. Read this tracker and the relevant phase document before changing code.
+2. Keep the current phase/slice marked `🟡` while implementation or verification is incomplete.
+3. Mark an item `[x]` only when repository evidence proves it is implemented.
+4. Mark a phase/slice `✅ VERIFIED` only after its required unit/integration/security/browser/runtime quality gates have passed as applicable.
+5. If a regression invalidates a completed gate, reopen the checkbox/status rather than leaving stale green documentation.
+6. Update this README, the detailed implementation document, architecture/API/schema/event docs, and ADRs in the same change whenever their contracts change.
+7. Never claim a local check, runtime acceptance, migration, browser journey, or production behavior passed unless its output was actually observed.
+
+The repository is the single source of truth for product, design, engineering, architecture, infrastructure, security, AI, UX, deployment decisions, and implementation status.
 
 ---
 
@@ -160,7 +347,9 @@ packages/
 ├── config/         runtime-specific validated configuration
 ├── contracts/      shared transport/API contracts
 ├── database/       Prisma/PostgreSQL ownership
-└── observability/  structured logging foundation
+├── observability/  structured logging foundation
+├── resume-security/    validation and malware-scanning contracts/adapters
+└── resume-extraction/  native extraction, quality and OCR-facing contracts
 ```
 
 Additional domain packages are created only when implementation genuinely needs them. Empty future-domain packages are intentionally avoided.
@@ -171,7 +360,9 @@ Additional domain packages are created only when implementation genuinely needs 
 PostgreSQL  → transactional source of truth
 Redis       → cache, coordination and queue infrastructure
 RustFS      → local S3-compatible object storage
+ClamAV      → malware scanning
 Prisma      → migrations and database client
+BullMQ      → asynchronous processing queues
 pnpm        → workspace/package management
 Turborepo   → repository task orchestration
 ```
@@ -210,6 +401,7 @@ PostgreSQL        localhost:5432
 Redis             localhost:6379
 RustFS S3 API     http://localhost:9000
 RustFS Console    http://localhost:9001
+ClamAV            localhost:3310
 ```
 
 The local RustFS container uses the same generic `S3_*` credentials consumed by the application. The Compose stack initializes its named data volume permissions before RustFS starts because RustFS runs as a non-root user.
@@ -220,7 +412,7 @@ The intended development bucket is:
 talent-network-local
 ```
 
-Bucket provisioning will be automated alongside the storage adapter/resume-upload implementation. Production bucket creation belongs to infrastructure provisioning rather than normal API startup.
+Local bucket creation and browser CORS policy are bootstrapped by the development infrastructure. Production bucket creation belongs to infrastructure provisioning rather than normal API startup.
 
 ### API health contract
 
