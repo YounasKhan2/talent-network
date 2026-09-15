@@ -5,7 +5,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { DatabaseClient, PrismaInputJsonValue } from '@talent-network/database';
+import {
+  DATABASE_JSON_DB_NULL,
+  type DatabaseClient,
+  type PrismaInputJsonValue,
+} from '@talent-network/database';
 import { DATABASE_CLIENT } from '../database/database.module.js';
 import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
 
@@ -33,6 +37,77 @@ const passportVersionInclude = {
     include: { items: { orderBy: { sortOrder: 'asc' as const } } },
   },
 };
+
+type WorkMode = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'FLEXIBLE';
+
+interface CurrentEmployment {
+  companyName: string;
+  title: string;
+  employmentType: string | null;
+  location: string | null;
+  workMode: WorkMode | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  isCurrent: boolean;
+  summary: string | null;
+}
+
+interface CurrentEducation {
+  institutionName: string;
+  degree: string | null;
+  fieldOfStudy: string | null;
+  location: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  isCurrent: boolean;
+  description: string | null;
+}
+
+interface CurrentSkill {
+  name: string;
+  normalizedName: string;
+  proficiency: string | null;
+  experienceMonths: number | null;
+  lastUsedAt: Date | null;
+}
+
+interface CurrentProject {
+  name: string;
+  description: string | null;
+  role: string | null;
+  url: string | null;
+  repositoryUrl: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+interface CurrentCertification {
+  name: string;
+  issuer: string | null;
+  credentialId: string | null;
+  credentialUrl: string | null;
+  issuedAt: Date | null;
+  expiresAt: Date | null;
+}
+
+interface CurrentLanguage {
+  name: string;
+  proficiency: string | null;
+}
+
+interface CurrentLink {
+  label: string;
+  url: string;
+  kind: string | null;
+}
+
+interface CurrentLocation {
+  label: string;
+  countryCode: string | null;
+  region: string | null;
+  city: string | null;
+  remoteOnly: boolean;
+}
 
 @Injectable()
 export class ResumeReviewService {
@@ -75,7 +150,11 @@ export class ResumeReviewService {
       },
       review: {
         available: processingState === 'READY_FOR_REVIEW' && hasProposal && !decided,
-        blockingReason: readBlockingReason(processingState, hasProposal, reviewRecord?.decision ?? null),
+        blockingReason: readBlockingReason(
+          processingState,
+          hasProposal,
+          reviewRecord?.decision ?? null,
+        ),
         record: reviewRecord,
       },
     };
@@ -89,13 +168,17 @@ export class ResumeReviewService {
 
     if (!version) throw new BadRequestException({ code: 'RESUME_VERSION_NOT_AVAILABLE' });
     if (!parseResult) throw new BadRequestException({ code: 'PARSE_PROPOSAL_NOT_AVAILABLE' });
-    if (!currentProfile) throw new ConflictException({ code: 'CANDIDATE_PASSPORT_NOT_INITIALIZED' });
+    if (!currentProfile) {
+      throw new ConflictException({ code: 'CANDIDATE_PASSPORT_NOT_INITIALIZED' });
+    }
 
     const existing = await this.database.resumeReview.findUnique({
       where: { resumeVersionId: version.id },
     });
     if (existing && existing.decision !== 'PENDING') {
-      if (matchesFinalDecision(existing.decision, input.decision)) return this.getReview(userId, resumeId);
+      if (matchesFinalDecision(existing.decision, input.decision)) {
+        return this.getReview(userId, resumeId);
+      }
       throw new ConflictException({ code: 'RESUME_REVIEW_ALREADY_DECIDED' });
     }
 
@@ -117,7 +200,11 @@ export class ResumeReviewService {
             decision: 'IGNORED',
             decidedAt: new Date(),
           },
-          update: { decision: 'IGNORED', candidateEdits: null, decidedAt: new Date() },
+          update: {
+            decision: 'IGNORED',
+            candidateEdits: DATABASE_JSON_DB_NULL,
+            decidedAt: new Date(),
+          },
         });
         await transaction.resumeVersion.update({
           where: { id: version.id },
@@ -141,143 +228,164 @@ export class ResumeReviewService {
       return this.getReview(userId, resumeId);
     }
 
-    const proposal = readParsedProposal(parseResult.parsedJson, version.id, parseResult.sourceExtractionId);
+    const proposal = readParsedProposal(
+      parseResult.parsedJson,
+      version.id,
+      parseResult.sourceExtractionId,
+    );
     const edits = input.decision === 'EDIT' ? input.edits : {};
     const decision = input.decision === 'EDIT' ? 'EDITED' : 'ACCEPTED';
     const now = new Date();
 
-    await this.database.$transaction(async (transaction) => {
-      const candidate = await transaction.candidate.findFirst({
-        where: { id: context.resume.candidate.id, userId },
-        select: { currentProfileVersionId: true },
+    try {
+      await this.database.$transaction(async (transaction) => {
+        const candidate = await transaction.candidate.findFirst({
+          where: { id: context.resume.candidate.id, userId },
+          select: { currentProfileVersionId: true },
+        });
+        if (!candidate || candidate.currentProfileVersionId !== currentProfile.id) {
+          throw new ConflictException({ code: 'CAREER_PASSPORT_CHANGED_DURING_REVIEW' });
+        }
+
+        const alreadyReviewed = await transaction.resumeReview.findUnique({
+          where: { resumeVersionId: version.id },
+        });
+        if (alreadyReviewed?.appliedProfileVersionId) return;
+        if (alreadyReviewed && alreadyReviewed.decision !== 'PENDING') {
+          throw new ConflictException({ code: 'RESUME_REVIEW_ALREADY_DECIDED' });
+        }
+
+        const next = await transaction.candidateProfileVersion.create({
+          data: {
+            candidateId: context.resume.candidate.id,
+            versionNumber: currentProfile.versionNumber + 1,
+            status: 'APPROVED',
+            source: 'RESUME_IMPORT',
+            headline:
+              edits.headline !== undefined
+                ? edits.headline
+                : readStringClaim(proposal.headline) ?? currentProfile.headline,
+            summary:
+              edits.summary !== undefined
+                ? edits.summary
+                : readStringClaim(proposal.summary) ?? currentProfile.summary,
+            availabilityStatus: currentProfile.availabilityStatus,
+            availableFrom: currentProfile.availableFrom,
+            compensationCurrency: currentProfile.compensationCurrency,
+            compensationMinimum: currentProfile.compensationMinimum,
+            compensationTarget: currentProfile.compensationTarget,
+            compensationPeriod: currentProfile.compensationPeriod,
+            preferredWorkModes: currentProfile.preferredWorkModes,
+            preferredEmploymentTypes: currentProfile.preferredEmploymentTypes,
+            approvedAt: now,
+            employments: {
+              create: mergeEmployments(currentProfile.employments, proposal.experiences),
+            },
+            education: { create: mergeEducation(currentProfile.education, proposal.education) },
+            skills: { create: mergeSkills(currentProfile.skills, proposal.skills) },
+            projects: { create: mergeProjects(currentProfile.projects, proposal.projects) },
+            certifications: {
+              create: mergeCertifications(
+                currentProfile.certifications,
+                proposal.certifications,
+              ),
+            },
+            languages: { create: mergeLanguages(currentProfile.languages, proposal.languages) },
+            links: { create: mergeLinks(currentProfile.links, proposal.links) },
+            locationPreferences: {
+              create: mergeLocations(currentProfile.locationPreferences, proposal.locations),
+            },
+            customSections: {
+              create: currentProfile.customSections.map((section, sectionIndex) => ({
+                title: section.title,
+                description: section.description,
+                sortOrder: sectionIndex,
+                items: {
+                  create: section.items.map((item, itemIndex) => ({
+                    title: item.title,
+                    subtitle: item.subtitle,
+                    description: item.description,
+                    startDate: item.startDate,
+                    endDate: item.endDate,
+                    url: item.url,
+                    sortOrder: itemIndex,
+                  })),
+                },
+              })),
+            },
+          },
+        });
+
+        await transaction.candidateProfileVersion.update({
+          where: { id: currentProfile.id },
+          data: { status: 'SUPERSEDED' },
+        });
+        await transaction.candidate.update({
+          where: { id: context.resume.candidate.id },
+          data: { currentProfileVersionId: next.id },
+        });
+        await transaction.resumeVersion.update({
+          where: { id: version.id },
+          data: { processingState: 'APPROVED', approvedProfileVersionId: next.id },
+        });
+        await transaction.resumeReview.upsert({
+          where: { resumeVersionId: version.id },
+          create: {
+            resumeVersionId: version.id,
+            parseResultId: parseResult.id,
+            baseProfileVersionId: currentProfile.id,
+            decision,
+            candidateEdits: edits as PrismaInputJsonValue,
+            appliedProfileVersionId: next.id,
+            decidedAt: now,
+          },
+          update: {
+            decision,
+            candidateEdits: edits as PrismaInputJsonValue,
+            appliedProfileVersionId: next.id,
+            decidedAt: now,
+          },
+        });
+        await writeAuditEvent(transaction, {
+          actorType: 'USER',
+          actorId: userId,
+          action: 'candidate.resume.review_applied',
+          resourceType: 'CandidateProfileVersion',
+          resourceId: next.id,
+          metadata: {
+            candidateId: context.resume.candidate.id,
+            resumeId,
+            resumeVersionId: version.id,
+            parseResultId: parseResult.id,
+            decision,
+            versionNumber: next.versionNumber,
+          },
+        });
+        await writeOutboxEvent(transaction, {
+          aggregateType: 'Candidate',
+          aggregateId: context.resume.candidate.id,
+          eventType: 'candidate.passport.resume_imported',
+          payload: {
+            candidateId: context.resume.candidate.id,
+            profileVersionId: next.id,
+            resumeVersionId: version.id,
+            parseResultId: parseResult.id,
+            decision,
+            versionNumber: next.versionNumber,
+          },
+        });
       });
-      if (!candidate || candidate.currentProfileVersionId !== currentProfile.id) {
-        throw new ConflictException({ code: 'CAREER_PASSPORT_CHANGED_DURING_REVIEW' });
+    } catch (error) {
+      if (isReviewRace(error)) {
+        const final = await this.database.resumeReview.findUnique({
+          where: { resumeVersionId: version.id },
+        });
+        if (final && matchesFinalDecision(final.decision, input.decision)) {
+          return this.getReview(userId, resumeId);
+        }
       }
-
-      const alreadyReviewed = await transaction.resumeReview.findUnique({
-        where: { resumeVersionId: version.id },
-      });
-      if (alreadyReviewed?.appliedProfileVersionId) return;
-      if (alreadyReviewed && alreadyReviewed.decision !== 'PENDING') {
-        throw new ConflictException({ code: 'RESUME_REVIEW_ALREADY_DECIDED' });
-      }
-
-      const next = await transaction.candidateProfileVersion.create({
-        data: {
-          candidateId: context.resume.candidate.id,
-          versionNumber: currentProfile.versionNumber + 1,
-          status: 'APPROVED',
-          source: 'RESUME_IMPORT',
-          headline:
-            edits.headline !== undefined
-              ? edits.headline
-              : readStringClaim(proposal.headline) ?? currentProfile.headline,
-          summary:
-            edits.summary !== undefined
-              ? edits.summary
-              : readStringClaim(proposal.summary) ?? currentProfile.summary,
-          availabilityStatus: currentProfile.availabilityStatus,
-          availableFrom: currentProfile.availableFrom,
-          compensationCurrency: currentProfile.compensationCurrency,
-          compensationMinimum: currentProfile.compensationMinimum,
-          compensationTarget: currentProfile.compensationTarget,
-          compensationPeriod: currentProfile.compensationPeriod,
-          preferredWorkModes: currentProfile.preferredWorkModes,
-          preferredEmploymentTypes: currentProfile.preferredEmploymentTypes,
-          approvedAt: now,
-          employments: { create: mergeEmployments(currentProfile.employments, proposal.experiences) },
-          education: { create: mergeEducation(currentProfile.education, proposal.education) },
-          skills: { create: mergeSkills(currentProfile.skills, proposal.skills) },
-          projects: { create: mergeProjects(currentProfile.projects, proposal.projects) },
-          certifications: {
-            create: mergeCertifications(currentProfile.certifications, proposal.certifications),
-          },
-          languages: { create: mergeLanguages(currentProfile.languages, proposal.languages) },
-          links: { create: mergeLinks(currentProfile.links, proposal.links) },
-          locationPreferences: {
-            create: mergeLocations(currentProfile.locationPreferences, proposal.locations),
-          },
-          customSections: {
-            create: currentProfile.customSections.map((section, sectionIndex) => ({
-              title: section.title,
-              description: section.description,
-              sortOrder: sectionIndex,
-              items: {
-                create: section.items.map((item, itemIndex) => ({
-                  title: item.title,
-                  subtitle: item.subtitle,
-                  description: item.description,
-                  startDate: item.startDate,
-                  endDate: item.endDate,
-                  url: item.url,
-                  sortOrder: itemIndex,
-                })),
-              },
-            })),
-          },
-        },
-      });
-
-      await transaction.candidateProfileVersion.update({
-        where: { id: currentProfile.id },
-        data: { status: 'SUPERSEDED' },
-      });
-      await transaction.candidate.update({
-        where: { id: context.resume.candidate.id },
-        data: { currentProfileVersionId: next.id },
-      });
-      await transaction.resumeVersion.update({
-        where: { id: version.id },
-        data: { processingState: 'APPROVED', approvedProfileVersionId: next.id },
-      });
-      await transaction.resumeReview.upsert({
-        where: { resumeVersionId: version.id },
-        create: {
-          resumeVersionId: version.id,
-          parseResultId: parseResult.id,
-          baseProfileVersionId: currentProfile.id,
-          decision,
-          candidateEdits: edits as PrismaInputJsonValue,
-          appliedProfileVersionId: next.id,
-          decidedAt: now,
-        },
-        update: {
-          decision,
-          candidateEdits: edits as PrismaInputJsonValue,
-          appliedProfileVersionId: next.id,
-          decidedAt: now,
-        },
-      });
-      await writeAuditEvent(transaction, {
-        actorType: 'USER',
-        actorId: userId,
-        action: 'candidate.resume.review_applied',
-        resourceType: 'CandidateProfileVersion',
-        resourceId: next.id,
-        metadata: {
-          candidateId: context.resume.candidate.id,
-          resumeId,
-          resumeVersionId: version.id,
-          parseResultId: parseResult.id,
-          decision,
-          versionNumber: next.versionNumber,
-        },
-      });
-      await writeOutboxEvent(transaction, {
-        aggregateType: 'Candidate',
-        aggregateId: context.resume.candidate.id,
-        eventType: 'candidate.passport.resume_imported',
-        payload: {
-          candidateId: context.resume.candidate.id,
-          profileVersionId: next.id,
-          resumeVersionId: version.id,
-          parseResultId: parseResult.id,
-          decision,
-          versionNumber: next.versionNumber,
-        },
-      });
-    });
+      throw error;
+    }
 
     return this.getReview(userId, resumeId);
   }
@@ -347,12 +455,20 @@ export class ResumeReviewService {
   }
 }
 
-function matchesFinalDecision(stored: string, requested: ResumeReviewDecisionInput['decision']): boolean {
+function matchesFinalDecision(
+  stored: string,
+  requested: ResumeReviewDecisionInput['decision'],
+): boolean {
   return (
     (stored === 'IGNORED' && requested === 'IGNORE') ||
     (stored === 'ACCEPTED' && requested === 'ACCEPT') ||
     (stored === 'EDITED' && requested === 'EDIT')
   );
+}
+
+function isReviewRace(error: unknown): boolean {
+  const record = asRecord(error);
+  return record?.code === 'P2002' || record?.code === 'P2034';
 }
 
 function readBlockingReason(
@@ -367,15 +483,25 @@ function readBlockingReason(
   if (processingState === 'FAILED_TERMINAL') return 'PROCESSING_FAILED_TERMINAL';
   if (processingState === 'REJECTED') return 'RESUME_REJECTED';
   if (processingState === 'APPROVED') return 'REVIEW_ALREADY_APPROVED';
-  if (!hasProposal && processingState === 'READY_FOR_REVIEW') return 'PARSE_PROPOSAL_NOT_AVAILABLE';
+  if (!hasProposal && processingState === 'READY_FOR_REVIEW') {
+    return 'PARSE_PROPOSAL_NOT_AVAILABLE';
+  }
   return 'PROCESSING_IN_PROGRESS';
 }
 
 type JsonRecord = Record<string, unknown>;
 
-function readParsedProposal(value: unknown, resumeVersionId: string, sourceExtractionId: string): JsonRecord {
+function readParsedProposal(
+  value: unknown,
+  resumeVersionId: string,
+  sourceExtractionId: string,
+): JsonRecord {
   const proposal = asRecord(value);
-  if (!proposal || proposal.resumeVersionId !== resumeVersionId || proposal.sourceExtractionId !== sourceExtractionId) {
+  if (
+    !proposal ||
+    proposal.resumeVersionId !== resumeVersionId ||
+    proposal.sourceExtractionId !== sourceExtractionId
+  ) {
     throw new BadRequestException({ code: 'INVALID_RESUME_PARSE_PROPOSAL' });
   }
   return proposal;
@@ -412,7 +538,7 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function mergeEmployments(current: any[], value: unknown) {
+function mergeEmployments(current: readonly CurrentEmployment[], value: unknown) {
   const rows = current.map((item, index) => ({
     companyName: item.companyName,
     title: item.title,
@@ -435,7 +561,7 @@ function mergeEmployments(current: any[], value: unknown) {
     if (seen.has(key)) continue;
     const dates = readDateRange(item?.dates);
     const summary = readStringClaim(item?.summary);
-    const highlights = asArray(item?.highlights).map(readStringClaim).filter(Boolean) as string[];
+    const highlights = asArray(item?.highlights).map(readStringClaim).filter(isString);
     rows.push({
       companyName,
       title,
@@ -453,7 +579,7 @@ function mergeEmployments(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeEducation(current: any[], value: unknown) {
+function mergeEducation(current: readonly CurrentEducation[], value: unknown) {
   const rows = current.map((item, index) => ({
     institutionName: item.institutionName,
     degree: item.degree,
@@ -465,7 +591,9 @@ function mergeEducation(current: any[], value: unknown) {
     description: item.description,
     sortOrder: index,
   }));
-  const seen = new Set(rows.map((item) => `${item.institutionName}|${item.degree ?? ''}`.toLowerCase()));
+  const seen = new Set(
+    rows.map((item) => `${item.institutionName}|${item.degree ?? ''}`.toLowerCase()),
+  );
   for (const raw of asArray(value)) {
     const item = asRecord(raw);
     const institutionName = readStringClaim(item?.institution);
@@ -474,7 +602,7 @@ function mergeEducation(current: any[], value: unknown) {
     const key = `${institutionName}|${degree ?? ''}`.toLowerCase();
     if (seen.has(key)) continue;
     const dates = readDateRange(item?.dates);
-    const details = asArray(item?.details).map(readStringClaim).filter(Boolean) as string[];
+    const details = asArray(item?.details).map(readStringClaim).filter(isString);
     rows.push({
       institutionName,
       degree,
@@ -491,7 +619,7 @@ function mergeEducation(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeSkills(current: any[], value: unknown) {
+function mergeSkills(current: readonly CurrentSkill[], value: unknown) {
   const rows = current.map((item, index) => ({
     name: item.name,
     normalizedName: item.normalizedName,
@@ -520,7 +648,7 @@ function mergeSkills(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeProjects(current: any[], value: unknown) {
+function mergeProjects(current: readonly CurrentProject[], value: unknown) {
   const rows = current.map((item, index) => ({
     name: item.name,
     description: item.description,
@@ -551,7 +679,7 @@ function mergeProjects(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeCertifications(current: any[], value: unknown) {
+function mergeCertifications(current: readonly CurrentCertification[], value: unknown) {
   const rows = current.map((item, index) => ({
     name: item.name,
     issuer: item.issuer,
@@ -580,7 +708,7 @@ function mergeCertifications(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeLanguages(current: any[], value: unknown) {
+function mergeLanguages(current: readonly CurrentLanguage[], value: unknown) {
   const rows = current.map((item, index) => ({
     name: item.name,
     proficiency: item.proficiency,
@@ -597,7 +725,7 @@ function mergeLanguages(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeLinks(current: any[], value: unknown) {
+function mergeLinks(current: readonly CurrentLink[], value: unknown) {
   const rows = current.map((item, index) => ({
     label: item.label,
     url: item.url,
@@ -620,7 +748,7 @@ function mergeLinks(current: any[], value: unknown) {
   return rows;
 }
 
-function mergeLocations(current: any[], value: unknown) {
+function mergeLocations(current: readonly CurrentLocation[], value: unknown) {
   const rows = current.map((item, index) => ({
     label: item.label,
     countryCode: item.countryCode,
@@ -645,4 +773,8 @@ function mergeLocations(current: any[], value: unknown) {
     seen.add(label.toLowerCase());
   }
   return rows;
+}
+
+function isString(value: string | null): value is string {
+  return value !== null;
 }
