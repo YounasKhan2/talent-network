@@ -8,13 +8,13 @@ import {
   type ParsedResume,
 } from './index.js';
 
-test('resume parsing contracts expose explicit version identities', () => {
+void test('resume parsing contracts expose explicit version identities', () => {
   assert.equal(PARSED_RESUME_SCHEMA_VERSION, 'parsed-resume-v1');
   assert.equal(RESUME_PARSER_POLICY_VERSION, 'resume-parser-policy-v1');
   assert.equal(RESUME_EVIDENCE_POLICY_VERSION, 'resume-evidence-policy-v1');
 });
 
-test('evidence can preserve truthful page-less DOCX semantics', () => {
+void test('evidence can preserve truthful page-less DOCX semantics', () => {
   const evidence: ParsedEvidence = {
     resumeExtractionId: 'extraction-id',
     pageNumber: null,
@@ -26,7 +26,7 @@ test('evidence can preserve truthful page-less DOCX semantics', () => {
   assert.deepEqual(evidence.sourceRange, { start: 10, end: 42 });
 });
 
-test('parsed resume remains a proposal contract without approval state', () => {
+void test('parsed resume remains a proposal contract without approval state', () => {
   const parsed: ParsedResume = {
     schemaVersion: PARSED_RESUME_SCHEMA_VERSION,
     resumeVersionId: 'resume-version-id',
