@@ -16,8 +16,10 @@ export class ResumeParseSourceError extends Error {
     readonly code:
       | 'RESUME_VERSION_NOT_FOUND'
       | 'RESUME_NOT_PARSING'
+      | 'PIPELINE_VERSION_MISMATCH'
       | 'SOURCE_EXTRACTION_NOT_FOUND'
-      | 'SOURCE_EXTRACTION_NOT_COMPLETED',
+      | 'SOURCE_EXTRACTION_NOT_COMPLETED'
+      | 'SOURCE_PIPELINE_MISMATCH',
   ) {
     super(code);
     this.name = 'ResumeParseSourceError';
@@ -31,6 +33,7 @@ export class ResumeParseResultRepository {
     candidateId: string;
     resumeVersionId: string;
     sourceExtractionId: string;
+    pipelineVersion?: string;
   }) {
     const resumeVersion = await this.database.resumeVersion.findFirst({
       where: {
@@ -50,6 +53,12 @@ export class ResumeParseResultRepository {
     if (resumeVersion.processingState !== 'PARSING') {
       throw new ResumeParseSourceError('RESUME_NOT_PARSING');
     }
+    if (
+      input.pipelineVersion !== undefined &&
+      input.pipelineVersion !== resumeVersion.processingPipelineVersion
+    ) {
+      throw new ResumeParseSourceError('PIPELINE_VERSION_MISMATCH');
+    }
 
     const sourceExtraction = await this.database.resumeExtraction.findFirst({
       where: {
@@ -59,6 +68,7 @@ export class ResumeParseResultRepository {
       select: {
         id: true,
         resumeVersionId: true,
+        pipelineVersion: true,
         status: true,
         schemaVersion: true,
         textChecksumSha256: true,
@@ -70,6 +80,9 @@ export class ResumeParseResultRepository {
     }
     if (sourceExtraction.status !== 'COMPLETED') {
       throw new ResumeParseSourceError('SOURCE_EXTRACTION_NOT_COMPLETED');
+    }
+    if (sourceExtraction.pipelineVersion !== resumeVersion.processingPipelineVersion) {
+      throw new ResumeParseSourceError('SOURCE_PIPELINE_MISMATCH');
     }
 
     return { resumeVersion, sourceExtraction };
