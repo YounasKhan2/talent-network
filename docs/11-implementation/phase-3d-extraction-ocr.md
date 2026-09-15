@@ -2,9 +2,17 @@
 
 ## Status
 
-**3D-A CONTRACTS + PERSISTENCE VERIFIED. 3D-B NATIVE PDF/DOCX EXTRACTION VERIFIED. 3D-C QUALITY ROUTING VERIFIED. 3D-D OCR FALLBACK IMPLEMENTED / APPLICATION-RUNTIME VERIFICATION CURRENT — 2026-09-15.**
+**PHASE 3D VERIFIED / CLOSED — 2026-09-15.**
 
-Phase 3D begins only after Phase 3C has advanced a candidate-owned ResumeVersion to `EXTRACTING`. Its responsibility is to produce a rebuildable, source-aware document representation for Phase 3E. It does not infer Career Passport fields and never mutates the Passport.
+All Phase 3D slices are verified:
+
+- **3D-A — Contracts and persistence foundation ✅ VERIFIED**
+- **3D-B — Native PDF/DOCX extraction ✅ VERIFIED**
+- **3D-C — Quality routing ✅ VERIFIED**
+- **3D-D — OCR fallback ✅ VERIFIED**
+- **3D-E — Runtime closure ✅ VERIFIED**
+
+Phase 3D begins only after Phase 3C has advanced a candidate-owned `ResumeVersion` to `EXTRACTING`. Its responsibility is to produce a rebuildable, source-aware document representation for Phase 3E. It does not infer Career Passport fields and never mutates the Passport.
 
 ## Invariants
 
@@ -207,43 +215,105 @@ Transient OCR HTTP failures (`network`, `timeout`, `429`, `5xx`) are retryable t
 
 ## Verified evidence — 2026-09-15
 
-The root `pnpm check` is green after the native extraction, quality-routing, OCR processor, OCR dispatcher, HTTP adapter, worker runtime wiring, local OCR sidecar, retry-hardening, and formatting fixes.
+Phase 3D was closed against repository baseline commit:
 
-Automated evidence includes:
+```text
+0621076b31ae91b9ee9dda106d4e04e3fcc3fdb6
+chore(phase3d): format OCR runtime acceptance
+```
+
+### Automated and integration evidence
+
+The complete repository gate `pnpm check` passed after runtime acceptance. It includes formatting, linting, typechecking, package tests, Phase 1/2/2A/2B/3 integration suites, and the full monorepo build.
+
+Phase 3D-specific automated evidence includes:
 
 - native PDF/DOCX extraction and deterministic quality routing
+- real PDF.js PDF fixture extraction with truthful page semantics
+- real Mammoth DOCX fixture extraction without fabricated pagination
+- page/source normalization and source-range checks
 - OCR source-identity validation
 - OCR persistence as a separate derived `ResumeExtraction`
-- `OCR_REQUIRED → PARSING` processor behavior with injected OCR results
-- duplicate-delivery idempotency
+- `OCR_REQUIRED → PARSING` processor behavior
+- duplicate extraction-delivery idempotency
+- duplicate OCR-delivery idempotency
 - metadata-only audit/outbox events
 - private-object retry recovery
 - transient OCR-service retry recovery
+- terminal insufficient-OCR-quality behavior
 - HTTP adapter timeout/status/response-boundary behavior
-- scheduler dispatch with stable OCR job identity
+- scheduler dispatch with stable extraction and OCR job identities
 
-Real local OCR runtime evidence observed on 2026-09-15:
+### Real OCR service evidence
 
 ```text
 docker compose ps ocr
-→ talent-network-ocr-1 ... Up ... (healthy)
+→ talent-network-ocr-1 ... healthy
 
 pnpm ocr:smoke
 → Local OCR smoke passed.
 → Recognized 332 characters on page 1.
 ```
 
-The smoke harness generates a genuine image-only PDF and requires Tesseract to recover deterministic resume text. The same scanned fixture was materialized to:
+The smoke harness generated a genuine image-only PDF and required Tesseract to recover deterministic resume text. The scanned fixture was materialized to:
 
 ```text
 packages/resume-extraction/test-fixtures/scanned-resume.pdf
 ```
 
-This proves the local HTTP sidecar, PDF rendering, Tesseract invocation, bounded response contract, and scanned-document OCR capability. It does **not** by itself prove the full Talent Network asynchronous state path from a persisted `ResumeVersion` through `OCR_REQUIRED`, scheduler dispatch, OCR worker persistence, and final `PARSING`.
+### Real application-runtime acceptance
 
-The real native fixture tests execute PDF.js and Mammoth against generated binary PDF/DOCX files. PDF page numbers are truthful, DOCX pagination is not fabricated, source ranges are validated, and sufficient text passes the deterministic quality policy.
+The real application runtime was executed with PostgreSQL, Redis, RustFS, OCR, scheduler, and worker active against the same environment.
 
-PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synthetic PDF fixture. Broader font compatibility remains a runtime-hardening concern for 3D-E rather than a blocker for 3D-B.
+Command:
+
+```bash
+pnpm test:runtime:phase3d-ocr
+```
+
+Observed persisted state path:
+
+```text
+EXTRACTING
+→ OCR_REQUIRED
+→ PARSING
+```
+
+Observed derived extractions:
+
+```text
+NATIVE_PDF COMPLETED pdfjs-dist@6.3.289
+OCR        COMPLETED http-ocr-service@1
+```
+
+Observed durable event path:
+
+```text
+candidate.resume.security_passed
+→ candidate.resume.ocr_required
+→ candidate.resume.ocr_completed
+```
+
+The acceptance harness verified scheduler publication for both extraction and OCR handoffs. It also verified that known OCR fixture text was absent from audit/outbox metadata. The successful fixture was cleaned up after the run.
+
+This proves the persisted asynchronous application path:
+
+```text
+candidate.resume.security_passed
+→ resume.extract
+→ native PDF extraction
+→ OCR_REQUIRED
+→ candidate.resume.ocr_required
+→ resume.ocr
+→ real HTTP OCR/Tesseract
+→ separate OCR ResumeExtraction
+→ candidate.resume.ocr_completed
+→ PARSING
+```
+
+The runtime acceptance initially exposed only an operational setup requirement: scheduler and worker are host Node processes and must be running alongside the Docker infrastructure. Once those runtimes were active, the same acceptance harness passed without an architecture or processing-code change.
+
+PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synthetic native PDF fixture. It does not invalidate the verified extraction semantics; broader font compatibility remains a future runtime-hardening concern rather than a Phase 3D closure blocker.
 
 ## 3D implementation slices
 
@@ -274,9 +344,7 @@ PDF.js currently emits a non-failing `standardFontDataUrl` warning for the synth
 - metadata-only audit/outbox events
 - duplicate-delivery idempotency and bounded storage-read retry coverage
 
-### 3D-D — OCR fallback 🟡 IMPLEMENTED / APPLICATION-RUNTIME VERIFICATION CURRENT
-
-Implemented and automated-gate verified:
+### 3D-D — OCR fallback ✅ VERIFIED
 
 - provider-neutral `ResumeOcrEngine`
 - stable `resume.ocr` queue/job identity
@@ -291,39 +359,28 @@ Implemented and automated-gate verified:
 - optional worker runtime subscription
 - local FastAPI + PyMuPDF + Tesseract OCR sidecar
 - deterministic scanned-PDF smoke harness
+- real persisted `OCR_REQUIRED → resume.ocr → PARSING` runtime acceptance
+- scheduler publication verified for extraction and OCR handoffs
+- runtime audit/outbox privacy assertion passed
 
-Runtime evidence already observed:
+### 3D-E — Runtime closure ✅ VERIFIED
 
-- real OCR container built and started successfully
-- Docker health check reports `healthy`
-- scanned/image-only PDF smoke test passed against real Tesseract
-- 332 characters recognized on page 1
-- deterministic scanned fixture materialized for application-level acceptance
-- complete repository `pnpm check` passed
+Closure matrix:
 
-Still required before `VERIFIED`:
+1. real native-text PDF → native extraction → `PARSING` ✅
+2. real DOCX → native extraction → `PARSING` ✅
+3. scanned/image PDF → `OCR_REQUIRED` → OCR → `PARSING` ✅
+4. page/source mapping survives normalization ✅
+5. derived text remains candidate-private ✅
+6. no raw text appears in audit/outbox metadata; runtime service logging is configured to avoid body/text emission ✅
+7. retries and duplicate deliveries are bounded/idempotent ✅
+8. root `pnpm check` is green ✅
 
-- observe the real application queue/state path `OCR_REQUIRED → candidate.resume.ocr_required → resume.ocr → OCR ResumeExtraction COMPLETED → PARSING`
-- confirm private OCR text is absent from application logs/audit/outbox during that real path
-- confirm runtime retry/idempotency behavior remains correct if acceptance exposes any integration edge case
-- rerun root `pnpm check` after any acceptance fix
+Phase 3D is therefore closed. Phase 3E may consume the verified `ResumeDocument`/`ResumeExtraction` boundary for structured parsing and evidence mapping without changing Phase 3D ownership, privacy, or source-identity semantics.
 
-### 3D-E — Runtime closure ← CURRENT ACCEPTANCE BOUNDARY
+## Runtime commands
 
-Verify at minimum:
-
-1. real native-text PDF → native extraction → `PARSING`
-2. real DOCX → native extraction → `PARSING`
-3. scanned/image PDF → `OCR_REQUIRED` → OCR → `PARSING`
-4. page/source mapping survives normalization
-5. derived text remains candidate-private
-6. no raw text appears in audit/outbox/logs
-7. retries are idempotent
-8. root `pnpm check` is green
-
-Current evidence already satisfies the local OCR-service health/smoke portion of this matrix. The remaining closure item is the persisted application pipeline, not the OCR engine itself.
-
-Local OCR smoke commands:
+Local OCR smoke:
 
 ```bash
 docker compose up -d --build ocr
@@ -331,18 +388,32 @@ docker compose ps ocr
 docker compose exec -T ocr python smoke_test.py
 ```
 
-To materialize the deterministic scanned fixture for application-level acceptance:
+Materialize the deterministic scanned fixture:
 
 ```bash
 docker compose exec -T ocr python smoke_test.py --output /tmp/scanned-resume.pdf
 docker compose cp ocr:/tmp/scanned-resume.pdf packages/resume-extraction/test-fixtures/scanned-resume.pdf
 ```
 
-See [`services/ocr/README.md`](../../services/ocr/README.md) for the local service contract and acceptance notes.
+Keep scheduler and worker runtimes active during application acceptance:
+
+```bash
+pnpm --filter @talent-network/scheduler dev
+pnpm --filter @talent-network/worker dev
+```
+
+Then:
+
+```bash
+pnpm test:runtime:phase3d-ocr
+pnpm check
+```
+
+See [`phase-3d-runtime-acceptance.md`](./phase-3d-runtime-acceptance.md) for the deterministic application-runtime acceptance procedure and [`services/ocr/README.md`](../../services/ocr/README.md) for the local OCR service contract.
 
 ## UI boundary
 
-Phase 3D is backend/processing infrastructure. The current Candidate Workspace does **not** yet expose a Resume destination or upload/review page. That UI belongs to **Phase 3F — Candidate Review Workspace**, after structured parsing/evidence mapping in Phase 3E. Runtime closure for 3D must therefore use the real backend/storage/queue path rather than inventing a UI route that is not implemented yet.
+Phase 3D is backend/processing infrastructure. The current Candidate Workspace does **not** yet expose a Resume destination or upload/review page. That UI belongs to **Phase 3F — Candidate Review Workspace**, after structured parsing/evidence mapping in Phase 3E. Runtime closure for 3D therefore uses the real backend/storage/queue path rather than inventing a UI route that is not implemented yet.
 
 ## Non-goals
 
