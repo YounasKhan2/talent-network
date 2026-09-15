@@ -33,7 +33,7 @@ CREATE TABLE "ResumeParseResult" (
 
 -- Stable parse execution identity. `promptVersion` uses the explicit sentinel
 -- `none` for non-AI parsers so nullable uniqueness cannot create duplicate runs.
-CREATE UNIQUE INDEX "ResumeParseResult_resumeVersionId_sourceExtractionId_pipelineVersion_parserName_parserVersion_schemaVersion_promptVersion_key"
+CREATE UNIQUE INDEX "resume_parse_execution_key"
 ON "ResumeParseResult"(
     "resumeVersionId",
     "sourceExtractionId",
