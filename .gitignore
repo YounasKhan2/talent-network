@@ -17,3 +17,5 @@ packages/database/src/generated/
 apps/web/next-env.d.ts
 uploads/
 .tmp/
+packages/resume-extraction/test-fixtures/synthetic-resume.pdf
+packages/resume-extraction/test-fixtures/synthetic-resume.docx
