@@ -106,18 +106,15 @@ export class ResumeParseResultRepository {
   }
 
   async findOwnedParseResult(input: { candidateId: string; parseResultId: string }) {
+    const ownedVersions = await this.database.resumeVersion.findMany({
+      where: { resume: { candidateId: input.candidateId } },
+      select: { id: true },
+    });
+
     return this.database.resumeParseResult.findFirst({
       where: {
         id: input.parseResultId,
-        resumeVersion: undefined,
-        resumeVersionId: {
-          in: await this.database.resumeVersion
-            .findMany({
-              where: { resume: { candidateId: input.candidateId } },
-              select: { id: true },
-            })
-            .then((rows) => rows.map((row) => row.id)),
-        },
+        resumeVersionId: { in: ownedVersions.map((row) => row.id) },
       },
     });
   }
