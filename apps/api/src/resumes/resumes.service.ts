@@ -139,6 +139,7 @@ export class ResumesService {
         objectKey: true,
         mimeType: true,
         sizeBytes: true,
+        uploadedAt: true,
       },
     });
     if (!version) throw new NotFoundException({ code: 'RESUME_VERSION_NOT_FOUND' });
@@ -165,7 +166,7 @@ export class ResumesService {
     return this.database.$transaction(async (transaction) => {
       const updated = await transaction.resumeVersion.update({
         where: { id: version.id },
-        data: { processingState: 'UPLOADED' },
+        data: { processingState: 'UPLOADED', uploadedAt: new Date() },
       });
       await writeAuditEvent(transaction, {
         actorType: 'USER',
