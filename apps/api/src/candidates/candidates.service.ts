@@ -132,7 +132,7 @@ export class CandidatesService {
     });
     if (existing) return existing;
 
-    return this.database.$transaction(async (transaction) => {
+    const candidateId = await this.database.$transaction(async (transaction) => {
       const candidate = await transaction.candidate.create({ data: { userId } });
       const version = await transaction.candidateProfileVersion.create({
         data: {
@@ -162,10 +162,12 @@ export class CandidatesService {
         eventType: 'candidate.passport.created',
         payload: { candidateId: candidate.id, userId, profileVersionId: version.id },
       });
-      return transaction.candidate.findUniqueOrThrow({
-        where: { id: candidate.id },
-        include: { currentProfileVersion: { include: profileInclude } },
-      });
+      return candidate.id;
+    });
+
+    return this.database.candidate.findUniqueOrThrow({
+      where: { id: candidateId },
+      include: { currentProfileVersion: { include: profileInclude } },
     });
   }
 
@@ -285,7 +287,7 @@ export class CandidatesService {
     const locationPreferences = replacement.locationPreferences ?? current.locationPreferences;
     const customSections = replacement.customSections ?? current.customSections;
 
-    return this.database.$transaction(async (transaction) => {
+    await this.database.$transaction(async (transaction) => {
       const next = await transaction.candidateProfileVersion.create({
         data: {
           candidateId: candidate.id,
@@ -451,10 +453,11 @@ export class CandidatesService {
           versionNumber: next.versionNumber,
         },
       });
-      return transaction.candidate.findUniqueOrThrow({
-        where: { id: candidate.id },
-        include: { currentProfileVersion: { include: profileInclude } },
-      });
+    });
+
+    return this.database.candidate.findUniqueOrThrow({
+      where: { id: candidate.id },
+      include: { currentProfileVersion: { include: profileInclude } },
     });
   }
 }
