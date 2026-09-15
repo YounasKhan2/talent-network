@@ -215,6 +215,7 @@ export async function processResumeSecurityJob(
         payload: {
           resumeId: version.resumeId,
           resumeVersionId: version.id,
+          processingPipelineVersion: version.processingPipelineVersion,
           nextStage: 'EXTRACTING',
         },
       },
