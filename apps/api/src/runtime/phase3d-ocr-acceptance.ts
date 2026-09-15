@@ -12,7 +12,10 @@ const PRIVATE_MARKERS = ['Alex Morgan', 'Senior Software Engineer', 'TypeScript'
 
 async function main(): Promise<void> {
   const env = parseApiEnv();
-  const timeoutMs = readPositiveIntegerEnv('PHASE3D_ACCEPTANCE_TIMEOUT_MS', DEFAULT_TIMEOUT_MS);
+  const timeoutMs = readPositiveIntegerEnv(
+    'PHASE3D_ACCEPTANCE_TIMEOUT_MS',
+    DEFAULT_TIMEOUT_MS,
+  );
   const keepOnSuccess = process.env.PHASE3D_ACCEPTANCE_KEEP === '1';
   const runId = randomUUID();
   const database = createDatabaseClient(env.DATABASE_URL);
@@ -142,7 +145,9 @@ async function main(): Promise<void> {
     const nativeExtraction = extractions.find(
       (extraction) => extraction.extractionMethod === 'NATIVE_PDF',
     );
-    const ocrExtraction = extractions.find((extraction) => extraction.extractionMethod === 'OCR');
+    const ocrExtraction = extractions.find(
+      (extraction) => extraction.extractionMethod === 'OCR',
+    );
 
     assert(
       nativeExtraction?.status === 'COMPLETED',
@@ -191,10 +196,16 @@ async function main(): Promise<void> {
         `- ${extraction.extractionMethod} ${extraction.status} ${extraction.extractorName}@${extraction.extractorVersion}`,
       );
     }
-    console.log(`Outbox events: ${outboxEvents.map((event) => event.eventType).join(' -> ')}`);
+    console.log(
+      `Outbox events: ${outboxEvents.map((event) => event.eventType).join(' -> ')}`,
+    );
     console.log('Scheduler publication assertion passed for extraction and OCR handoffs.');
-    console.log('Privacy assertion passed: no known OCR fixture text in audit/outbox metadata.');
-    console.log('Phase 3D OCR runtime acceptance PASSED: OCR_REQUIRED -> resume.ocr -> PARSING.');
+    console.log(
+      'Privacy assertion passed: no known OCR fixture text in audit/outbox metadata.',
+    );
+    console.log(
+      'Phase 3D OCR runtime acceptance PASSED: OCR_REQUIRED -> resume.ocr -> PARSING.',
+    );
     succeeded = true;
   } finally {
     const shouldCleanup = succeeded ? !keepOnSuccess : false;
@@ -281,7 +292,10 @@ function assertPublishedOutboxEvent(
 ): void {
   const event = events.find((item) => item.eventType === expected);
   assert(event, `Expected eventType=${expected}.`);
-  assert(event.publishedAt instanceof Date, `Expected ${expected} to be published by the scheduler.`);
+  assert(
+    event.publishedAt instanceof Date,
+    `Expected ${expected} to be published by the scheduler.`,
+  );
   assert(event.attemptCount > 0, `Expected ${expected} publication attemptCount > 0.`);
 }
 
