@@ -171,7 +171,10 @@ async function main(): Promise<void> {
     const sourceEvents = outboxEvents.filter(
       (event) => event.eventType === 'candidate.resume.extraction_completed',
     );
-    assert(sourceEvents.length === 2, 'Expected duplicate source events for idempotency acceptance.');
+    assert(
+      sourceEvents.length === 2,
+      'Expected duplicate source events for idempotency acceptance.',
+    );
     for (const event of sourceEvents) {
       assert(event.publishedAt instanceof Date, 'Expected parse source event to be published.');
       assert(event.attemptCount > 0, 'Expected parse source publication attemptCount > 0.');
@@ -182,8 +185,12 @@ async function main(): Promise<void> {
     assertNoPrivateMarkers(auditEvents, 'audit events');
     assert(profileVersionCount === 0, 'Parsing must not create a Career Passport version.');
 
-    console.log('Duplicate delivery assertion passed: one ResumeParseResult for two source events.');
-    console.log('Privacy assertion passed: private parsed values absent from audit/outbox metadata.');
+    console.log(
+      'Duplicate delivery assertion passed: one ResumeParseResult for two source events.',
+    );
+    console.log(
+      'Privacy assertion passed: private parsed values absent from audit/outbox metadata.',
+    );
     console.log('Career Passport assertion passed: no CandidateProfileVersion was created.');
     console.log('Phase 3E runtime acceptance PASSED: PARSING -> resume.parse -> READY_FOR_REVIEW.');
     succeeded = true;
@@ -243,7 +250,10 @@ function assertEvent(
   expected: string,
   key = 'eventType',
 ): void {
-  assert(events.some((event) => event[key] === expected), `Expected ${key}=${expected}.`);
+  assert(
+    events.some((event) => event[key] === expected),
+    `Expected ${key}=${expected}.`,
+  );
 }
 
 function assertNoPrivateMarkers(value: unknown, label: string): void {
@@ -261,7 +271,8 @@ function readPositiveIntegerEnv(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer.`);
+  if (!Number.isInteger(value) || value <= 0)
+    throw new Error(`${name} must be a positive integer.`);
   return value;
 }
 

@@ -24,7 +24,10 @@ void test('successful parse persists proposal and advances exactly to READY_FOR_
   assert.equal(fixture.outboxEvents[0]?.eventType, 'candidate.resume.parse_completed');
   assert.equal(JSON.stringify(fixture.outboxEvents).includes('private@example.com'), false);
   assert.equal(JSON.stringify(fixture.auditEvents).includes('private@example.com'), false);
-  assert.equal(JSON.stringify(fixture.parseResult.parsedJson).includes('private@example.com'), true);
+  assert.equal(
+    JSON.stringify(fixture.parseResult.parsedJson).includes('private@example.com'),
+    true,
+  );
 });
 
 void test('duplicate delivery after completion is idempotent', async () => {

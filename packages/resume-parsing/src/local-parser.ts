@@ -16,9 +16,15 @@ export class LocalDeterministicResumeParser implements ResumeParser {
   readonly version = '1';
 
   parse(input: ResumeParseInput): Promise<ParsedResumeDraft> {
-    const email = input.preprocessedDocument.candidates.find((candidate) => candidate.kind === 'EMAIL');
-    const phone = input.preprocessedDocument.candidates.find((candidate) => candidate.kind === 'PHONE');
-    const urls = input.preprocessedDocument.candidates.filter((candidate) => candidate.kind === 'URL');
+    const email = input.preprocessedDocument.candidates.find(
+      (candidate) => candidate.kind === 'EMAIL',
+    );
+    const phone = input.preprocessedDocument.candidates.find(
+      (candidate) => candidate.kind === 'PHONE',
+    );
+    const urls = input.preprocessedDocument.candidates.filter(
+      (candidate) => candidate.kind === 'URL',
+    );
 
     const emailClaim = email
       ? detectionClaim(email.value, input.sourceExtractionId, email, 1)

@@ -103,7 +103,9 @@ export async function processResumeParseJob(
       select: { processingState: true },
     });
     if (current?.processingState === 'READY_FOR_REVIEW') return;
-    throw new Error(`ResumeVersion is not ready for parsing: ${current?.processingState ?? 'missing'}`);
+    throw new Error(
+      `ResumeVersion is not ready for parsing: ${current?.processingState ?? 'missing'}`,
+    );
   }
 
   const sourceExtraction = await database.resumeExtraction.findUnique({
@@ -192,8 +194,7 @@ export async function processResumeParseJob(
           parsedJson: toInputJson(draft.parsedResume),
           confidenceSummary: toInputJson(validation.confidenceSummary),
           warnings: toInputJson(draft.parsedResume.warnings),
-          inputChecksumSha256:
-            draft.inputChecksumSha256 ?? sourceExtraction.textChecksumSha256,
+          inputChecksumSha256: draft.inputChecksumSha256 ?? sourceExtraction.textChecksumSha256,
           failureCode: null,
           completedAt: new Date(),
         },
