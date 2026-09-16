@@ -1,3 +1,5 @@
+export * from './career-passport-taxonomy.js';
+
 export type ServiceStatus = 'ok' | 'degraded' | 'unavailable';
 
 export interface HealthResponse {
