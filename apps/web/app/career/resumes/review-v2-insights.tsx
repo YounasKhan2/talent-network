@@ -22,7 +22,8 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
   ).length;
   const privateReferenceCount = runtime?.privateSourceCount ?? legacyPrivateReferenceCount;
   const records = summarizeReconciliations(runtime?.reconciliations ?? []);
-  const reviewDiagnostics = runtime?.diagnostics.filter((diagnostic) => diagnostic.reviewRequired) ?? [];
+  const reviewDiagnostics =
+    runtime?.diagnostics.filter((diagnostic) => diagnostic.reviewRequired) ?? [];
   const sourceCoverageRatio = runtime?.sourceCoverage.ratio ?? coverage?.ratio ?? null;
 
   return (
@@ -33,7 +34,8 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           <h3>What the system understood</h3>
           <p>
             Claim confidence, source accounting, extraction quality, and structural confidence are
-            independent signals. A strong claim score does not prove the entire resume was understood.
+            independent signals. A strong claim score does not prove the entire resume was
+            understood.
           </p>
         </div>
         <span className={styles.parserBadge}>{parserName ?? 'Parser pending'}</span>
@@ -47,7 +49,11 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
         />
         <QualityMetric
           label="Source accounting"
-          value={sourceCoverageRatio === null ? 'Not reported' : `${Math.round(sourceCoverageRatio * 100)}%`}
+          value={
+            sourceCoverageRatio === null
+              ? 'Not reported'
+              : `${Math.round(sourceCoverageRatio * 100)}%`
+          }
           detail={
             runtime
               ? `${runtime.sourceCoverage.accountedSourceCount} of ${runtime.sourceCoverage.meaningfulSourceCount} meaningful source items accounted · ${records.mapped} mapped · ${records.partial} partial · ${records.unmapped} unmapped · ${records.privateOnly} private`

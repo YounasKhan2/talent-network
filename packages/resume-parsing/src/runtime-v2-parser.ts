@@ -12,10 +12,7 @@ import {
   extractCoreResumeFieldsV2,
   type ResumeCoreTypedExtractionResult,
 } from './core-typed-extraction.js';
-import {
-  buildResumeDocumentGraph,
-  type ResumeDocumentGraphSource,
-} from './document-graph.js';
+import { buildResumeDocumentGraph, type ResumeDocumentGraphSource } from './document-graph.js';
 import {
   extractExtensionResumeFieldsV2,
   type ParsedOpenWorldRecordV2,
@@ -98,12 +95,7 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
         extensions.additionalSections,
         input.sourceExtractionId,
       ),
-      ...buildAwardCompatibilitySections(
-        graph,
-        structuralDocument,
-        core,
-        input.sourceExtractionId,
-      ),
+      ...buildAwardCompatibilitySections(graph, structuralDocument, core, input.sourceExtractionId),
     ].sort((left, right) => left.sourceOrder - right.sourceOrder);
 
     const base: Omit<ParsedResume, 'confidenceSummary' | 'coverageSummary'> = {
@@ -386,7 +378,9 @@ function deriveLegacyCoverageSummary(
 
   for (const [legacyKey, typeKey] of LEGACY_COVERAGE_MAP) {
     const sourcePresent = presentTypes.has(typeKey);
-    sections.push(coverageSection(legacyKey, sourcePresent, detectedCount(parsedResume, legacyKey)));
+    sections.push(
+      coverageSection(legacyKey, sourcePresent, detectedCount(parsedResume, legacyKey)),
+    );
   }
 
   const sourceSections = sections.filter((section) => section.sourcePresent);

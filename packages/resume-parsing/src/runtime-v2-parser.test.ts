@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { ResumeDocumentGraphSource } from './document-graph.js';
-import { preprocessResumeDocument, type ResumePreprocessingDocumentInput } from './preprocessing.js';
+import {
+  preprocessResumeDocument,
+  type ResumePreprocessingDocumentInput,
+} from './preprocessing.js';
 import { validateResumeProposal } from './proposal-validation.js';
 import { ResumeIntelligenceV2Parser } from './runtime-v2-parser.js';
 

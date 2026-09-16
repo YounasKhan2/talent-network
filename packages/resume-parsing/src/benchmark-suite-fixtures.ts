@@ -26,7 +26,8 @@ const DOCX_TABLE_RESUME: ResumeBenchmarkGroundTruth = {
   schemaVersion: 'resume-intelligence-benchmark-v1',
   fixtureId: 'docx-table-layout-v1',
   title: 'DOCX resume with table-backed records',
-  description: 'Seed contract for page-less DOCX structure containing table-backed experience and certifications.',
+  description:
+    'Seed contract for page-less DOCX structure containing table-backed experience and certifications.',
   sourceFormat: 'DOCX',
   pageCount: null,
   sections: [
@@ -41,7 +42,8 @@ const SCANNED_OCR_RESUME: ResumeBenchmarkGroundTruth = {
   schemaVersion: 'resume-intelligence-benchmark-v1',
   fixtureId: 'scanned-ocr-two-page-v1',
   title: 'Scanned two-page OCR resume',
-  description: 'Seed contract for image/OCR recovery with core sections and explicit source accounting.',
+  description:
+    'Seed contract for image/OCR recovery with core sections and explicit source accounting.',
   sourceFormat: 'IMAGE',
   pageCount: 2,
   sections: [
@@ -56,7 +58,8 @@ const TWO_COLUMN_PDF_RESUME: ResumeBenchmarkGroundTruth = {
   schemaVersion: 'resume-intelligence-benchmark-v1',
   fixtureId: 'two-column-pdf-v1',
   title: 'Two-column PDF resume',
-  description: 'Seed contract for reading-order and section-boundary regressions in a multi-column layout.',
+  description:
+    'Seed contract for reading-order and section-boundary regressions in a multi-column layout.',
   sourceFormat: 'PDF',
   pageCount: 2,
   sections: [
@@ -87,7 +90,8 @@ const PRIVATE_REFERENCES_RESUME: ResumeBenchmarkGroundTruth = {
   schemaVersion: 'resume-intelligence-benchmark-v1',
   fixtureId: 'private-references-v1',
   title: 'Resume containing third-party references',
-  description: 'Seed contract proving third-party reference records remain accounted for but private-only.',
+  description:
+    'Seed contract proving third-party reference records remain accounted for but private-only.',
   sourceFormat: 'DOCX',
   pageCount: null,
   sections: [

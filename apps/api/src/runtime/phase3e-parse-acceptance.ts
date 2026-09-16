@@ -196,8 +196,12 @@ async function main(): Promise<void> {
     assert(profileVersionCount === 0, 'Parsing must not create a Career Passport version.');
 
     console.log('V2 parser assertion passed: resume-intelligence-v2-parser@1 persisted runtimeV2.');
-    console.log('Duplicate delivery assertion passed: one ResumeParseResult for two source events.');
-    console.log('Privacy assertion passed: private parsed values absent from audit/outbox metadata.');
+    console.log(
+      'Duplicate delivery assertion passed: one ResumeParseResult for two source events.',
+    );
+    console.log(
+      'Privacy assertion passed: private parsed values absent from audit/outbox metadata.',
+    );
     console.log('Career Passport assertion passed: no CandidateProfileVersion was created.');
     console.log('Phase 3G runtime closure PASSED: PARSING -> V2 parse -> READY_FOR_REVIEW.');
     succeeded = true;
