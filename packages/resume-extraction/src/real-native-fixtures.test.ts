@@ -103,6 +103,7 @@ void test('real DOCX fixture extracts through Mammoth without fabricated paginat
   assert.equal(result.document.pages.length, 1);
   assert.equal(result.document.pages[0]?.pageNumber, null);
   assert.equal(result.document.pages[0]?.nativePdf, undefined);
+  assert.ok((result.document.pages[0]?.nativeDocx?.blocks.length ?? 0) > 0);
   assert.ok(result.document.quality.nonWhitespaceCharacterCount >= 120);
   assertValidBlocks(result.document.pages[0]?.text ?? '', result.document.pages[0]?.blocks ?? []);
 
