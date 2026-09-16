@@ -27,6 +27,7 @@ const passportVersionInclude = {
   skills: { orderBy: { sortOrder: 'asc' as const } },
   projects: { orderBy: { sortOrder: 'asc' as const } },
   certifications: { orderBy: { sortOrder: 'asc' as const } },
+  awards: { orderBy: { sortOrder: 'asc' as const } },
   languages: { orderBy: { sortOrder: 'asc' as const } },
   links: { orderBy: { sortOrder: 'asc' as const } },
   locationPreferences: { orderBy: { sortOrder: 'asc' as const } },
@@ -259,6 +260,10 @@ export class ResumeReviewService {
             versionNumber: currentProfile.versionNumber + 1,
             status: 'APPROVED',
             source: 'RESUME_IMPORT',
+            contactFullName: currentProfile.contactFullName,
+            contactEmail: currentProfile.contactEmail,
+            contactPhone: currentProfile.contactPhone,
+            contactLocation: currentProfile.contactLocation,
             headline:
               edits.headline !== undefined
                 ? edits.headline
@@ -285,6 +290,16 @@ export class ResumeReviewService {
             certifications: {
               create: mergeCertifications(currentProfile.certifications, proposal.certifications),
             },
+            awards: {
+              create: currentProfile.awards.map((award, index) => ({
+                title: award.title,
+                issuer: award.issuer,
+                awardedAt: award.awardedAt,
+                description: award.description,
+                url: award.url,
+                sortOrder: index,
+              })),
+            },
             languages: { create: mergeLanguages(currentProfile.languages, proposal.languages) },
             links: { create: mergeLinks(currentProfile.links, proposal.links) },
             locationPreferences: {
@@ -294,6 +309,10 @@ export class ResumeReviewService {
               create: currentProfile.customSections.map((section, sectionIndex) => ({
                 title: section.title,
                 description: section.description,
+                sectionTypeKey: section.sectionTypeKey,
+                sourceHeading: section.sourceHeading,
+                classificationConfidence: section.classificationConfidence,
+                classificationStatus: section.classificationStatus,
                 sortOrder: sectionIndex,
                 items: {
                   create: section.items.map((item, itemIndex) => ({
