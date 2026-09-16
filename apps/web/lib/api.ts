@@ -98,6 +98,16 @@ export interface CandidateCertificationResponse {
   sortOrder: number;
 }
 
+export interface CandidateAwardResponse {
+  id: string;
+  title: string;
+  issuer: string | null;
+  awardedAt: string | null;
+  description: string | null;
+  url: string | null;
+  sortOrder: number;
+}
+
 export interface CandidateLanguageResponse {
   id: string;
   name: string;
@@ -138,6 +148,10 @@ export interface CandidateCustomSectionResponse {
   id: string;
   title: string;
   description: string | null;
+  sectionTypeKey: string | null;
+  sourceHeading: string | null;
+  classificationConfidence: number | null;
+  classificationStatus: string | null;
   sortOrder: number;
   items: CandidateCustomSectionItemResponse[];
 }
@@ -155,6 +169,10 @@ export interface CandidatePassportResponse {
     versionNumber: number;
     status: string;
     source: string;
+    contactFullName: string | null;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    contactLocation: string | null;
     headline: string | null;
     summary: string | null;
     availabilityStatus: CandidateAvailabilityStatus | null;
@@ -201,6 +219,7 @@ export interface CandidatePassportResponse {
     }>;
     projects: CandidateProjectResponse[];
     certifications: CandidateCertificationResponse[];
+    awards: CandidateAwardResponse[];
     languages: CandidateLanguageResponse[];
     links: CandidateLinkResponse[];
     locationPreferences: CandidateLocationPreferenceResponse[];
@@ -367,6 +386,18 @@ export function getCandidatePassport(): Promise<CandidatePassportResponse> {
   return apiRequest<CandidatePassportResponse>('/candidate/passport');
 }
 
+export function updateCandidateContactInformation(input: {
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+}): Promise<CandidatePassportResponse> {
+  return apiRequest<CandidatePassportResponse>('/candidate/passport/contact', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 export function updateCandidateOverview(input: {
   headline?: string | null;
   summary?: string | null;
@@ -454,6 +485,18 @@ export function replaceCandidateCertifications(
   return replaceCandidateSection('/candidate/passport/certifications', { certifications });
 }
 
+export function replaceCandidateAwards(
+  awards: Array<{
+    title: string;
+    issuer?: string | null;
+    awardedAt?: string | null;
+    description?: string | null;
+    url?: string | null;
+  }>,
+): Promise<CandidatePassportResponse> {
+  return replaceCandidateSection('/candidate/passport/awards', { awards });
+}
+
 export function replaceCandidateLanguages(
   languages: Array<{
     name: string;
@@ -489,6 +532,10 @@ export function replaceCandidateCustomSections(
   customSections: Array<{
     title: string;
     description?: string | null;
+    sectionTypeKey?: string | null;
+    sourceHeading?: string | null;
+    classificationConfidence?: number | null;
+    classificationStatus?: string | null;
     items: Array<{
       title: string;
       subtitle?: string | null;
