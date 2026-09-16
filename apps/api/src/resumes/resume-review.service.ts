@@ -12,6 +12,11 @@ import {
 } from '@talent-network/database';
 import { DATABASE_CLIENT } from '../database/database.module.js';
 import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
+import {
+  mergeResumeAwards,
+  mergeResumeCustomSections,
+  readApprovedResumeContact,
+} from './resume-passport-open-sections.js';
 
 export interface ResumeReviewEdits {
   headline?: string | null;
@@ -235,6 +240,12 @@ export class ResumeReviewService {
     const edits = input.decision === 'EDIT' ? input.edits : {};
     const decision = input.decision === 'EDIT' ? 'EDITED' : 'ACCEPTED';
     const now = new Date();
+    const resumeContact = readApprovedResumeContact(proposal, currentProfile);
+    const resumeAwards = mergeResumeAwards(currentProfile.awards, proposal.additionalSections);
+    const resumeCustomSections = mergeResumeCustomSections(
+      currentProfile.customSections,
+      proposal.additionalSections,
+    );
 
     try {
       await this.database.$transaction(async (transaction) => {
@@ -260,10 +271,10 @@ export class ResumeReviewService {
             versionNumber: currentProfile.versionNumber + 1,
             status: 'APPROVED',
             source: 'RESUME_IMPORT',
-            contactFullName: currentProfile.contactFullName,
-            contactEmail: currentProfile.contactEmail,
-            contactPhone: currentProfile.contactPhone,
-            contactLocation: currentProfile.contactLocation,
+            contactFullName: resumeContact.contactFullName,
+            contactEmail: resumeContact.contactEmail,
+            contactPhone: resumeContact.contactPhone,
+            contactLocation: resumeContact.contactLocation,
             headline:
               edits.headline !== undefined
                 ? edits.headline
@@ -290,43 +301,13 @@ export class ResumeReviewService {
             certifications: {
               create: mergeCertifications(currentProfile.certifications, proposal.certifications),
             },
-            awards: {
-              create: currentProfile.awards.map((award, index) => ({
-                title: award.title,
-                issuer: award.issuer,
-                awardedAt: award.awardedAt,
-                description: award.description,
-                url: award.url,
-                sortOrder: index,
-              })),
-            },
+            awards: { create: resumeAwards },
             languages: { create: mergeLanguages(currentProfile.languages, proposal.languages) },
             links: { create: mergeLinks(currentProfile.links, proposal.links) },
             locationPreferences: {
               create: mergeLocations(currentProfile.locationPreferences, proposal.locations),
             },
-            customSections: {
-              create: currentProfile.customSections.map((section, sectionIndex) => ({
-                title: section.title,
-                description: section.description,
-                sectionTypeKey: section.sectionTypeKey,
-                sourceHeading: section.sourceHeading,
-                classificationConfidence: section.classificationConfidence,
-                classificationStatus: section.classificationStatus,
-                sortOrder: sectionIndex,
-                items: {
-                  create: section.items.map((item, itemIndex) => ({
-                    title: item.title,
-                    subtitle: item.subtitle,
-                    description: item.description,
-                    startDate: item.startDate,
-                    endDate: item.endDate,
-                    url: item.url,
-                    sortOrder: itemIndex,
-                  })),
-                },
-              })),
-            },
+            customSections: { create: resumeCustomSections },
           },
         });
 
