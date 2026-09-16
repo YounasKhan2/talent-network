@@ -166,6 +166,9 @@ export interface ResumeRecordReconciliation {
   partiallyMappedRecordCount: number;
   unmappedRecordCount: number;
   privateOnlyRecordCount: number;
+  intentionallyIgnoredRecordCount: number;
+  unprocessedRecordCount: number;
+  accountedRecordCount: number;
   recordCoverageRatio: number;
 }
 

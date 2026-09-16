@@ -10,5 +10,6 @@ export * from './preprocessing.js';
 export * from './proposal-validation.js';
 export * from './queue-contract.js';
 export * from './schema.js';
+export * from './source-ledger.js';
 export * from './structural-detection.js';
 export * from './versions.js';
