@@ -165,7 +165,7 @@ export interface ParsedResume {
   languages: ParsedLanguage[];
   links: ParsedLink[];
   locations: ParsedLocation[];
-  additionalSections: ParsedAdditionalSection[];
+  additionalSections?: ParsedAdditionalSection[];
   warnings: string[];
   confidenceSummary: ParsedResumeConfidenceSummary;
   coverageSummary?: ParsedResumeCoverageSummary;
