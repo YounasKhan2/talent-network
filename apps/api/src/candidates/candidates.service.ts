@@ -3,6 +3,13 @@ import type { DatabaseClient } from '@talent-network/database';
 import { DATABASE_CLIENT } from '../database/database.module.js';
 import { writeAuditEvent, writeOutboxEvent } from '../events/transactional-events.js';
 
+export interface CandidateContactInformationInput {
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+}
+
 export interface CandidateProfileOverviewInput {
   headline?: string | null;
   summary?: string | null;
@@ -72,6 +79,14 @@ export interface CandidateCertificationInput {
   expiresAt: Date | null;
 }
 
+export interface CandidateAwardInput {
+  title: string;
+  issuer: string | null;
+  awardedAt: Date | null;
+  description: string | null;
+  url: string | null;
+}
+
 export interface CandidateLanguageInput {
   name: string;
   proficiency: string | null;
@@ -103,6 +118,10 @@ export interface CandidateCustomSectionItemInput {
 export interface CandidateCustomSectionInput {
   title: string;
   description: string | null;
+  sectionTypeKey: string | null;
+  sourceHeading: string | null;
+  classificationConfidence: number | null;
+  classificationStatus: string | null;
   items: CandidateCustomSectionItemInput[];
 }
 
@@ -112,6 +131,7 @@ const profileInclude = {
   skills: { orderBy: { sortOrder: 'asc' as const } },
   projects: { orderBy: { sortOrder: 'asc' as const } },
   certifications: { orderBy: { sortOrder: 'asc' as const } },
+  awards: { orderBy: { sortOrder: 'asc' as const } },
   languages: { orderBy: { sortOrder: 'asc' as const } },
   links: { orderBy: { sortOrder: 'asc' as const } },
   locationPreferences: { orderBy: { sortOrder: 'asc' as const } },
@@ -205,6 +225,10 @@ export class CandidatesService {
     });
   }
 
+  updateContactInformation(userId: string, contactInformation: CandidateContactInformationInput) {
+    return this.createNextVersion(userId, { contactInformation });
+  }
+
   updateOverview(userId: string, input: CandidateProfileOverviewInput) {
     return this.createNextVersion(userId, { overview: input });
   }
@@ -227,6 +251,10 @@ export class CandidatesService {
 
   replaceCertifications(userId: string, certifications: CandidateCertificationInput[]) {
     return this.createNextVersion(userId, { certifications });
+  }
+
+  replaceAwards(userId: string, awards: CandidateAwardInput[]) {
+    return this.createNextVersion(userId, { awards });
   }
 
   replaceLanguages(userId: string, languages: CandidateLanguageInput[]) {
@@ -257,12 +285,14 @@ export class CandidatesService {
   private async createNextVersion(
     userId: string,
     replacement: {
+      contactInformation?: CandidateContactInformationInput;
       overview?: CandidateProfileOverviewInput;
       skills?: CandidateSkillInput[];
       employments?: CandidateEmploymentInput[];
       education?: CandidateEducationInput[];
       projects?: CandidateProjectInput[];
       certifications?: CandidateCertificationInput[];
+      awards?: CandidateAwardInput[];
       languages?: CandidateLanguageInput[];
       links?: CandidateLinkInput[];
       locationPreferences?: CandidateLocationPreferenceInput[];
@@ -276,12 +306,14 @@ export class CandidatesService {
     if (!candidate?.currentProfileVersion) throw candidateNotInitialized();
 
     const current = candidate.currentProfileVersion;
+    const contactInformation = replacement.contactInformation;
     const overview = replacement.overview;
     const employments = replacement.employments ?? current.employments;
     const education = replacement.education ?? current.education;
     const skills = replacement.skills ?? current.skills;
     const projects = replacement.projects ?? current.projects;
     const certifications = replacement.certifications ?? current.certifications;
+    const awards = replacement.awards ?? current.awards;
     const languages = replacement.languages ?? current.languages;
     const links = replacement.links ?? current.links;
     const locationPreferences = replacement.locationPreferences ?? current.locationPreferences;
@@ -294,6 +326,10 @@ export class CandidatesService {
           versionNumber: current.versionNumber + 1,
           status: 'APPROVED',
           source: 'MANUAL',
+          contactFullName: contactInformation?.fullName ?? current.contactFullName,
+          contactEmail: contactInformation?.email ?? current.contactEmail,
+          contactPhone: contactInformation?.phone ?? current.contactPhone,
+          contactLocation: contactInformation?.location ?? current.contactLocation,
           headline: overview?.headline !== undefined ? overview.headline : current.headline,
           summary: overview?.summary !== undefined ? overview.summary : current.summary,
           availabilityStatus:
@@ -382,6 +418,16 @@ export class CandidatesService {
               sortOrder: index,
             })),
           },
+          awards: {
+            create: awards.map((award, index) => ({
+              title: award.title,
+              issuer: award.issuer,
+              awardedAt: award.awardedAt,
+              description: award.description,
+              url: award.url,
+              sortOrder: index,
+            })),
+          },
           languages: {
             create: languages.map((language, index) => ({
               name: language.name,
@@ -411,6 +457,10 @@ export class CandidatesService {
             create: customSections.map((section, sectionIndex) => ({
               title: section.title,
               description: section.description,
+              sectionTypeKey: section.sectionTypeKey,
+              sourceHeading: section.sourceHeading,
+              classificationConfidence: section.classificationConfidence,
+              classificationStatus: section.classificationStatus,
               sortOrder: sectionIndex,
               items: {
                 create: section.items.map((item, itemIndex) => ({
