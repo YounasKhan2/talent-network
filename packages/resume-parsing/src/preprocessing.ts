@@ -1,4 +1,6 @@
-export const RESUME_PREPROCESSING_POLICY_VERSION = 'resume-preprocess-v2' as const;
+import { classifyCareerSectionHeading } from '@talent-network/contracts';
+
+export const RESUME_PREPROCESSING_POLICY_VERSION = 'resume-preprocess-v3' as const;
 
 export const RESUME_PREPROCESSING_LIMITS = {
   maximumChunkCharacters: 12_000,
@@ -155,7 +157,33 @@ export function classifyResumeSectionHeading(value: string): ResumeSectionKind |
     if (aliases.includes(normalized)) return kind;
   }
 
+  const taxonomy = classifyCareerSectionHeading(value);
+  if (taxonomy.typeKey !== 'CUSTOM') return resumeKindForCareerSection(taxonomy.typeKey);
+
   return looksLikeUnknownSectionHeading(value) ? 'OTHER' : null;
+}
+
+function resumeKindForCareerSection(typeKey: string): ResumeSectionKind {
+  switch (typeKey) {
+    case 'PROFESSIONAL_SUMMARY':
+      return 'SUMMARY';
+    case 'WORK_EXPERIENCE':
+      return 'EXPERIENCE';
+    case 'EDUCATION':
+      return 'EDUCATION';
+    case 'SKILLS':
+      return 'SKILLS';
+    case 'PROJECTS':
+      return 'PROJECTS';
+    case 'CERTIFICATIONS':
+      return 'CERTIFICATIONS';
+    case 'LANGUAGES':
+      return 'LANGUAGES';
+    case 'PROFESSIONAL_LINKS':
+      return 'LINKS';
+    default:
+      return 'OTHER';
+  }
 }
 
 export function detectSections(fragments: ResumeSourceFragment[]): ResumePreprocessedSection[] {
