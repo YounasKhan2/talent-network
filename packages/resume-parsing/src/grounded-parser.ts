@@ -40,7 +40,7 @@ export class GroundedResumeParser implements ResumeParser {
       links,
       coverageSummary: deriveCoverageSummary({ ...draft.parsedResume, links }, input),
       warnings: [
-        ...draft.parsedResume.warnings,
+        'Deterministic parser v4 promotes only source-grounded identity, summary, contact, link, skill, experience, and education claims. Ambiguous record layouts and remaining resume sections stay unpromoted for candidate review.',
         'Coverage is section-level completeness across source sections that are actually present; it is separate from claim confidence.',
       ],
     };
