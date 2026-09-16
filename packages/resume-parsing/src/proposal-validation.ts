@@ -53,25 +53,23 @@ export function validateResumeProposal(
   let evidenceCount = 0;
 
   for (const [path, claim] of claims) {
-    assertConfidence(claim.confidence, `${path}.confidence`);
+    evidenceCount += validateClaim(
+      path,
+      claim,
+      preprocessedDocument,
+      expectedSourceExtractionId,
+    );
+  }
 
-    if (claim.evidence.length === 0) {
-      fail(`${path} must contain at least one source evidence reference.`);
-    }
-
-    if (classifyResumeClaimConfidence(claim.confidence) === 'LOW' && claim.warnings.length === 0) {
-      fail(`${path} is low confidence and must surface a review warning.`);
-    }
-
-    for (const evidence of claim.evidence) {
-      validateEvidence(
-        evidence,
-        preprocessedDocument,
-        expectedSourceExtractionId,
-        `${path}.evidence`,
-      );
-      evidenceCount += 1;
-    }
+  // Additional sections are intentionally excluded from confidence arithmetic until their
+  // semantics are classified. They still obey the exact same source-evidence requirements.
+  for (const [path, claim] of collectPreservedSectionClaims(parsedResume)) {
+    evidenceCount += validateClaim(
+      path,
+      claim,
+      preprocessedDocument,
+      expectedSourceExtractionId,
+    );
   }
 
   const confidenceSummary = deriveConfidenceSummary(claims.map(([, claim]) => claim));
@@ -83,6 +81,34 @@ export function validateResumeProposal(
     claimCount: claims.length,
     evidenceCount,
   };
+}
+
+function validateClaim(
+  path: string,
+  claim: ParsedClaim<unknown>,
+  preprocessedDocument: PreprocessedResumeDocument,
+  expectedSourceExtractionId: string,
+): number {
+  assertConfidence(claim.confidence, `${path}.confidence`);
+
+  if (claim.evidence.length === 0) {
+    fail(`${path} must contain at least one source evidence reference.`);
+  }
+
+  if (classifyResumeClaimConfidence(claim.confidence) === 'LOW' && claim.warnings.length === 0) {
+    fail(`${path} is low confidence and must surface a review warning.`);
+  }
+
+  for (const evidence of claim.evidence) {
+    validateEvidence(
+      evidence,
+      preprocessedDocument,
+      expectedSourceExtractionId,
+      `${path}.evidence`,
+    );
+  }
+
+  return claim.evidence.length;
 }
 
 function validateEvidence(
@@ -205,6 +231,21 @@ function collectParsedClaims(parsedResume: ParsedResume): Array<[string, ParsedC
 
   parsedResume.locations.forEach((item, index) => {
     push(`locations[${index}].value`, item.value);
+  });
+
+  return claims;
+}
+
+function collectPreservedSectionClaims(
+  parsedResume: ParsedResume,
+): Array<[string, ParsedClaim<unknown>]> {
+  const claims: Array<[string, ParsedClaim<unknown>]> = [];
+
+  parsedResume.additionalSections?.forEach((section, index) => {
+    claims.push([`additionalSections[${index}].heading`, section.heading]);
+    section.entries.forEach((claim, entryIndex) => {
+      claims.push([`additionalSections[${index}].entries[${entryIndex}]`, claim]);
+    });
   });
 
   return claims;
