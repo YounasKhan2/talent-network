@@ -15,6 +15,7 @@ void test('classifies known headings and preserves unknown uppercase sections as
   assert.equal(classifyResumeSectionHeading('TECHNICAL SKILLS'), 'SKILLS');
   assert.equal(classifyResumeSectionHeading('VOLUNTEERING'), 'OTHER');
   assert.equal(classifyResumeSectionHeading('Senior Software Engineer'), null);
+  assert.equal(classifyResumeSectionHeading('FULL-STACK DEVELOPER | REACT | NEXT.JS'), null);
 });
 
 void test('preprocessing preserves PDF page, block and source ranges across sections', () => {
@@ -147,9 +148,11 @@ void test('deterministic contact candidates retain exact source coordinates', ()
   const url = detections.find((item) => item.kind === 'URL');
 
   assert.equal(email?.value, 'alex@example.com');
+  assert.equal(email?.evidenceKind, 'DIRECT_TEXT');
   assert.deepEqual(email?.sourceRange, { start: 50, end: 66 });
   assert.equal(phone?.value, '+92 300 1234567');
   assert.equal(url?.value, 'https://example.com/alex');
+  assert.equal(url?.evidenceKind, 'DIRECT_TEXT');
   assert.equal(url?.pageNumber, 1);
   assert.equal(url?.blockIndex, 0);
 });
@@ -175,6 +178,58 @@ void test('bare profile and portfolio links are detected without treating email 
     'linkedin.com/in/alex-morgan',
     'github.com/alex-morgan',
     'alex-morgan.me',
+  ]);
+});
+
+void test('PDF link annotations are promoted only when grounded to an overlapping visible block', () => {
+  const text = 'alex@example.com | LinkedIn | GitHub | Portfolio';
+  const blocks: ResumePreprocessingDocumentInput['pages'][number]['blocks'] = [
+    {
+      text,
+      sourceRange: { startOffset: 0, endOffset: text.length },
+      boundingBox: { x: 40, y: 700, width: 320, height: 14 },
+    },
+  ];
+  const pages: ResumePreprocessingDocumentInput['pages'] = [
+    {
+      pageNumber: 1,
+      text,
+      blocks,
+      nativePdf: {
+        annotations: [
+          {
+            subtype: 'Link',
+            url: 'https://www.linkedin.com/in/alex-morgan',
+            rect: [150, 699, 205, 716],
+          },
+          {
+            subtype: 'Link',
+            url: 'javascript:alert(1)',
+            rect: [210, 699, 250, 716],
+          },
+          {
+            subtype: 'Link',
+            url: 'https://github.com/alex-morgan',
+            rect: [900, 699, 950, 716],
+          },
+        ],
+      },
+    },
+  ];
+
+  const urls = detectDeterministicCandidates([], pages).filter(
+    (candidate) => candidate.kind === 'URL',
+  );
+
+  assert.deepEqual(urls, [
+    {
+      kind: 'URL',
+      value: 'https://www.linkedin.com/in/alex-morgan',
+      pageNumber: 1,
+      blockIndex: 0,
+      sourceRange: { start: 0, end: text.length },
+      evidenceKind: 'DERIVED_LINK',
+    },
   ]);
 });
 
