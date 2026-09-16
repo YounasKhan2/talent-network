@@ -1,4 +1,6 @@
 export * from './ai-gateway.js';
+export * from './benchmark-fixtures.js';
+export * from './benchmark.js';
 export * from './contracts.js';
 export * from './gateway-parser.js';
 export * from './grounded-parser.js';

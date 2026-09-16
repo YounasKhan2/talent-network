@@ -1,4 +1,5 @@
 export * from './career-passport-taxonomy.js';
+export * from './resume-intelligence-v2.js';
 
 export type ServiceStatus = 'ok' | 'degraded' | 'unavailable';
 
