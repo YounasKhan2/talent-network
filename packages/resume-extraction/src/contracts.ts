@@ -56,7 +56,12 @@ export type ResumePdfTextStyle = {
 };
 
 export type ResumeJsonValue =
-  null | boolean | number | string | ResumeJsonValue[] | { [key: string]: ResumeJsonValue };
+  | null
+  | boolean
+  | number
+  | string
+  | ResumeJsonValue[]
+  | { [key: string]: ResumeJsonValue };
 
 export type ResumePdfNativePage = {
   pageNumber: number;
@@ -78,12 +83,31 @@ export type ResumePdfNativePage = {
   annotations?: ResumeJsonValue[];
 };
 
+export type ResumeDocxBlockKind = 'PARAGRAPH' | 'HEADING' | 'LIST_ITEM' | 'TABLE_ROW';
+
+export type ResumeDocxHyperlink = {
+  text: string;
+  url: string;
+};
+
+export type ResumeDocxNativeBlock = {
+  kind: ResumeDocxBlockKind;
+  text: string;
+  tableCells?: string[];
+  hyperlinks?: ResumeDocxHyperlink[];
+};
+
+export type ResumeDocxNativePage = {
+  blocks: ResumeDocxNativeBlock[];
+};
+
 export type ResumeDocumentPage = {
   pageNumber: number | null;
   text: string;
   lines?: ResumeDocumentLine[];
   blocks: ResumeDocumentBlock[];
   nativePdf?: ResumePdfNativePage;
+  nativeDocx?: ResumeDocxNativePage;
 };
 
 export type ResumeExtractionQuality = {
