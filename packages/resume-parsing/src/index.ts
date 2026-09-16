@@ -1,6 +1,7 @@
 export * from './ai-gateway.js';
 export * from './contracts.js';
 export * from './gateway-parser.js';
+export * from './grounded-parser.js';
 export * from './local-parser.js';
 export * from './preprocessing.js';
 export * from './proposal-validation.js';
