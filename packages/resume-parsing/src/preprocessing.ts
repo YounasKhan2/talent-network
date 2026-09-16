@@ -403,13 +403,13 @@ function bestOverlappingBlock(
 }
 
 function annotationRect(value: unknown): ResumePreprocessingBoundingBox | null {
-  if (!Array.isArray(value) || value.length < 4) return null;
+  const coordinates = asUnknownArray(value);
+  if (!coordinates || coordinates.length < 4) return null;
 
-  const x1 = value[0];
-  const y1 = value[1];
-  const x2 = value[2];
-  const y2 = value[3];
-  if (![x1, y1, x2, y2].every(isFiniteNumber)) return null;
+  const x1 = coordinates[0];
+  const y1 = coordinates[1];
+  const x2 = coordinates[2];
+  const y2 = coordinates[3];
   if (!isFiniteNumber(x1) || !isFiniteNumber(y1) || !isFiniteNumber(x2) || !isFiniteNumber(y2)) {
     return null;
   }
@@ -541,6 +541,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function asUnknownArray(value: unknown): unknown[] | null {
+  return Array.isArray(value) ? (value as unknown[]) : null;
 }
 
 function isFiniteNumber(value: unknown): value is number {
