@@ -154,6 +154,30 @@ void test('deterministic contact candidates retain exact source coordinates', ()
   assert.equal(url?.blockIndex, 0);
 });
 
+void test('bare profile and portfolio links are detected without treating email domains as links', () => {
+  const text =
+    'alex@example.com | linkedin.com/in/alex-morgan | github.com/alex-morgan | alex-morgan.me';
+  const fragments: ResumeSourceFragment[] = [
+    {
+      pageNumber: null,
+      blockIndex: 2,
+      segmentIndex: 0,
+      text,
+      sourceRange: { start: 100, end: 100 + text.length },
+    },
+  ];
+
+  const urls = detectDeterministicCandidates(fragments)
+    .filter((candidate) => candidate.kind === 'URL')
+    .map((candidate) => candidate.value);
+
+  assert.deepEqual(urls, [
+    'linkedin.com/in/alex-morgan',
+    'github.com/alex-morgan',
+    'alex-morgan.me',
+  ]);
+});
+
 void test('employment date ranges are never promoted to phone candidates', () => {
   const fragments: ResumeSourceFragment[] = [
     {
