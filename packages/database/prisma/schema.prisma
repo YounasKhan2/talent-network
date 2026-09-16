@@ -233,6 +233,10 @@ model CandidateProfileVersion {
   versionNumber              Int
   status                     CandidateProfileVersionStatus @default(DRAFT)
   source                     CandidateProfileSource        @default(MANUAL)
+  contactFullName            String?
+  contactEmail               String?
+  contactPhone               String?
+  contactLocation            String?
   headline                   String?
   summary                    String?
   availabilityStatus         CandidateAvailabilityStatus?
@@ -252,6 +256,7 @@ model CandidateProfileVersion {
   skills                     CandidateSkill[]
   projects                   CandidateProject[]
   certifications             CandidateCertification[]
+  awards                     CandidateAward[]
   languages                  CandidateLanguage[]
   links                      CandidateLink[]
   locationPreferences        CandidateLocationPreference[]
@@ -350,6 +355,21 @@ model CandidateCertification {
   @@index([profileVersionId, sortOrder])
 }
 
+model CandidateAward {
+  id               String                  @id @default(uuid()) @db.Uuid
+  profileVersionId String                  @db.Uuid
+  title            String
+  issuer           String?
+  awardedAt        DateTime?
+  description      String?
+  url              String?
+  sortOrder        Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  profileVersion   CandidateProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+
+  @@index([profileVersionId, sortOrder])
+}
+
 model CandidateLanguage {
   id               String                  @id @default(uuid()) @db.Uuid
   profileVersionId String                  @db.Uuid
@@ -393,16 +413,21 @@ model CandidateLocationPreference {
 }
 
 model CandidateCustomSection {
-  id               String                       @id @default(uuid()) @db.Uuid
-  profileVersionId String                       @db.Uuid
-  title            String
-  description      String?
-  sortOrder         Int                          @default(0)
-  createdAt         DateTime                     @default(now())
-  profileVersion   CandidateProfileVersion      @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
-  items            CandidateCustomSectionItem[]
+  id                       String                       @id @default(uuid()) @db.Uuid
+  profileVersionId         String                       @db.Uuid
+  title                    String
+  description              String?
+  sectionTypeKey           String?
+  sourceHeading            String?
+  classificationConfidence Float?
+  classificationStatus     String?
+  sortOrder                Int                          @default(0)
+  createdAt                DateTime                     @default(now())
+  profileVersion           CandidateProfileVersion      @relation(fields: [profileVersionId], references: [id], onDelete: Cascade)
+  items                    CandidateCustomSectionItem[]
 
   @@index([profileVersionId, sortOrder])
+  @@index([profileVersionId, sectionTypeKey, sortOrder])
 }
 
 model CandidateCustomSectionItem {
