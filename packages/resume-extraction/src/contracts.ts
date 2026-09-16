@@ -56,7 +56,12 @@ export type ResumePdfTextStyle = {
 };
 
 export type ResumeJsonValue =
-  null | boolean | number | string | ResumeJsonValue[] | { [key: string]: ResumeJsonValue };
+  | null
+  | boolean
+  | number
+  | string
+  | ResumeJsonValue[]
+  | { [key: string]: ResumeJsonValue };
 
 export type ResumePdfNativePage = {
   pageNumber: number;
@@ -75,6 +80,7 @@ export type ResumePdfNativePage = {
     lang: string | null;
   };
   structTree: ResumeJsonValue | null;
+  annotations: ResumeJsonValue[];
 };
 
 export type ResumeDocumentPage = {
