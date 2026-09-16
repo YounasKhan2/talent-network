@@ -1,6 +1,7 @@
 import type { CareerPassportSectionTypeKey } from './career-passport-taxonomy.js';
 
 export const DOCUMENT_GRAPH_SCHEMA_VERSION = 'resume-document-graph-v1' as const;
+export const RESUME_STRUCTURAL_DOCUMENT_SCHEMA_VERSION = 'resume-structural-document-v1' as const;
 export const RESUME_INTELLIGENCE_BENCHMARK_SCHEMA_VERSION =
   'resume-intelligence-benchmark-v1' as const;
 
@@ -82,6 +83,17 @@ export interface ResumeStructuralRecord {
   nodeIds: readonly string[];
   sourceOrder: number;
   recordBoundaryConfidence: number;
+}
+
+export interface ResumeStructuralDocumentV1 {
+  schemaVersion: typeof RESUME_STRUCTURAL_DOCUMENT_SCHEMA_VERSION;
+  documentGraphSchemaVersion: typeof DOCUMENT_GRAPH_SCHEMA_VERSION;
+  resumeVersionId: string;
+  sourceExtractionId: string;
+  sections: readonly ResumeStructuralSection[];
+  records: readonly ResumeStructuralRecord[];
+  unsectionedNodeIds: readonly string[];
+  diagnostics: readonly ResumeIntelligenceDiagnostic[];
 }
 
 export const SOURCE_LEDGER_STATUSES = [
