@@ -48,15 +48,41 @@ type RecordContext = {
 
 type DateMatch = { start: number; end: number; value: ParsedDateRange };
 
-const DATE_RANGE_PATTERN = /\b(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?((?:19|20)\d{2})\s*(?:[-–—]|to)\s*(?:(present|current|now)|(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?((?:19|20)\d{2}))\b/i;
+const DATE_RANGE_PATTERN =
+  /\b(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?((?:19|20)\d{2})\s*(?:[-–—]|to)\s*(?:(present|current|now)|(?:(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?((?:19|20)\d{2}))\b/i;
 const SINGLE_YEAR_PATTERN = /\b((?:19|20)\d{2})\b/;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const PHONE_PATTERN = /(?:\+?\d[\d\s().-]{7,}\d)/;
-const ROLE_PATTERN = /\b(engineer|developer|architect|manager|director|lead|consultant|specialist|analyst|scientist|designer|administrator|officer|intern|researcher|professor|teacher)\b/i;
-const DEGREE_PATTERN = /\b(b\.?s\.?|b\.?sc\.?|bachelor|m\.?s\.?|m\.?sc\.?|master|mba|ph\.?d\.?|doctorate|associate|diploma|certificate)\b/i;
+const ROLE_PATTERN =
+  /\b(engineer|developer|architect|manager|director|lead|consultant|specialist|analyst|scientist|designer|administrator|officer|intern|researcher|professor|teacher)\b/i;
+const DEGREE_PATTERN =
+  /\b(b\.?s\.?|b\.?sc\.?|bachelor|m\.?s\.?|m\.?sc\.?|master|mba|ph\.?d\.?|doctorate|associate|diploma|certificate)\b/i;
 const LOCATION_PATTERN = /^[A-Za-z .'-]+,\s*[A-Za-z .'-]{2,}$/;
 const MONTHS: Record<string, string> = {
-  jan: '01', january: '01', feb: '02', february: '02', mar: '03', march: '03', apr: '04', april: '04', may: '05', jun: '06', june: '06', jul: '07', july: '07', aug: '08', august: '08', sep: '09', sept: '09', september: '09', oct: '10', october: '10', nov: '11', november: '11', dec: '12', december: '12',
+  jan: '01',
+  january: '01',
+  feb: '02',
+  february: '02',
+  mar: '03',
+  march: '03',
+  apr: '04',
+  april: '04',
+  may: '05',
+  jun: '06',
+  june: '06',
+  jul: '07',
+  july: '07',
+  aug: '08',
+  august: '08',
+  sep: '09',
+  sept: '09',
+  september: '09',
+  oct: '10',
+  october: '10',
+  nov: '11',
+  november: '11',
+  dec: '12',
+  december: '12',
 };
 
 export function extractCoreResumeFieldsV2(
@@ -75,12 +101,14 @@ export function extractCoreResumeFieldsV2(
   const contexts: RecordContext[] = structuralDocument.records.flatMap((record) => {
     const section = sectionById.get(record.sectionId);
     if (!section) return [];
-    return [{
-      record,
-      section,
-      typeKey: classifyCareerSectionHeading(section.headingText ?? '').typeKey,
-      lines: evidenceLines(record.nodeIds, nodeById),
-    }];
+    return [
+      {
+        record,
+        section,
+        typeKey: classifyCareerSectionHeading(section.headingText ?? '').typeKey,
+        lines: evidenceLines(record.nodeIds, nodeById),
+      },
+    ];
   });
 
   const experiences: ParsedExperience[] = [];
@@ -139,15 +167,17 @@ function extractRecord(
     certificationIndex: number;
     awardIndex: number;
   },
-): {
-  decision: ResumeSourceLedgerDecision;
-  experience?: ParsedExperience;
-  education?: ParsedEducation;
-  skills?: ParsedSkill[];
-  certification?: ParsedCertification;
-  award?: ParsedAwardV2;
-  summary?: ParsedClaim<string>;
-} | undefined {
+):
+  | {
+      decision: ResumeSourceLedgerDecision;
+      experience?: ParsedExperience;
+      education?: ParsedEducation;
+      skills?: ParsedSkill[];
+      certification?: ParsedCertification;
+      award?: ParsedAwardV2;
+      summary?: ParsedClaim<string>;
+    }
+  | undefined {
   if (context.typeKey === 'WORK_EXPERIENCE') {
     const result = parseExperience(context, sourceExtractionId);
     return result
@@ -242,20 +272,27 @@ function parseExperience(
     const roleIndex = context.lines.indexOf(roleLine);
     companyLine = context.lines
       .slice(roleIndex + 1)
-      .find((line) => line !== dateLine && !LOCATION_PATTERN.test(line.text) && !isBullet(line.text));
+      .find(
+        (line) => line !== dateLine && !LOCATION_PATTERN.test(line.text) && !isBullet(line.text),
+      );
     companyText = companyLine?.text.trim();
   }
   const locationLine = context.lines.find((line) => LOCATION_PATTERN.test(line.text));
-  const role = roleLine && roleText ? claim(roleText, roleLine, sourceExtractionId, 0.93) : undefined;
-  const company = split && roleLine
-    ? claim(split.company, roleLine, sourceExtractionId, 0.91)
-    : companyLine && companyText
-      ? claim(companyText, companyLine, sourceExtractionId, 0.91)
-      : undefined;
-  const location = locationLine ? claim(locationLine.text, locationLine, sourceExtractionId, 0.88) : undefined;
-  const dates = dateLine && dateMatch
-    ? dateClaim(dateMatch, dateLine, sourceExtractionId, context.record.recordBoundaryConfidence)
+  const role =
+    roleLine && roleText ? claim(roleText, roleLine, sourceExtractionId, 0.93) : undefined;
+  const company =
+    split && roleLine
+      ? claim(split.company, roleLine, sourceExtractionId, 0.91)
+      : companyLine && companyText
+        ? claim(companyText, companyLine, sourceExtractionId, 0.91)
+        : undefined;
+  const location = locationLine
+    ? claim(locationLine.text, locationLine, sourceExtractionId, 0.88)
     : undefined;
+  const dates =
+    dateLine && dateMatch
+      ? dateClaim(dateMatch, dateLine, sourceExtractionId, context.record.recordBoundaryConfidence)
+      : undefined;
   const highlights = context.lines
     .filter((line) => isBullet(line.text))
     .map((line) => claim(cleanBullet(line.text), line, sourceExtractionId, 0.9))
@@ -291,14 +328,28 @@ function parseEducation(
     /\b(university|college|institute|school|academy)\b/i.test(line.text),
   );
   const locationLine = context.lines.find((line) => LOCATION_PATTERN.test(line.text));
-  const dateLine = context.lines.find((line) => findDateRange(line.text) || SINGLE_YEAR_PATTERN.test(line.text));
-  const qualification = degreeLine ? claim(stripDate(degreeLine.text), degreeLine, sourceExtractionId, 0.93) : undefined;
-  const institution = institutionLine ? claim(institutionLine.text, institutionLine, sourceExtractionId, 0.93) : undefined;
-  const location = locationLine ? claim(locationLine.text, locationLine, sourceExtractionId, 0.88) : undefined;
+  const dateLine = context.lines.find(
+    (line) => findDateRange(line.text) || SINGLE_YEAR_PATTERN.test(line.text),
+  );
+  const qualification = degreeLine
+    ? claim(stripDate(degreeLine.text), degreeLine, sourceExtractionId, 0.93)
+    : undefined;
+  const institution = institutionLine
+    ? claim(institutionLine.text, institutionLine, sourceExtractionId, 0.93)
+    : undefined;
+  const location = locationLine
+    ? claim(locationLine.text, locationLine, sourceExtractionId, 0.88)
+    : undefined;
   const dates = dateLine ? educationDateClaim(dateLine, sourceExtractionId) : undefined;
   if (!qualification && !institution && !dates) return undefined;
   const details = context.lines
-    .filter((line) => line !== degreeLine && line !== institutionLine && line !== locationLine && line !== dateLine)
+    .filter(
+      (line) =>
+        line !== degreeLine &&
+        line !== institutionLine &&
+        line !== locationLine &&
+        line !== dateLine,
+    )
     .map((line) => claim(cleanBullet(line.text), line, sourceExtractionId, 0.84))
     .filter((value): value is ParsedClaim<string> => value !== undefined);
   const value: ParsedEducation = {
@@ -326,7 +377,10 @@ function parseSkills(context: RecordContext, sourceExtractionId: string): Parsed
   const seen = new Set<string>();
   for (const line of context.lines) {
     const text = line.text.includes(':') ? line.text.slice(line.text.indexOf(':') + 1) : line.text;
-    for (const token of text.split(/[,;•·|]/).map((value) => cleanBullet(value).trim()).filter(Boolean)) {
+    for (const token of text
+      .split(/[,;•·|]/)
+      .map((value) => cleanBullet(value).trim())
+      .filter(Boolean)) {
       if (token.length < 2 || token.length > 80) continue;
       const key = token.toLocaleLowerCase('en-US');
       if (seen.has(key)) continue;
@@ -339,7 +393,10 @@ function parseSkills(context: RecordContext, sourceExtractionId: string): Parsed
   return output;
 }
 
-function parseCertification(context: RecordContext, sourceExtractionId: string): ParsedCertification | undefined {
+function parseCertification(
+  context: RecordContext,
+  sourceExtractionId: string,
+): ParsedCertification | undefined {
   const lines = preferredTableCells(context.lines);
   const nameLine = lines.find((line) => !isDateOnly(line.text));
   if (!nameLine) return undefined;
@@ -347,8 +404,12 @@ function parseCertification(context: RecordContext, sourceExtractionId: string):
   if (!name) return undefined;
   const issuerLine = lines.find((line) => line !== nameLine && !isDateOnly(line.text));
   const issuedLine = lines.find((line) => isDateOnly(line.text));
-  const issuer = issuerLine ? claim(issuerLine.text, issuerLine, sourceExtractionId, 0.88) : undefined;
-  const issuedAt = issuedLine ? claim(issuedLine.text, issuedLine, sourceExtractionId, 0.86) : undefined;
+  const issuer = issuerLine
+    ? claim(issuerLine.text, issuerLine, sourceExtractionId, 0.88)
+    : undefined;
+  const issuedAt = issuedLine
+    ? claim(issuedLine.text, issuedLine, sourceExtractionId, 0.86)
+    : undefined;
   return { name, ...(issuer ? { issuer } : {}), ...(issuedAt ? { issuedAt } : {}) };
 }
 
@@ -358,19 +419,41 @@ function parseAward(context: RecordContext, sourceExtractionId: string): ParsedA
   const name = claim(nameLine.text, nameLine, sourceExtractionId, 0.93);
   if (!name) return undefined;
   const issuedLine = context.lines.find((line) => line !== nameLine && isDateOnly(line.text));
-  const issuerLine = context.lines.find((line) => line !== nameLine && line !== issuedLine && !isBullet(line.text));
+  const issuerLine = context.lines.find(
+    (line) => line !== nameLine && line !== issuedLine && !isBullet(line.text),
+  );
   const detailsLine = context.lines.find((line) => isBullet(line.text));
-  const issuer = issuerLine ? claim(issuerLine.text, issuerLine, sourceExtractionId, 0.86) : undefined;
-  const issuedAt = issuedLine ? claim(issuedLine.text, issuedLine, sourceExtractionId, 0.86) : undefined;
-  const details = detailsLine ? claim(cleanBullet(detailsLine.text), detailsLine, sourceExtractionId, 0.84) : undefined;
-  return { name, ...(issuer ? { issuer } : {}), ...(issuedAt ? { issuedAt } : {}), ...(details ? { details } : {}) };
+  const issuer = issuerLine
+    ? claim(issuerLine.text, issuerLine, sourceExtractionId, 0.86)
+    : undefined;
+  const issuedAt = issuedLine
+    ? claim(issuedLine.text, issuedLine, sourceExtractionId, 0.86)
+    : undefined;
+  const details = detailsLine
+    ? claim(cleanBullet(detailsLine.text), detailsLine, sourceExtractionId, 0.84)
+    : undefined;
+  return {
+    name,
+    ...(issuer ? { issuer } : {}),
+    ...(issuedAt ? { issuedAt } : {}),
+    ...(details ? { details } : {}),
+  };
 }
 
-function parseSummary(context: RecordContext, sourceExtractionId: string): ParsedClaim<string> | undefined {
+function parseSummary(
+  context: RecordContext,
+  sourceExtractionId: string,
+): ParsedClaim<string> | undefined {
   const lines = context.lines.filter((line) => line.text.length >= 20);
-  const value = lines.map((line) => line.text).join(' ').replace(/\s+/g, ' ').trim();
+  const value = lines
+    .map((line) => line.text)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (value.length < 20) return undefined;
-  const evidence = lines.flatMap((line) => evidenceFor(line, sourceExtractionId, 'SECTION_CONTEXT'));
+  const evidence = lines.flatMap((line) =>
+    evidenceFor(line, sourceExtractionId, 'SECTION_CONTEXT'),
+  );
   return evidence.length > 0 ? { value, confidence: 0.94, evidence, warnings: [] } : undefined;
 }
 
@@ -378,7 +461,11 @@ function extractPreambleIdentity(
   nodeIds: readonly string[],
   nodeById: ReadonlyMap<string, DocumentGraphNode>,
   sourceExtractionId: string,
-): { identityCandidate?: ParsedIdentityCandidate; headline?: ParsedClaim<string>; decisions: ResumeSourceLedgerDecision[] } {
+): {
+  identityCandidate?: ParsedIdentityCandidate;
+  headline?: ParsedClaim<string>;
+  decisions: ResumeSourceLedgerDecision[];
+} {
   const lines = evidenceLines(nodeIds, nodeById);
   let fullName: ParsedClaim<string> | undefined;
   let email: ParsedClaim<string> | undefined;
@@ -399,13 +486,20 @@ function extractPreambleIdentity(
     }
   }
 
-  const textLines = lines.filter((line) => !EMAIL_PATTERN.test(line.text) && !PHONE_PATTERN.test(line.text) && !/https?:\/\//i.test(line.text));
+  const textLines = lines.filter(
+    (line) =>
+      !EMAIL_PATTERN.test(line.text) &&
+      !PHONE_PATTERN.test(line.text) &&
+      !/https?:\/\//i.test(line.text),
+  );
   const nameLine = textLines.find((line) => looksLikeName(line.text));
   if (nameLine) {
     fullName = claim(nameLine.text, nameLine, sourceExtractionId, 0.92);
     if (fullName) addPath(pathsByNode, nameLine.node.id, 'identityCandidate.fullName');
     const nameIndex = textLines.indexOf(nameLine);
-    const headlineLine = textLines.slice(nameIndex + 1).find((line) => ROLE_PATTERN.test(line.text));
+    const headlineLine = textLines
+      .slice(nameIndex + 1)
+      .find((line) => ROLE_PATTERN.test(line.text));
     if (headlineLine) {
       headline = claim(headlineLine.text, headlineLine, sourceExtractionId, 0.9);
       if (headline) addPath(pathsByNode, headlineLine.node.id, 'headline');
@@ -415,21 +509,51 @@ function extractPreambleIdentity(
   const decisions = nodeIds.map((sourceId): ResumeSourceLedgerDecision => {
     const paths = pathsByNode.get(sourceId) ?? [];
     return paths.length > 0
-      ? { sourceId, status: 'MAPPED', semanticTypeKey: 'CONTACT_INFORMATION', mappedClaimIds: paths, reviewRequired: false }
-      : { sourceId, status: 'UNMAPPED', semanticTypeKey: 'CONTACT_INFORMATION', reasonCode: 'PREAMBLE_CONTENT_NOT_CORE_CONTACT', reviewRequired: true };
+      ? {
+          sourceId,
+          status: 'MAPPED',
+          semanticTypeKey: 'CONTACT_INFORMATION',
+          mappedClaimIds: paths,
+          reviewRequired: false,
+        }
+      : {
+          sourceId,
+          status: 'UNMAPPED',
+          semanticTypeKey: 'CONTACT_INFORMATION',
+          reasonCode: 'PREAMBLE_CONTENT_NOT_CORE_CONTACT',
+          reviewRequired: true,
+        };
   });
-  const identityCandidate = fullName || email || phone
-    ? { ...(fullName ? { fullName } : {}), ...(email ? { email } : {}), ...(phone ? { phone } : {}) }
-    : undefined;
-  return { ...(identityCandidate ? { identityCandidate } : {}), ...(headline ? { headline } : {}), decisions };
+  const identityCandidate =
+    fullName || email || phone
+      ? {
+          ...(fullName ? { fullName } : {}),
+          ...(email ? { email } : {}),
+          ...(phone ? { phone } : {}),
+        }
+      : undefined;
+  return {
+    ...(identityCandidate ? { identityCandidate } : {}),
+    ...(headline ? { headline } : {}),
+    decisions,
+  };
 }
 
-function evidenceLines(nodeIds: readonly string[], nodeById: ReadonlyMap<string, DocumentGraphNode>): EvidenceLine[] {
+function evidenceLines(
+  nodeIds: readonly string[],
+  nodeById: ReadonlyMap<string, DocumentGraphNode>,
+): EvidenceLine[] {
   return nodeIds
     .map((id) => nodeById.get(id))
     .filter((node): node is DocumentGraphNode => Boolean(node?.text?.trim()))
     .filter((node) => node.kind !== 'TABLE' && node.kind !== 'LIST' && node.kind !== 'LINK')
-    .filter((node) => !(node.kind === 'TABLE_ROW' && node.childIds.some((id) => nodeById.get(id)?.kind === 'TABLE_CELL')))
+    .filter(
+      (node) =>
+        !(
+          node.kind === 'TABLE_ROW' &&
+          node.childIds.some((id) => nodeById.get(id)?.kind === 'TABLE_CELL')
+        ),
+    )
     .sort((a, b) => a.readingOrder - b.readingOrder)
     .map((node) => ({ node, text: node.text?.trim() ?? '' }));
 }
@@ -439,10 +563,17 @@ function preferredTableCells(lines: readonly EvidenceLine[]): readonly EvidenceL
   return cells.length > 0 ? cells : lines;
 }
 
-function claim(value: string, line: EvidenceLine, sourceExtractionId: string, confidence: number): ParsedClaim<string> | undefined {
+function claim(
+  value: string,
+  line: EvidenceLine,
+  sourceExtractionId: string,
+  confidence: number,
+): ParsedClaim<string> | undefined {
   const text = value.trim();
   const evidence = evidenceFor(line, sourceExtractionId, 'DIRECT_TEXT');
-  return text && evidence.length > 0 ? { value: text, confidence, evidence, warnings: [] } : undefined;
+  return text && evidence.length > 0
+    ? { value: text, confidence, evidence, warnings: [] }
+    : undefined;
 }
 
 function evidenceFor(
@@ -453,40 +584,54 @@ function evidenceFor(
   const range = line.node.sourceRange;
   if (!range) return [];
   const blockIndex = line.node.metadata?.blockIndex;
-  return [{
-    resumeExtractionId: sourceExtractionId,
-    pageNumber: line.node.pageNumber,
-    ...(typeof blockIndex === 'number' ? { blockIndex } : {}),
-    sourceRange: { start: range.start, end: range.end },
-    evidenceKind,
-  }];
+  return [
+    {
+      resumeExtractionId: sourceExtractionId,
+      pageNumber: line.node.pageNumber,
+      ...(typeof blockIndex === 'number' ? { blockIndex } : {}),
+      sourceRange: { start: range.start, end: range.end },
+      evidenceKind,
+    },
+  ];
 }
 
-function dateClaim(match: DateMatch, line: EvidenceLine, sourceExtractionId: string, boundaryConfidence: number): ParsedClaim<ParsedDateRange> | undefined {
+function dateClaim(
+  match: DateMatch,
+  line: EvidenceLine,
+  sourceExtractionId: string,
+  boundaryConfidence: number,
+): ParsedClaim<ParsedDateRange> | undefined {
   const range = line.node.sourceRange;
   if (!range) return undefined;
   const blockIndex = line.node.metadata?.blockIndex;
   return {
     value: match.value,
     confidence: Math.min(0.96, Math.max(0.8, boundaryConfidence)),
-    evidence: [{
-      resumeExtractionId: sourceExtractionId,
-      pageNumber: line.node.pageNumber,
-      ...(typeof blockIndex === 'number' ? { blockIndex } : {}),
-      sourceRange: { start: range.start + match.start, end: range.start + match.end },
-      evidenceKind: 'DERIVED_DATE',
-    }],
+    evidence: [
+      {
+        resumeExtractionId: sourceExtractionId,
+        pageNumber: line.node.pageNumber,
+        ...(typeof blockIndex === 'number' ? { blockIndex } : {}),
+        sourceRange: { start: range.start + match.start, end: range.start + match.end },
+        evidenceKind: 'DERIVED_DATE',
+      },
+    ],
     warnings: [],
   };
 }
 
-function educationDateClaim(line: EvidenceLine, sourceExtractionId: string): ParsedClaim<ParsedDateRange> | undefined {
+function educationDateClaim(
+  line: EvidenceLine,
+  sourceExtractionId: string,
+): ParsedClaim<ParsedDateRange> | undefined {
   const range = findDateRange(line.text);
   if (range) return dateClaim(range, line, sourceExtractionId, 0.9);
   const yearMatch = line.text.match(SINGLE_YEAR_PATTERN);
   if (!yearMatch?.[1]) return undefined;
   const evidence = evidenceFor(line, sourceExtractionId, 'DIRECT_TEXT');
-  return evidence.length > 0 ? { value: { end: yearMatch[1] }, confidence: 0.88, evidence, warnings: [] } : undefined;
+  return evidence.length > 0
+    ? { value: { end: yearMatch[1] }, confidence: 0.88, evidence, warnings: [] }
+    : undefined;
 }
 
 function findDateRange(text: string): DateMatch | undefined {
@@ -500,7 +645,11 @@ function findDateRange(text: string): DateMatch | undefined {
     end: match.index + match[0].length,
     value: {
       start: startMonth ? `${match[2]}-${startMonth}` : match[2],
-      ...(match[3] ? { isCurrent: true } : endYear ? { end: endMonth ? `${endYear}-${endMonth}` : endYear } : {}),
+      ...(match[3]
+        ? { isCurrent: true }
+        : endYear
+          ? { end: endMonth ? `${endYear}-${endMonth}` : endYear }
+          : {}),
     },
   };
 }
@@ -510,7 +659,10 @@ function normalizeMonth(value: string | undefined): string | undefined {
 }
 
 function splitRoleCompany(text: string): { role: string; company: string } | undefined {
-  const parts = text.split(/\s+[—–-]\s+/).map((part) => part.trim()).filter(Boolean);
+  const parts = text
+    .split(/\s+[—–-]\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
   const role = parts[0];
   const company = parts[1];
   return role && company && ROLE_PATTERN.test(role) ? { role, company } : undefined;
@@ -518,10 +670,16 @@ function splitRoleCompany(text: string): { role: string; company: string } | und
 
 function stripDate(text: string): string {
   const match = findDateRange(text);
-  return match ? `${text.slice(0, match.start)} ${text.slice(match.end)}`.replace(/\s+/g, ' ').trim() : text.trim();
+  return match
+    ? `${text.slice(0, match.start)} ${text.slice(match.end)}`.replace(/\s+/g, ' ').trim()
+    : text.trim();
 }
 
-function mappedDecision(sourceId: string, claimIds: readonly string[], complete: boolean): ResumeSourceLedgerDecision {
+function mappedDecision(
+  sourceId: string,
+  claimIds: readonly string[],
+  complete: boolean,
+): ResumeSourceLedgerDecision {
   return {
     sourceId,
     status: complete ? 'MAPPED' : 'PARTIALLY_MAPPED',
@@ -531,7 +689,12 @@ function mappedDecision(sourceId: string, claimIds: readonly string[], complete:
 }
 
 function unmappedDecision(sourceId: string): ResumeSourceLedgerDecision {
-  return { sourceId, status: 'UNMAPPED', reasonCode: 'CORE_EXTRACTOR_NO_CONFIDENT_MATCH', reviewRequired: true };
+  return {
+    sourceId,
+    status: 'UNMAPPED',
+    reasonCode: 'CORE_EXTRACTOR_NO_CONFIDENT_MATCH',
+    reviewRequired: true,
+  };
 }
 
 function isBullet(text: string): boolean {
@@ -548,7 +711,12 @@ function isDateOnly(text: string): boolean {
 
 function looksLikeName(text: string): boolean {
   const words = text.trim().split(/\s+/);
-  return words.length >= 2 && words.length <= 6 && !/\d|@|https?:\/\//i.test(text) && words.every((word) => /^[A-Za-z][A-Za-z.'’-]*$/.test(word));
+  return (
+    words.length >= 2 &&
+    words.length <= 6 &&
+    !/\d|@|https?:\/\//i.test(text) &&
+    words.every((word) => /^[A-Za-z][A-Za-z.'’-]*$/.test(word))
+  );
 }
 
 function addPath(map: Map<string, string[]>, nodeId: string, path: string): void {

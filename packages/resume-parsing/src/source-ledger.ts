@@ -45,7 +45,9 @@ const ACCOUNTED_STATUSES = new Set<SourceLedgerStatus>([
   'INTENTIONALLY_IGNORED',
 ]);
 
-export function buildResumeSourceLedger(input: BuildResumeSourceLedgerInput): ResumeSourceLedgerResult {
+export function buildResumeSourceLedger(
+  input: BuildResumeSourceLedgerInput,
+): ResumeSourceLedgerResult {
   const sectionTypes = new Map<string, CareerPassportSectionTypeKey>();
   const entries: ResumeSourceLedgerEntry[] = [];
 
@@ -91,7 +93,8 @@ export function buildResumeSourceLedger(input: BuildResumeSourceLedgerInput): Re
   const entryBySourceId = new Map(entries.map((entry) => [entry.sourceId, entry]));
   for (const decision of input.decisions ?? []) {
     const current = entryBySourceId.get(decision.sourceId);
-    if (!current) throw new Error(`RESUME_SOURCE_LEDGER_DECISION_UNKNOWN_SOURCE:${decision.sourceId}`);
+    if (!current)
+      throw new Error(`RESUME_SOURCE_LEDGER_DECISION_UNKNOWN_SOURCE:${decision.sourceId}`);
     validateDecision(decision);
 
     const semanticTypeKey = decision.semanticTypeKey ?? current.semanticTypeKey;
@@ -121,14 +124,13 @@ export function buildResumeSourceLedger(input: BuildResumeSourceLedgerInput): Re
 
 function validateDecision(decision: ResumeSourceLedgerDecision): void {
   const claimCount = decision.mappedClaimIds?.length ?? 0;
-  if ((decision.status === 'MAPPED' || decision.status === 'PARTIALLY_MAPPED') && claimCount === 0) {
+  if (
+    (decision.status === 'MAPPED' || decision.status === 'PARTIALLY_MAPPED') &&
+    claimCount === 0
+  ) {
     throw new Error(`RESUME_SOURCE_LEDGER_DECISION_REQUIRES_CLAIMS:${decision.sourceId}`);
   }
-  if (
-    decision.status !== 'MAPPED' &&
-    decision.status !== 'PARTIALLY_MAPPED' &&
-    claimCount > 0
-  ) {
+  if (decision.status !== 'MAPPED' && decision.status !== 'PARTIALLY_MAPPED' && claimCount > 0) {
     throw new Error(`RESUME_SOURCE_LEDGER_DECISION_FORBIDS_CLAIMS:${decision.sourceId}`);
   }
   if (decision.status === 'INTENTIONALLY_IGNORED' && !decision.reasonCode) {
@@ -140,7 +142,9 @@ function defaultReviewRequired(status: ResumeSourceLedgerDecisionStatus): boolea
   return status === 'PARTIALLY_MAPPED' || status === 'UNMAPPED';
 }
 
-function deriveSourceCoverage(entries: readonly ResumeSourceLedgerEntry[]): ResumeSourceCoverageSummary {
+function deriveSourceCoverage(
+  entries: readonly ResumeSourceLedgerEntry[],
+): ResumeSourceCoverageSummary {
   const meaningfulEntries = entries.filter((entry) => entry.sourceKind !== 'SECTION');
   const accountedSourceCount = meaningfulEntries.filter((entry) =>
     ACCOUNTED_STATUSES.has(entry.status),
@@ -193,7 +197,9 @@ function deriveRecordReconciliations(
       unprocessedRecordCount,
       accountedRecordCount,
       recordCoverageRatio:
-        records.length === 0 ? 1 : (mappedRecordCount + partiallyMappedRecordCount) / records.length,
+        records.length === 0
+          ? 1
+          : (mappedRecordCount + partiallyMappedRecordCount) / records.length,
     };
   });
 }

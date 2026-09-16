@@ -15,7 +15,11 @@ void test('core typed extractor maps structural records into evidence-grounded c
     paragraph('headline', 'Senior Platform Engineering Manager', 2),
     paragraph('email', 'alexandra@example.com', 3),
     paragraph('phone', '+1 415 555 0199', 4),
-    paragraph('summary-body', 'Engineering leader focused on resilient distributed systems and data platforms.', 10),
+    paragraph(
+      'summary-body',
+      'Engineering leader focused on resilient distributed systems and data platforms.',
+      10,
+    ),
     paragraph('exp-role-1', 'Senior Director of Platform Engineering — NimbusForge', 20),
     paragraph('exp-date-1', 'Mar 2021 – Present', 21),
     paragraph('exp-location-1', 'Seattle, WA', 22),
@@ -64,9 +68,7 @@ void test('core typed extractor maps structural records into evidence-grounded c
   );
   assert.ok(
     result.decisions.every(
-      (decision) =>
-        decision.status === 'UNMAPPED' ||
-        (decision.mappedClaimIds?.length ?? 0) > 0,
+      (decision) => decision.status === 'UNMAPPED' || (decision.mappedClaimIds?.length ?? 0) > 0,
     ),
   );
 });
@@ -132,14 +134,7 @@ function structuralDocument(): ResumeStructuralDocumentV1 {
       section(
         'section-experience',
         'Professional Experience',
-        [
-          'exp-role-1',
-          'exp-date-1',
-          'exp-location-1',
-          'exp-bullet-1',
-          'exp-role-2',
-          'exp-date-2',
-        ],
+        ['exp-role-1', 'exp-date-1', 'exp-location-1', 'exp-bullet-1', 'exp-role-2', 'exp-date-2'],
         1,
       ),
       section('section-education', 'Education', ['edu-degree-1', 'edu-school-1', 'edu-year-1'], 2),
