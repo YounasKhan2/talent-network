@@ -126,6 +126,12 @@ export function mergeResumeCustomSections(
     const classification = classifyCareerSectionHeading(section.heading);
 
     if (classification.typeKey === 'AWARDS') continue;
+
+    // References commonly contain third-party names, emails, and phone numbers. Resume parsing keeps
+    // the source section privately for review, but it is not copied into the generally reusable
+    // Passport section graph until we have explicit per-section privacy controls.
+    if (classification.typeKey === 'REFERENCES') continue;
+
     if (classification.typeKey !== 'CUSTOM') {
       const definition = getCareerPassportSectionDefinition(classification.typeKey);
       if (definition.storage !== 'CUSTOM_SECTION') continue;
