@@ -369,7 +369,7 @@ function parseCoverageSummary(value: unknown): ParsedResumeCoverageSummary {
     ratio,
     coveredSectionCount,
     sourceSectionCount,
-    status: status as ParsedResumeCoverageSummary['status'],
+    status: derivedStatus,
     sections,
   };
 }
@@ -377,7 +377,7 @@ function parseCoverageSummary(value: unknown): ParsedResumeCoverageSummary {
 function parseCoverageSection(value: unknown, index: number): ParsedResumeCoverageSection {
   const data = record(value, `coverageSummary.sections[${index}]`);
   const key = stringValue(data.key, `coverageSummary.sections[${index}].key`);
-  if (!COVERAGE_KEYS.includes(key as ResumeCoverageSectionKey)) {
+  if (!isCoverageSectionKey(key)) {
     fail(`coverageSummary.sections[${index}].key is invalid.`);
   }
   const sourcePresent = booleanValue(
@@ -395,11 +395,15 @@ function parseCoverageSection(value: unknown, index: number): ParsedResumeCovera
   }
 
   return {
-    key: key as ResumeCoverageSectionKey,
+    key,
     sourcePresent,
     detectedCount,
-    status: status as ParsedResumeCoverageSection['status'],
+    status: expectedStatus,
   };
+}
+
+function isCoverageSectionKey(value: string): value is ResumeCoverageSectionKey {
+  return COVERAGE_KEYS.some((key) => key === value);
 }
 
 function record(value: unknown, path: string): Record<string, unknown> {
