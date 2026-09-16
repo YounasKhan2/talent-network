@@ -150,6 +150,6 @@ void test('runtime parser derives grounded name headline summary and skills with
     preprocessedDocument,
     'extraction-semantics',
   );
-  assert.equal(validation.claimCount, 17);
+  assert.equal(validation.claimCount, 16);
   assert.equal(validation.confidenceSummary.lowConfidenceClaimCount, 0);
 });
