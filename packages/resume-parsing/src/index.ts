@@ -1,5 +1,7 @@
 export * from './ai-gateway.js';
 export * from './benchmark-fixtures.js';
+export * from './benchmark-regression.js';
+export * from './benchmark-suite-fixtures.js';
 export * from './benchmark.js';
 export * from './contracts.js';
 export * from './core-typed-extraction.js';

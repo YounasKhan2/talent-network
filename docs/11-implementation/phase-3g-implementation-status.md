@@ -12,8 +12,8 @@ This file is the live implementation checkpoint for Phase 3G while the architect
 3G-E Core typed extractors V2                 ✅ VERIFIED
 3G-F Extensions + open-world fallback         ✅ VERIFIED
 3G-G Semantic recovery capability gate        ✅ VERIFIED
-3G-H Candidate Review UX V2                   🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
-3G-I Benchmark expansion + regression gate    ⬜ NOT STARTED
+3G-H Candidate Review UX V2                   ✅ VERIFIED
+3G-I Benchmark expansion + regression gate    🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
 3G-J Runtime closure                          ⬜ NOT STARTED
 ```
 
@@ -105,96 +105,95 @@ Verified locally on 2026-09-17:
 - provider/benchmark/privacy/latency/cost failures returned explicit fail-closed reason codes
 - formatting cleanup was committed/pushed and the stage was consolidated into one final commit
 
-## 3G-H implementation scope
+### 3G-H
 
-3G-H upgrades the candidate-facing resume review workspace so quality and completeness are no longer represented by one misleading confidence percentage.
+Verified locally on 2026-09-17:
 
-The stage intentionally remains compatible with the currently persisted Phase 3 runtime proposal. It does not fabricate Source Ledger or structural metrics that are not yet persisted.
+- web lint/typecheck/build passed
+- resume-parsing lint/typecheck/build passed
+- 59/59 resume-parsing tests passed
+- API lint/typecheck passed
+- full Phase 3 integration suite passed 31/31
+- Review V2 removed the misleading `Overall confidence` presentation
+- Claim confidence and Source coverage are presented independently
+- additional/custom sections and private-reference guidance are visible without changing candidate authority
+- document/structural quality remain explicit pending-runtime states instead of fabricated browser scores
+- formatting cleanup was committed/pushed and the stage was consolidated into one final commit
 
-The Review V2 experience adds:
+## 3G-I implementation scope
 
-- `Claim confidence` as an explicitly claim-level metric
-- `Source coverage` as a separate metric from `coverageSummary`
-- detected-vs-missed source section visibility
-- preserved additional/custom sections surfaced before candidate approval
-- References/private third-party data withheld from ordinary displayed content
-- an explicit privacy explanation for References
-- document-quality and structural-quality cards that truthfully state `Pending V2 runtime` until 3G-J persists those signals
-- an explanation that Source Ledger record counts/reconciliation will arrive with the V2 runtime rather than being guessed in the browser
-- removal of the old `Overall confidence` summary from the review UI
-- no change to candidate authority: Accept/Edit/Ignore remain the only paths that can apply or reject a proposal
+3G-I converts the Phase 3G benchmark from a single golden-fixture harness into an explicit regression gate while keeping production-readiness claims honest.
 
-### 3G-H quality-model invariant
+The stage adds:
 
-```text
-Claim confidence
-!=
-Source coverage
-!=
-Document extraction quality
-!=
-Structural quality
-```
+- a seed benchmark matrix spanning PDF, DOCX, scanned/OCR, two-column layout, open-world custom sections, and private References
+- fixture metadata that distinguishes `AVAILABLE` artifacts from source-truth contracts that are only `SPECIFIED`
+- suite-level fixture pass-rate and source-coverage calculations
+- record F1 and field F1 thresholds
+- evidence-grounding and unknown-preservation thresholds
+- zero-tolerance privacy-violation gating
+- a Phase 3G seed policy for immediate regression protection
+- a separate production-readiness policy requiring at least 100 real artifact-backed fixtures
+- explicit failure reasons when corpus size, artifact backing, quality, coverage, preservation, or privacy gates fail
+- a hard rule that the seed suite passing does not imply production readiness
 
-The UI must never use one of these dimensions as a substitute for another.
-
-### 3G-H compatibility invariant
-
-```text
-runtime telemetry persisted
-→ display measured value
-
-runtime telemetry not persisted
-→ display explicit unavailable/pending state
-→ never infer or manufacture a score in the browser
-```
-
-### 3G-H privacy invariant
+### 3G-I benchmark integrity invariant
 
 ```text
-References / third-party contact data
-→ private-only explanation
-→ not rendered as ordinary Career Passport content
-→ organization visibility unchanged
+synthetic/specification-only fixture contract
+→ useful for regression vocabulary and deterministic tests
+→ does NOT count as a real artifact-backed production fixture
 ```
-
-### 3G-H authority invariant
 
 ```text
-resume proposal
-→ review evidence only
-
-candidate ACCEPT / EDIT
-→ may create new RESUME_IMPORT Passport version
-
-candidate IGNORE
-→ Passport unchanged
+production ready
+→ >= 100 artifact-backed legal-safe fixtures
+→ record F1 >= 0.95
+→ field F1 >= 0.95
+→ evidence grounding >= 0.99
+→ meaningful-source accounting = 1.00
+→ unknown preservation = 1.00
+→ privacy violations = 0
 ```
 
-3G-H does not alter the server-side approval transaction or authentication identity boundary.
+The project must not manufacture fixture count by cloning generated observations or duplicating the same resume layout.
 
-### 3G-H acceptance gate
+### 3G-I seed matrix
 
-3G-H is verified only after:
+The seed suite currently describes these distinct regression classes:
+
+- complex five-page PDF
+- simple one-page PDF
+- table-backed DOCX
+- scanned/OCR image resume
+- two-column PDF
+- open-world custom-section resume
+- third-party References/privacy resume
+
+Only artifacts actually stored/available to the benchmark runner count toward `artifactBackedFixtureCount`.
+
+### 3G-I acceptance gate
+
+3G-I is verified only after:
 
 ```text
-web lint                              PASS
-web typecheck                         PASS
-web build                             PASS (or documented environment-only blocker)
-resume-parsing regression tests       PASS
-API Phase 3 review integration        PASS
-pnpm format                           no unexpected changes
-git status --short                    clean
+contracts lint                         PASS
+contracts typecheck                    PASS
+contracts build                        PASS
+resume-parsing lint                    PASS
+resume-parsing typecheck               PASS
+resume-parsing test                    PASS
+resume-parsing build                   PASS
+pnpm format                            no unexpected changes
+git status --short                     clean
 ```
 
-Browser acceptance should confirm:
+Expected regression tests cover:
 
-- no `Overall confidence` label remains
-- Claim confidence and Source coverage render independently
-- detected/missed coverage sections are visible when coverage exists
-- additional/custom sections are visible without exposing References content
-- document/structural metrics show pending runtime state rather than fake values
-- existing Accept/Edit/Ignore behavior remains intact
-- contact data remains clearly separated from login/auth identity
+- seed suite spans multiple formats/layouts/privacy classes
+- seed gate passes when every seed fixture and quality invariant passes
+- one silent source-record regression fails the suite
+- unknown-preservation or privacy regression fails closed
+- production readiness remains blocked while the real artifact-backed corpus is below policy
 
 The stage must not be marked verified from code inspection alone.
