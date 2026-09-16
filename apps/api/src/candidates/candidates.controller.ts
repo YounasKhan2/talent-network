@@ -9,6 +9,10 @@ import {
   Put,
   Req,
 } from '@nestjs/common';
+import {
+  CAREER_PASSPORT_CORE_SECTION_KEYS,
+  CAREER_PASSPORT_EXTENSION_SECTION_KEYS,
+} from '@talent-network/contracts';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service.js';
 import { assertCsrf, readSessionToken, type RequestLike } from '../auth/auth.http.js';
@@ -31,6 +35,11 @@ const workModeSchema = z.enum(['REMOTE', 'HYBRID', 'ONSITE', 'FLEXIBLE']);
 const availabilitySchema = z.enum(['IMMEDIATE', 'NOTICE_PERIOD', 'OPEN_TO_OFFERS', 'NOT_LOOKING']);
 const nullableUrlSchema = z.string().trim().url().max(2048).nullable().optional();
 const nullableDateSchema = z.string().datetime().nullable().optional();
+const sectionTypeKeys = new Set<string>([
+  ...CAREER_PASSPORT_CORE_SECTION_KEYS,
+  ...CAREER_PASSPORT_EXTENSION_SECTION_KEYS,
+  'CUSTOM',
+]);
 
 const overviewSchema = z
   .object({
@@ -139,6 +148,19 @@ const customSectionSchema = z
   .object({
     title: z.string().trim().min(1).max(160),
     description: z.string().trim().max(1000).nullable().optional(),
+    sectionTypeKey: z
+      .string()
+      .trim()
+      .max(64)
+      .nullable()
+      .optional()
+      .refine((value) => value == null || sectionTypeKeys.has(value), 'Unknown section type key.'),
+    sourceHeading: z.string().trim().max(220).nullable().optional(),
+    classificationConfidence: z.number().min(0).max(1).nullable().optional(),
+    classificationStatus: z
+      .enum(['AUTO_CLASSIFIED', 'NEEDS_REVIEW', 'CANDIDATE_CLASSIFIED'])
+      .nullable()
+      .optional(),
     items: z.array(customSectionItemSchema).max(50),
   })
   .strict();
@@ -421,6 +443,10 @@ function parseCustomSections(body: unknown): CandidateCustomSectionInput[] {
   return parsed.data.customSections.map((section) => ({
     title: section.title,
     description: section.description ?? null,
+    sectionTypeKey: section.sectionTypeKey ?? null,
+    sourceHeading: section.sourceHeading ?? null,
+    classificationConfidence: section.classificationConfidence ?? null,
+    classificationStatus: section.classificationStatus ?? null,
     items: section.items.map((item) => ({
       title: item.title,
       subtitle: item.subtitle ?? null,
