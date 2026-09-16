@@ -5,12 +5,14 @@ import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
 
 type SectionKey =
+  | 'contact'
   | 'overview'
   | 'experience'
   | 'education'
   | 'skills'
-  | 'projects'
   | 'certifications'
+  | 'awards'
+  | 'projects'
   | 'languages'
   | 'links'
   | 'locations'
@@ -32,16 +34,18 @@ type StoredPreferences = {
 const STORAGE_KEY = 'talent-network:career-passport:section-ui:v1';
 
 const SECTION_DEFINITIONS: readonly SectionDefinition[] = [
-  { id: 'overview', label: 'Professional overview', hideable: false },
-  { id: 'experience', label: 'Experience', hideable: false, collapseWhenEmpty: true },
+  { id: 'contact', label: 'Contact information', hideable: false },
+  { id: 'overview', label: 'Professional summary', hideable: false },
+  { id: 'experience', label: 'Work experience', hideable: false, collapseWhenEmpty: true },
   { id: 'education', label: 'Education', hideable: false, collapseWhenEmpty: true },
   { id: 'skills', label: 'Skills', hideable: false, collapseWhenEmpty: true },
-  { id: 'projects', label: 'Projects & portfolio', hideable: true, collapseWhenEmpty: true },
   { id: 'certifications', label: 'Certifications', hideable: false, collapseWhenEmpty: true },
+  { id: 'awards', label: 'Awards', hideable: false, collapseWhenEmpty: true },
+  { id: 'projects', label: 'Projects & portfolio', hideable: true, collapseWhenEmpty: true },
   { id: 'languages', label: 'Languages & interests', hideable: true, collapseWhenEmpty: true },
   { id: 'links', label: 'Professional links', hideable: true, collapseWhenEmpty: true },
   { id: 'locations', label: 'Location preferences', hideable: true, collapseWhenEmpty: true },
-  { id: 'custom-sections', label: 'Custom sections', hideable: false, collapseWhenEmpty: true },
+  { id: 'custom-sections', label: 'More career sections', hideable: true, collapseWhenEmpty: true },
   { id: 'privacy', label: 'Privacy & discoverability', hideable: false },
 ] as const;
 
@@ -236,7 +240,7 @@ export default function CareerSectionControls() {
           <div className="career-section-manager-panel" role="dialog" aria-label="Manage sections">
             <div className="career-section-manager-heading">
               <div>
-                <strong>Manage sections</strong>
+                <strong>Manage additional sections</strong>
                 <span>Hiding a section never deletes its saved data.</span>
               </div>
               <button
