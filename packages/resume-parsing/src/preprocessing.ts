@@ -364,9 +364,7 @@ function collectPhoneMatches(
   }
 }
 
-function deduplicateDetections(
-  detections: ResumeCandidateDetection[],
-): ResumeCandidateDetection[] {
+function deduplicateDetections(detections: ResumeCandidateDetection[]): ResumeCandidateDetection[] {
   const seen = new Set<string>();
   return detections.filter((detection) => {
     const key = [

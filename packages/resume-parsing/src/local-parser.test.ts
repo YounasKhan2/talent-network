@@ -123,11 +123,7 @@ void test('runtime parser derives grounded name headline summary and skills with
   assert.deepEqual(result.experiences, []);
   assert.deepEqual(result.education, []);
 
-  const validation = validateResumeProposal(
-    result,
-    preprocessedDocument,
-    'extraction-semantics',
-  );
+  const validation = validateResumeProposal(result, preprocessedDocument, 'extraction-semantics');
   assert.equal(validation.claimCount, 16);
   assert.equal(validation.confidenceSummary.lowConfidenceClaimCount, 0);
 });
@@ -219,7 +215,10 @@ void test('parser v3 handles PDF-style role/date plus company/location rows and 
     ],
   );
   assert.equal(result.education.length, 1);
-  assert.equal(result.education[0]?.qualification?.value, 'Bachelor of Science in Software Engineering');
+  assert.equal(
+    result.education[0]?.qualification?.value,
+    'Bachelor of Science in Software Engineering',
+  );
   assert.equal(result.education[0]?.institution?.value, 'Example University Lahore');
   assert.deepEqual(result.education[0]?.dates?.value, { end: '2026' });
 

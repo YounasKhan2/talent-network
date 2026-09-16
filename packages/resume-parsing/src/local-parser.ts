@@ -101,10 +101,7 @@ export class LocalDeterministicResumeParser implements ResumeParser {
       input.preprocessedDocument,
       input.sourceExtractionId,
     );
-    const education = deriveEducationClaims(
-      input.preprocessedDocument,
-      input.sourceExtractionId,
-    );
+    const education = deriveEducationClaims(input.preprocessedDocument, input.sourceExtractionId);
 
     const claimConfidences = [
       ...(identity.fullName ? [identity.fullName.confidence] : []),
@@ -334,9 +331,7 @@ function deriveExperienceClaims(
       }
 
       const next = fragments[index + 1];
-      const paired = next
-        ? parsePairedExperience(fragment, next, sourceExtractionId)
-        : undefined;
+      const paired = next ? parsePairedExperience(fragment, next, sourceExtractionId) : undefined;
       if (paired) {
         const { highlights, nextIndex } = collectHighlights(
           fragments,
@@ -372,35 +367,37 @@ function deriveEducationClaims(
     if (inline) {
       output.push({
         ...inline,
-        details: fragments.slice(1).map((fragment) =>
-          fragmentClaim(
-            cleanBullet(fragment.text),
-            sourceExtractionId,
-            fragment,
-            0.86,
-            'SECTION_CONTEXT',
+        details: fragments
+          .slice(1)
+          .map((fragment) =>
+            fragmentClaim(
+              cleanBullet(fragment.text),
+              sourceExtractionId,
+              fragment,
+              0.86,
+              'SECTION_CONTEXT',
+            ),
           ),
-        ),
       });
       continue;
     }
 
     const second = fragments[1];
-    const paired = second
-      ? parsePairedEducation(first, second, sourceExtractionId)
-      : undefined;
+    const paired = second ? parsePairedEducation(first, second, sourceExtractionId) : undefined;
     if (paired) {
       output.push({
         ...paired,
-        details: fragments.slice(2).map((fragment) =>
-          fragmentClaim(
-            cleanBullet(fragment.text),
-            sourceExtractionId,
-            fragment,
-            0.86,
-            'SECTION_CONTEXT',
+        details: fragments
+          .slice(2)
+          .map((fragment) =>
+            fragmentClaim(
+              cleanBullet(fragment.text),
+              sourceExtractionId,
+              fragment,
+              0.86,
+              'SECTION_CONTEXT',
+            ),
           ),
-        ),
       });
     }
   }
