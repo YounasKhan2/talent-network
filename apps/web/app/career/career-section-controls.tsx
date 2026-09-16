@@ -110,10 +110,7 @@ export default function CareerSectionControls() {
       setTargets((current) => {
         const keys = Object.keys(next) as SectionKey[];
         const currentKeys = Object.keys(current) as SectionKey[];
-        if (
-          keys.length === currentKeys.length &&
-          keys.every((key) => current[key] === next[key])
-        ) {
+        if (keys.length === currentKeys.length && keys.every((key) => current[key] === next[key])) {
           return current;
         }
         return next;
@@ -154,13 +151,7 @@ export default function CareerSectionControls() {
 
     setCollapsed(defaults);
     setInitializationComplete(true);
-  }, [
-    hadStoredPreferences,
-    initializationComplete,
-    pathname,
-    preferencesLoaded,
-    targets,
-  ]);
+  }, [hadStoredPreferences, initializationComplete, pathname, preferencesLoaded, targets]);
 
   useEffect(() => {
     if (pathname !== '/career' || !preferencesLoaded || !initializationComplete) return;
@@ -230,7 +221,9 @@ export default function CareerSectionControls() {
             >
               <span
                 aria-hidden="true"
-                className={isCollapsed ? 'career-section-chevron' : 'career-section-chevron is-open'}
+                className={
+                  isCollapsed ? 'career-section-chevron' : 'career-section-chevron is-open'
+                }
               />
             </button>
           </div>,
