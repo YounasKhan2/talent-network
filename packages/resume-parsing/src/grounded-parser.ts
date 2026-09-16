@@ -54,13 +54,11 @@ function buildLinkClaims(
   sourceExtractionId: string,
 ): ParsedResume['links'] {
   const links: ParsedResume['links'] = [];
-  const seen = new Set<string>();
 
   for (const candidate of candidates) {
     if (candidate.kind !== 'URL') continue;
     const normalized = normalizeUrl(candidate.value);
-    if (!normalized || seen.has(normalized.toLocaleLowerCase('en-US'))) continue;
-    seen.add(normalized.toLocaleLowerCase('en-US'));
+    if (!normalized) continue;
 
     links.push({
       url: detectionClaim(
@@ -128,9 +126,7 @@ function deriveCoverageSummary(
     parsedResume.identityCandidate?.phone,
     parsedResume.headline,
   ].filter(Boolean).length;
-  sections.push(
-    coverageSection('IDENTITY', identitySourcePresent, identityDetectedCount),
-  );
+  sections.push(coverageSection('IDENTITY', identitySourcePresent, identityDetectedCount));
 
   for (const [key, kind] of SECTION_MAP) {
     const sourcePresent = presentKinds.has(kind);
