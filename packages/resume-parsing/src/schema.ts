@@ -1,4 +1,5 @@
 import type {
+  ParsedAdditionalSection,
   ParsedCertification,
   ParsedClaim,
   ParsedDateRange,
@@ -81,6 +82,13 @@ export function validateParsedResume(
     languages: array(root.languages, 'languages').map(parseLanguage),
     links: array(root.links, 'links').map(parseLink),
     locations: array(root.locations, 'locations').map(parseLocation),
+    ...(root.additionalSections === undefined
+      ? {}
+      : {
+          additionalSections: array(root.additionalSections, 'additionalSections').map(
+            parseAdditionalSection,
+          ),
+        }),
     warnings: stringArray(root.warnings, 'warnings'),
     confidenceSummary: parseConfidenceSummary(root.confidenceSummary),
     ...(root.coverageSummary === undefined
@@ -230,6 +238,17 @@ function parseLocation(value: unknown, index: number): ParsedLocation {
   return {
     value: parseStringClaim(data.value, 'location.value'),
     ...(kind === undefined ? {} : { kind }),
+  };
+}
+
+function parseAdditionalSection(value: unknown, index: number): ParsedAdditionalSection {
+  const data = record(value, `additionalSections[${index}]`);
+  return {
+    sourceOrder: nonNegativeInteger(data.sourceOrder, `additionalSections[${index}].sourceOrder`),
+    heading: parseStringClaim(data.heading, `additionalSections[${index}].heading`),
+    entries: array(data.entries, `additionalSections[${index}].entries`).map((entry, entryIndex) =>
+      parseStringClaim(entry, `additionalSections[${index}].entries[${entryIndex}]`),
+    ),
   };
 }
 
