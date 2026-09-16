@@ -11,7 +11,11 @@ export interface ParsedEvidenceRange {
 }
 
 export type ParsedEvidenceKind =
-  'DIRECT_TEXT' | 'SECTION_CONTEXT' | 'NORMALIZED_VALUE' | 'DERIVED_DATE' | 'DERIVED_LINK';
+  | 'DIRECT_TEXT'
+  | 'SECTION_CONTEXT'
+  | 'NORMALIZED_VALUE'
+  | 'DERIVED_DATE'
+  | 'DERIVED_LINK';
 
 export interface ParsedEvidence {
   resumeExtractionId: string;
@@ -111,6 +115,34 @@ export interface ParsedResumeConfidenceSummary {
   totalClaimCount: number;
 }
 
+export type ResumeCoverageSectionKey =
+  | 'IDENTITY'
+  | 'SUMMARY'
+  | 'EXPERIENCE'
+  | 'EDUCATION'
+  | 'SKILLS'
+  | 'PROJECTS'
+  | 'CERTIFICATIONS'
+  | 'LANGUAGES'
+  | 'LINKS';
+
+export type ResumeCoverageSectionStatus = 'NOT_PRESENT' | 'DETECTED' | 'MISSED';
+
+export interface ParsedResumeCoverageSection {
+  key: ResumeCoverageSectionKey;
+  sourcePresent: boolean;
+  detectedCount: number;
+  status: ResumeCoverageSectionStatus;
+}
+
+export interface ParsedResumeCoverageSummary {
+  ratio: number;
+  coveredSectionCount: number;
+  sourceSectionCount: number;
+  status: 'COMPLETE' | 'PARTIAL' | 'NONE';
+  sections: ParsedResumeCoverageSection[];
+}
+
 export interface ParsedResume {
   schemaVersion: ParsedResumeSchemaVersion;
   resumeVersionId: string;
@@ -129,6 +161,7 @@ export interface ParsedResume {
   locations: ParsedLocation[];
   warnings: string[];
   confidenceSummary: ParsedResumeConfidenceSummary;
+  coverageSummary?: ParsedResumeCoverageSummary;
 }
 
 export interface ResumeParseInput {
