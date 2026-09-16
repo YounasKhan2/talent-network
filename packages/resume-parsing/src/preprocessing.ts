@@ -1,4 +1,4 @@
-export const RESUME_PREPROCESSING_POLICY_VERSION = 'resume-preprocess-v1' as const;
+export const RESUME_PREPROCESSING_POLICY_VERSION = 'resume-preprocess-v2' as const;
 
 export const RESUME_PREPROCESSING_LIMITS = {
   maximumChunkCharacters: 12_000,
@@ -20,18 +20,29 @@ export interface ResumePreprocessingSourceRange {
   end: number;
 }
 
+export interface ResumePreprocessingBoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ResumePreprocessingBlockInput {
   text: string;
   sourceRange: {
     startOffset: number;
     endOffset: number;
   };
+  boundingBox?: ResumePreprocessingBoundingBox | null;
 }
 
 export interface ResumePreprocessingPageInput {
   pageNumber: number | null;
   text: string;
   blocks: ResumePreprocessingBlockInput[];
+  nativePdf?: {
+    annotations?: unknown[];
+  };
 }
 
 export interface ResumePreprocessingDocumentInput {
@@ -47,6 +58,7 @@ export interface ResumeSourceFragment {
   segmentIndex: number;
   text: string;
   sourceRange: ResumePreprocessingSourceRange;
+  boundingBox?: ResumePreprocessingBoundingBox | null;
 }
 
 export interface ResumePreprocessedSection {
@@ -64,6 +76,7 @@ export interface ResumePreprocessedChunk {
 }
 
 export type ResumeCandidateDetectionKind = 'EMAIL' | 'PHONE' | 'URL';
+export type ResumeCandidateEvidenceKind = 'DIRECT_TEXT' | 'DERIVED_LINK';
 
 export interface ResumeCandidateDetection {
   kind: ResumeCandidateDetectionKind;
@@ -71,6 +84,7 @@ export interface ResumeCandidateDetection {
   pageNumber: number | null;
   blockIndex: number;
   sourceRange: ResumePreprocessingSourceRange;
+  evidenceKind: ResumeCandidateEvidenceKind;
 }
 
 export interface PreprocessedResumeDocument {
@@ -129,7 +143,7 @@ export function preprocessResumeDocument(
     resumeVersionId: document.resumeVersionId,
     sections: detectSections(fragments),
     chunks: buildBoundedChunks(fragments, maximumChunkCharacters),
-    candidates: detectDeterministicCandidates(fragments),
+    candidates: detectDeterministicCandidates(fragments, document.pages),
   };
 }
 
@@ -214,6 +228,7 @@ export function buildBoundedChunks(
 
 export function detectDeterministicCandidates(
   fragments: ResumeSourceFragment[],
+  pages: ResumePreprocessingPageInput[] = [],
 ): ResumeCandidateDetection[] {
   const detections: ResumeCandidateDetection[] = [];
 
@@ -224,6 +239,7 @@ export function detectDeterministicCandidates(
     collectPhoneMatches(fragment, detections);
   }
 
+  collectPdfAnnotationLinks(pages, detections);
   return deduplicateDetections(detections);
 }
 
@@ -245,6 +261,7 @@ function flattenSourceFragments(
           start: block.sourceRange.startOffset,
           end: block.sourceRange.endOffset,
         },
+        ...(block.boundingBox === undefined ? {} : { boundingBox: block.boundingBox }),
       });
     });
   }
@@ -303,6 +320,7 @@ function collectMatches(
         start: fragment.sourceRange.start + index,
         end: fragment.sourceRange.start + index + match[0].length,
       },
+      evidenceKind: 'DIRECT_TEXT',
     });
   }
 }
@@ -328,7 +346,96 @@ function collectBareUrlMatches(
         start: fragment.sourceRange.start + index,
         end: fragment.sourceRange.start + index + match[0].length,
       },
+      evidenceKind: 'DIRECT_TEXT',
     });
+  }
+}
+
+function collectPdfAnnotationLinks(
+  pages: ResumePreprocessingPageInput[],
+  output: ResumeCandidateDetection[],
+): void {
+  for (const page of pages) {
+    if (page.pageNumber === null || !Array.isArray(page.nativePdf?.annotations)) continue;
+
+    for (const annotation of page.nativePdf.annotations) {
+      const data = asRecord(annotation);
+      const url = safeHttpUrl(data?.url);
+      const rect = annotationRect(data?.rect);
+      if (!url || !rect) continue;
+
+      const match = bestOverlappingBlock(page.blocks, rect);
+      if (!match) continue;
+
+      output.push({
+        kind: 'URL',
+        value: url,
+        pageNumber: page.pageNumber,
+        blockIndex: match.index,
+        sourceRange: {
+          start: match.block.sourceRange.startOffset,
+          end: match.block.sourceRange.endOffset,
+        },
+        evidenceKind: 'DERIVED_LINK',
+      });
+    }
+  }
+}
+
+function bestOverlappingBlock(
+  blocks: ResumePreprocessingBlockInput[],
+  annotation: ResumePreprocessingBoundingBox,
+): { index: number; block: ResumePreprocessingBlockInput } | null {
+  let best: { index: number; block: ResumePreprocessingBlockInput; overlap: number } | null = null;
+
+  blocks.forEach((block, index) => {
+    if (!block.boundingBox) return;
+    const overlap = intersectionArea(block.boundingBox, annotation);
+    if (overlap <= 0 || (best && best.overlap >= overlap)) return;
+    best = { index, block, overlap };
+  });
+
+  return best ? { index: best.index, block: best.block } : null;
+}
+
+function annotationRect(value: unknown): ResumePreprocessingBoundingBox | null {
+  if (!Array.isArray(value) || value.length < 4) return null;
+  const [x1, y1, x2, y2] = value;
+  if (![x1, y1, x2, y2].every((entry) => typeof entry === 'number' && Number.isFinite(entry))) {
+    return null;
+  }
+  const left = Math.min(x1 as number, x2 as number);
+  const bottom = Math.min(y1 as number, y2 as number);
+  return {
+    x: left,
+    y: bottom,
+    width: Math.abs((x2 as number) - (x1 as number)),
+    height: Math.abs((y2 as number) - (y1 as number)),
+  };
+}
+
+function intersectionArea(
+  left: ResumePreprocessingBoundingBox,
+  right: ResumePreprocessingBoundingBox,
+): number {
+  const xOverlap = Math.max(
+    0,
+    Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x),
+  );
+  const yOverlap = Math.max(
+    0,
+    Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y),
+  );
+  return xOverlap * yOverlap;
+}
+
+function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+  } catch {
+    return null;
   }
 }
 
@@ -347,8 +454,6 @@ function collectPhoneMatches(
     const digitCount = value.replace(/\D/g, '').length;
     if (digitCount < 7 || digitCount > 15) continue;
 
-    // A bare 7–8 digit number is too ambiguous for a high-confidence resume phone claim.
-    // Keep shorter values only when an explicit international '+' prefix is present.
     if (digitCount < 9 && !value.startsWith('+')) continue;
 
     output.push({
@@ -360,6 +465,7 @@ function collectPhoneMatches(
         start: fragment.sourceRange.start + index,
         end: fragment.sourceRange.start + index + match[0].length,
       },
+      evidenceKind: 'DIRECT_TEXT',
     });
   }
 }
@@ -369,10 +475,12 @@ function deduplicateDetections(detections: ResumeCandidateDetection[]): ResumeCa
   return detections.filter((detection) => {
     const key = [
       detection.kind,
+      detection.value.toLocaleLowerCase('en-US'),
       detection.pageNumber ?? 'null',
       detection.blockIndex,
       detection.sourceRange.start,
       detection.sourceRange.end,
+      detection.evidenceKind,
     ].join(':');
     if (seen.has(key)) return false;
     seen.add(key);
@@ -400,6 +508,7 @@ function looksLikeUnknownSectionHeading(value: string): boolean {
   const trimmed = value.trim().replace(/[:：]\s*$/, '');
   if (trimmed.length < 2 || trimmed.length > 60) return false;
   if (trimmed.includes('\n')) return false;
+  if (trimmed.includes('|')) return false;
   if (trimmed.split(/\s+/).length > 8) return false;
   if (!/[A-Za-z]/.test(trimmed)) return false;
   if (/[.!?]/.test(trimmed)) return false;
@@ -416,4 +525,10 @@ function assertSourceRange(block: ResumePreprocessingBlockInput): void {
   if (startOffset < 0 || endOffset < startOffset) {
     throw new Error('Resume source range is invalid.');
   }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
