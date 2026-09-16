@@ -60,7 +60,5 @@ void test('DOCX structural normalizer preserves only safe hyperlink targets', ()
 
   assert.equal(blocks.length, 1);
   assert.equal(blocks[0]?.text, 'GitHub unsafe');
-  assert.deepEqual(blocks[0]?.hyperlinks, [
-    { text: 'GitHub', url: 'https://github.com/example' },
-  ]);
+  assert.deepEqual(blocks[0]?.hyperlinks, [{ text: 'GitHub', url: 'https://github.com/example' }]);
 });
