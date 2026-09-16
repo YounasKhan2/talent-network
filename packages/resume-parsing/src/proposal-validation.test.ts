@@ -127,7 +127,7 @@ function sourceDocument(): PreprocessedResumeDocument {
   } as const;
 
   return {
-    preprocessingPolicyVersion: 'resume-preprocess-v2',
+    preprocessingPolicyVersion: 'resume-preprocess-v3',
     sourceDocumentSchemaVersion: 'resume-document-v1',
     resumeVersionId,
     sections: [
