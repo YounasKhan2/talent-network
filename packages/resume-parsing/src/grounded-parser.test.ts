@@ -3,6 +3,7 @@ import test from 'node:test';
 import { GroundedResumeParser } from './grounded-parser.js';
 import { preprocessResumeDocument } from './preprocessing.js';
 import { validateResumeProposal } from './proposal-validation.js';
+import { validateParsedResume } from './schema.js';
 
 void test('parser v4 preserves annotation link provenance and separates coverage from confidence', async () => {
   const blocks = [
@@ -88,6 +89,12 @@ void test('parser v4 preserves annotation link provenance and separates coverage
   assert.doesNotThrow(() =>
     validateResumeProposal(result.parsedResume, preprocessedDocument, 'extraction-v4'),
   );
+
+  const structured = validateParsedResume(result.parsedResume, {
+    resumeVersionId: 'resume-version-v4',
+    sourceExtractionId: 'extraction-v4',
+  });
+  assert.deepEqual(structured.coverageSummary, result.parsedResume.coverageSummary);
 });
 
 void test('coverage does not penalize sections that are absent from the source', async () => {
