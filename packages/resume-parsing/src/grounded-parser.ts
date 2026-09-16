@@ -61,13 +61,7 @@ function buildLinkClaims(
     if (!normalized) continue;
 
     links.push({
-      url: detectionClaim(
-        candidate.value,
-        normalized,
-        sourceExtractionId,
-        candidate,
-        candidate.evidenceKind === 'DERIVED_LINK' ? 0.98 : 0.99,
-      ),
+      url: detectionClaim(candidate.value, normalized, sourceExtractionId, candidate, 0.99),
     });
   }
 
