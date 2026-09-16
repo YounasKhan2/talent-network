@@ -11,13 +11,28 @@ import type {
   ParsedLocation,
   ParsedProject,
   ParsedResume,
+  ParsedResumeCoverageSection,
+  ParsedResumeCoverageSummary,
   ParsedSkill,
+  ResumeCoverageSectionKey,
 } from './contracts.js';
 import {
   PARSED_RESUME_SCHEMA_VERSION,
   RESUME_EVIDENCE_POLICY_VERSION,
   RESUME_PARSER_POLICY_VERSION,
 } from './versions.js';
+
+const COVERAGE_KEYS: readonly ResumeCoverageSectionKey[] = [
+  'IDENTITY',
+  'SUMMARY',
+  'EXPERIENCE',
+  'EDUCATION',
+  'SKILLS',
+  'PROJECTS',
+  'CERTIFICATIONS',
+  'LANGUAGES',
+  'LINKS',
+];
 
 export class ResumeStructuredOutputError extends Error {
   constructor(message: string) {
@@ -68,6 +83,9 @@ export function validateParsedResume(
     locations: array(root.locations, 'locations').map(parseLocation),
     warnings: stringArray(root.warnings, 'warnings'),
     confidenceSummary: parseConfidenceSummary(root.confidenceSummary),
+    ...(root.coverageSummary === undefined
+      ? {}
+      : { coverageSummary: parseCoverageSummary(root.coverageSummary) }),
   };
 }
 
@@ -301,6 +319,86 @@ function parseConfidenceSummary(value: unknown): ParsedResume['confidenceSummary
       'confidenceSummary.lowConfidenceClaimCount',
     ),
     totalClaimCount: nonNegativeInteger(data.totalClaimCount, 'confidenceSummary.totalClaimCount'),
+  };
+}
+
+function parseCoverageSummary(value: unknown): ParsedResumeCoverageSummary {
+  const data = record(value, 'coverageSummary');
+  const ratio = numberValue(data.ratio, 'coverageSummary.ratio');
+  if (ratio < 0 || ratio > 1) fail('coverageSummary.ratio must be between 0 and 1.');
+
+  const coveredSectionCount = nonNegativeInteger(
+    data.coveredSectionCount,
+    'coverageSummary.coveredSectionCount',
+  );
+  const sourceSectionCount = nonNegativeInteger(
+    data.sourceSectionCount,
+    'coverageSummary.sourceSectionCount',
+  );
+  if (coveredSectionCount > sourceSectionCount) {
+    fail('coverageSummary.coveredSectionCount cannot exceed sourceSectionCount.');
+  }
+
+  const seen = new Set<string>();
+  const sections = array(data.sections, 'coverageSummary.sections').map((item, index) => {
+    const section = parseCoverageSection(item, index);
+    if (seen.has(section.key)) fail(`coverageSummary.sections contains duplicate ${section.key}.`);
+    seen.add(section.key);
+    return section;
+  });
+
+  const derivedSourceCount = sections.filter((section) => section.sourcePresent).length;
+  const derivedCoveredCount = sections.filter(
+    (section) => section.sourcePresent && section.status === 'DETECTED',
+  ).length;
+  if (sourceSectionCount !== derivedSourceCount || coveredSectionCount !== derivedCoveredCount) {
+    fail('coverageSummary counts do not match coverageSummary.sections.');
+  }
+
+  const derivedRatio = sourceSectionCount === 0 ? 0 : coveredSectionCount / sourceSectionCount;
+  if (Math.abs(ratio - derivedRatio) > 1e-9) {
+    fail('coverageSummary.ratio does not match coverageSummary counts.');
+  }
+
+  const status = stringValue(data.status, 'coverageSummary.status');
+  const derivedStatus =
+    ratio === 1 && sourceSectionCount > 0 ? 'COMPLETE' : ratio > 0 ? 'PARTIAL' : 'NONE';
+  if (status !== derivedStatus) fail('coverageSummary.status does not match coverageSummary.ratio.');
+
+  return {
+    ratio,
+    coveredSectionCount,
+    sourceSectionCount,
+    status: status as ParsedResumeCoverageSummary['status'],
+    sections,
+  };
+}
+
+function parseCoverageSection(value: unknown, index: number): ParsedResumeCoverageSection {
+  const data = record(value, `coverageSummary.sections[${index}]`);
+  const key = stringValue(data.key, `coverageSummary.sections[${index}].key`);
+  if (!COVERAGE_KEYS.includes(key as ResumeCoverageSectionKey)) {
+    fail(`coverageSummary.sections[${index}].key is invalid.`);
+  }
+  const sourcePresent = booleanValue(
+    data.sourcePresent,
+    `coverageSummary.sections[${index}].sourcePresent`,
+  );
+  const detectedCount = nonNegativeInteger(
+    data.detectedCount,
+    `coverageSummary.sections[${index}].detectedCount`,
+  );
+  const status = stringValue(data.status, `coverageSummary.sections[${index}].status`);
+  const expectedStatus = !sourcePresent ? 'NOT_PRESENT' : detectedCount > 0 ? 'DETECTED' : 'MISSED';
+  if (status !== expectedStatus) {
+    fail(`coverageSummary.sections[${index}].status is inconsistent.`);
+  }
+
+  return {
+    key: key as ResumeCoverageSectionKey,
+    sourcePresent,
+    detectedCount,
+    status: status as ParsedResumeCoverageSection['status'],
   };
 }
 
