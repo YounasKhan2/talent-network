@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
 
+import { getSession } from '../../lib/api';
+
 type SectionKey =
   | 'contact'
   | 'overview'
@@ -31,7 +33,8 @@ type StoredPreferences = {
   collapsed: SectionKey[];
 };
 
-const STORAGE_KEY = 'talent-network:career-passport:section-ui:v1';
+const STORAGE_KEY_PREFIX = 'talent-network:career-passport:section-ui:v2';
+const LEGACY_STORAGE_KEY = 'talent-network:career-passport:section-ui:v1';
 
 const SECTION_DEFINITIONS: readonly SectionDefinition[] = [
   { id: 'contact', label: 'Contact information', hideable: false },
@@ -45,7 +48,7 @@ const SECTION_DEFINITIONS: readonly SectionDefinition[] = [
   { id: 'languages', label: 'Languages & interests', hideable: true, collapseWhenEmpty: true },
   { id: 'links', label: 'Professional links', hideable: true, collapseWhenEmpty: true },
   { id: 'locations', label: 'Location preferences', hideable: true, collapseWhenEmpty: true },
-  { id: 'custom-sections', label: 'More career sections', hideable: true, collapseWhenEmpty: true },
+  { id: 'custom-sections', label: 'Career sections', hideable: true, collapseWhenEmpty: true },
   { id: 'privacy', label: 'Privacy & discoverability', hideable: false },
 ] as const;
 
@@ -57,9 +60,9 @@ function isSectionKey(value: unknown): value is SectionKey {
   return typeof value === 'string' && VALID_SECTION_KEYS.has(value as SectionKey);
 }
 
-function readStoredPreferences(): StoredPreferences | null {
+function readStoredPreferences(storageKey: string): StoredPreferences | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { hidden?: unknown; collapsed?: unknown };
     return {
@@ -73,6 +76,7 @@ function readStoredPreferences(): StoredPreferences | null {
 
 export default function CareerSectionControls() {
   const pathname = usePathname();
+  const [storageKey, setStorageKey] = useState<string | null>(null);
   const [hidden, setHidden] = useState<SectionKey[]>([]);
   const [collapsed, setCollapsed] = useState<SectionKey[]>([]);
   const [targets, setTargets] = useState<Partial<Record<SectionKey, HTMLElement>>>({});
@@ -85,16 +89,37 @@ export default function CareerSectionControls() {
   const collapsedSet = useMemo(() => new Set(collapsed), [collapsed]);
 
   useEffect(() => {
-    if (pathname !== '/career') return;
-    const stored = readStoredPreferences();
-    setHadStoredPreferences(Boolean(stored));
-    if (stored) {
-      setHidden(stored.hidden);
-      setCollapsed(stored.collapsed);
-      setInitializationComplete(true);
+    if (pathname !== '/career') {
+      setStorageKey(null);
+      return;
     }
-    setPreferencesLoaded(true);
+
+    let active = true;
+    void getSession()
+      .then((session) => {
+        if (!active) return;
+        setStorageKey(`${STORAGE_KEY_PREFIX}:${session.user.id}`);
+      })
+      .catch(() => {
+        if (!active) return;
+        setStorageKey(null);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [pathname]);
+
+  useEffect(() => {
+    if (pathname !== '/career' || !storageKey) return;
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    const stored = readStoredPreferences(storageKey);
+    setHidden(stored?.hidden ?? []);
+    setCollapsed(stored?.collapsed ?? []);
+    setHadStoredPreferences(Boolean(stored));
+    setInitializationComplete(Boolean(stored));
+    setPreferencesLoaded(true);
+  }, [pathname, storageKey]);
 
   useEffect(() => {
     if (pathname !== '/career') {
@@ -139,6 +164,7 @@ export default function CareerSectionControls() {
   useEffect(() => {
     if (
       pathname !== '/career' ||
+      !storageKey ||
       !preferencesLoaded ||
       hadStoredPreferences ||
       initializationComplete ||
@@ -155,13 +181,20 @@ export default function CareerSectionControls() {
 
     setCollapsed(defaults);
     setInitializationComplete(true);
-  }, [hadStoredPreferences, initializationComplete, pathname, preferencesLoaded, targets]);
+  }, [hadStoredPreferences, initializationComplete, pathname, preferencesLoaded, storageKey, targets]);
 
   useEffect(() => {
-    if (pathname !== '/career' || !preferencesLoaded || !initializationComplete) return;
+    if (
+      pathname !== '/career' ||
+      !storageKey ||
+      !preferencesLoaded ||
+      !initializationComplete
+    ) {
+      return;
+    }
     const preferences: StoredPreferences = { hidden, collapsed };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-  }, [collapsed, hidden, initializationComplete, pathname, preferencesLoaded]);
+    window.localStorage.setItem(storageKey, JSON.stringify(preferences));
+  }, [collapsed, hidden, initializationComplete, pathname, preferencesLoaded, storageKey]);
 
   useEffect(() => {
     if (pathname !== '/career') return;
@@ -240,8 +273,8 @@ export default function CareerSectionControls() {
           <div className="career-section-manager-panel" role="dialog" aria-label="Manage sections">
             <div className="career-section-manager-heading">
               <div>
-                <strong>Manage additional sections</strong>
-                <span>Hiding a section never deletes its saved data.</span>
+                <strong>Manage career sections</strong>
+                <span>These preferences are private to your signed-in account on this browser.</span>
               </div>
               <button
                 aria-label="Close section manager"
