@@ -11,7 +11,11 @@ export interface ParsedEvidenceRange {
 }
 
 export type ParsedEvidenceKind =
-  'DIRECT_TEXT' | 'SECTION_CONTEXT' | 'NORMALIZED_VALUE' | 'DERIVED_DATE' | 'DERIVED_LINK';
+  | 'DIRECT_TEXT'
+  | 'SECTION_CONTEXT'
+  | 'NORMALIZED_VALUE'
+  | 'DERIVED_DATE'
+  | 'DERIVED_LINK';
 
 export interface ParsedEvidence {
   resumeExtractionId: string;
@@ -95,6 +99,12 @@ export interface ParsedIdentityCandidate {
   phone?: ParsedClaim<string>;
 }
 
+export interface ParsedAdditionalSection {
+  sourceOrder: number;
+  heading: ParsedClaim<string>;
+  entries: ParsedClaim<string>[];
+}
+
 export interface ResumeParserMetadata {
   name: string;
   version: string;
@@ -155,6 +165,7 @@ export interface ParsedResume {
   languages: ParsedLanguage[];
   links: ParsedLink[];
   locations: ParsedLocation[];
+  additionalSections: ParsedAdditionalSection[];
   warnings: string[];
   confidenceSummary: ParsedResumeConfidenceSummary;
   coverageSummary?: ParsedResumeCoverageSummary;
