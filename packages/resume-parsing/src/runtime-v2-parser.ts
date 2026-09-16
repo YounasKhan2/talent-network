@@ -12,7 +12,10 @@ import {
   extractCoreResumeFieldsV2,
   type ResumeCoreTypedExtractionResult,
 } from './core-typed-extraction.js';
-import { buildResumeDocumentGraph, type ResumeDocumentGraphSource } from './document-graph.js';
+import {
+  buildResumeDocumentGraph,
+  type ResumeDocumentGraphSource,
+} from './document-graph.js';
 import {
   extractExtensionResumeFieldsV2,
   type ParsedOpenWorldRecordV2,
@@ -21,6 +24,8 @@ import type {
   ParsedAdditionalSection,
   ParsedAward,
   ParsedClaim,
+  ParsedIdentityCandidate,
+  ParsedLink,
   ParsedResume,
   ParsedResumeConfidenceSummary,
   ParsedResumeCoverageSection,
@@ -31,7 +36,10 @@ import type {
   ResumeParser,
 } from './contracts.js';
 import { ResumeProposalValidationError } from './proposal-validation.js';
-import { buildResumeSourceLedger } from './source-ledger.js';
+import {
+  buildResumeSourceLedger,
+  type ResumeSourceLedgerDecision,
+} from './source-ledger.js';
 import { detectResumeStructure } from './structural-detection.js';
 import {
   PARSED_RESUME_SCHEMA_VERSION,
@@ -40,6 +48,9 @@ import {
 } from './versions.js';
 
 const RUNTIME_V2_SCHEMA_VERSION = 'resume-intelligence-runtime-v2' as const;
+const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+const PHONE_PATTERN = /(?:\+?\d[\d\s().-]{7,}\d)/;
+const HTTP_URL_PATTERN = /https?:\/\/[^\s)>\]}]+/i;
 
 const LEGACY_COVERAGE_MAP: ReadonlyArray<
   readonly [ResumeCoverageSectionKey, CareerPassportSectionTypeKey]
@@ -65,7 +76,7 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
   readonly name = 'resume-intelligence-v2-parser';
   readonly version = '1';
 
-  async parse(input: ResumeParseInput): Promise<ParsedResumeDraft> {
+  parse(input: ResumeParseInput): Promise<ParsedResumeDraft> {
     const sourceDocument = input.sourceDocument;
     if (!sourceDocument) {
       throw new ResumeProposalValidationError(
@@ -82,12 +93,20 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
     const structuralDocument = detectResumeStructure(graph);
     const core = extractCoreResumeFieldsV2(graph, structuralDocument);
     const extensions = extractExtensionResumeFieldsV2(graph, structuralDocument);
+    const contact = extractHeadedContactFields(
+      graph,
+      structuralDocument,
+      input.sourceExtractionId,
+      extensions.links.length,
+    );
     const sourceLedger = buildResumeSourceLedger({
       structuralDocument,
-      decisions: [...core.decisions, ...extensions.decisions],
+      decisions: [...core.decisions, ...extensions.decisions, ...contact.decisions],
     });
 
     const awards = core.awards.map(toParsedAward);
+    const identityCandidate = mergeIdentityCandidates(core.identityCandidate, contact.identityCandidate);
+    const links = [...extensions.links, ...contact.links];
     const additionalSections = [
       ...buildAdditionalSections(
         graph,
@@ -95,7 +114,12 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
         extensions.additionalSections,
         input.sourceExtractionId,
       ),
-      ...buildAwardCompatibilitySections(graph, structuralDocument, core, input.sourceExtractionId),
+      ...buildAwardCompatibilitySections(
+        graph,
+        structuralDocument,
+        core,
+        input.sourceExtractionId,
+      ),
     ].sort((left, right) => left.sourceOrder - right.sourceOrder);
 
     const base: Omit<ParsedResume, 'confidenceSummary' | 'coverageSummary'> = {
@@ -108,7 +132,7 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
         parserPolicyVersion: RESUME_PARSER_POLICY_VERSION,
         evidencePolicyVersion: RESUME_EVIDENCE_POLICY_VERSION,
       },
-      ...(core.identityCandidate ? { identityCandidate: core.identityCandidate } : {}),
+      ...(identityCandidate ? { identityCandidate } : {}),
       ...(core.headline ? { headline: core.headline } : {}),
       ...(core.summary ? { summary: core.summary } : {}),
       experiences: core.experiences,
@@ -118,7 +142,7 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
       certifications: core.certifications,
       awards,
       languages: extensions.languages,
-      links: extensions.links,
+      links,
       locations: extensions.locations,
       ...(additionalSections.length > 0 ? { additionalSections } : {}),
       warnings: buildRuntimeWarnings(sourceLedger.sourceCoverage, sourceLedger.diagnostics.length),
@@ -146,7 +170,7 @@ export class ResumeIntelligenceV2Parser implements ResumeParser {
     const coverageSummary = deriveLegacyCoverageSummary(base, structuralDocument);
     const parsedResume: ParsedResume = { ...base, confidenceSummary, coverageSummary };
 
-    return { parsedResume };
+    return Promise.resolve({ parsedResume });
   }
 }
 
@@ -163,6 +187,164 @@ function toParsedAward(award: ResumeCoreTypedExtractionResult['awards'][number])
     ...(award.issuedAt ? { issuedAt: award.issuedAt } : {}),
     ...(award.details ? { details: award.details } : {}),
   };
+}
+
+function extractHeadedContactFields(
+  graph: ResumeDocumentGraphV1,
+  structuralDocument: ResumeStructuralDocumentV1,
+  sourceExtractionId: string,
+  linkOffset: number,
+): {
+  identityCandidate?: ParsedIdentityCandidate;
+  links: ParsedLink[];
+  decisions: ResumeSourceLedgerDecision[];
+} {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const sectionById = new Map(structuralDocument.sections.map((section) => [section.id, section]));
+  let email: ParsedClaim<string> | undefined;
+  let phone: ParsedClaim<string> | undefined;
+  const links: ParsedLink[] = [];
+  const decisions: ResumeSourceLedgerDecision[] = [];
+
+  for (const record of structuralDocument.records) {
+    const section = sectionById.get(record.sectionId);
+    if (
+      classifyCareerSectionHeading(section?.headingText ?? '').typeKey !== 'CONTACT_INFORMATION'
+    ) {
+      continue;
+    }
+
+    const mappedClaimIds: string[] = [];
+    let hasUnaccountedText = false;
+    const seenLinks = new Set<string>();
+
+    for (const nodeId of record.nodeIds) {
+      const node = nodeById.get(nodeId);
+      const text = node?.text?.trim();
+      if (!node || !text || !node.sourceRange) continue;
+
+      let residual = text;
+      const emailMatch = text.match(EMAIL_PATTERN)?.[0];
+      if (emailMatch) {
+        residual = residual.replace(emailMatch, ' ');
+        if (!email) {
+          email = nodeClaim(emailMatch, node, sourceExtractionId, 0.99);
+          if (email) mappedClaimIds.push('identityCandidate.email');
+        }
+      }
+
+      const phoneMatch = text.match(PHONE_PATTERN)?.[0];
+      if (phoneMatch) {
+        residual = residual.replace(phoneMatch, ' ');
+        if (!phone) {
+          phone = nodeClaim(phoneMatch, node, sourceExtractionId, 0.97);
+          if (phone) mappedClaimIds.push('identityCandidate.phone');
+        }
+      }
+
+      const urlMatch = text.match(HTTP_URL_PATTERN)?.[0];
+      if (urlMatch) {
+        residual = residual.replace(urlMatch, ' ');
+        const normalizedUrl = normalizeHttpUrl(urlMatch);
+        if (normalizedUrl && !seenLinks.has(normalizedUrl)) {
+          const url = nodeClaim(normalizedUrl, node, sourceExtractionId, 0.99);
+          if (url) {
+            seenLinks.add(normalizedUrl);
+            const index = linkOffset + links.length;
+            links.push({ url });
+            mappedClaimIds.push(`links[${index}].url`);
+          }
+        }
+      }
+
+      if (residual.replace(/[\s|,;:/·•()\[\]{}-]+/g, '').length > 0) {
+        hasUnaccountedText = true;
+      }
+    }
+
+    if (mappedClaimIds.length === 0) {
+      decisions.push({
+        sourceId: record.id,
+        status: 'UNMAPPED',
+        semanticTypeKey: 'CONTACT_INFORMATION',
+        reasonCode: 'CONTACT_RECORD_NOT_TYPED',
+        reviewRequired: true,
+      });
+      continue;
+    }
+
+    decisions.push({
+      sourceId: record.id,
+      status: hasUnaccountedText ? 'PARTIALLY_MAPPED' : 'MAPPED',
+      semanticTypeKey: 'CONTACT_INFORMATION',
+      mappedClaimIds,
+      reviewRequired: hasUnaccountedText,
+    });
+  }
+
+  const identityCandidate =
+    email || phone
+      ? {
+          ...(email ? { email } : {}),
+          ...(phone ? { phone } : {}),
+        }
+      : undefined;
+
+  return {
+    ...(identityCandidate ? { identityCandidate } : {}),
+    links,
+    decisions,
+  };
+}
+
+function mergeIdentityCandidates(
+  primary: ParsedIdentityCandidate | undefined,
+  fallback: ParsedIdentityCandidate | undefined,
+): ParsedIdentityCandidate | undefined {
+  const fullName = primary?.fullName ?? fallback?.fullName;
+  const email = primary?.email ?? fallback?.email;
+  const phone = primary?.phone ?? fallback?.phone;
+  return fullName || email || phone
+    ? {
+        ...(fullName ? { fullName } : {}),
+        ...(email ? { email } : {}),
+        ...(phone ? { phone } : {}),
+      }
+    : undefined;
+}
+
+function nodeClaim(
+  value: string,
+  node: DocumentGraphNode,
+  sourceExtractionId: string,
+  confidence: number,
+): ParsedClaim<string> | undefined {
+  if (!node.sourceRange) return undefined;
+  return {
+    value: value.trim(),
+    confidence,
+    evidence: [
+      {
+        resumeExtractionId: sourceExtractionId,
+        pageNumber: node.pageNumber,
+        ...(typeof node.metadata?.blockIndex === 'number'
+          ? { blockIndex: node.metadata.blockIndex }
+          : {}),
+        sourceRange: node.sourceRange,
+        evidenceKind: 'DIRECT_TEXT',
+      },
+    ],
+    warnings: [],
+  };
+}
+
+function normalizeHttpUrl(value: string): string | null {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+  } catch {
+    return null;
+  }
 }
 
 function buildAdditionalSections(
@@ -378,9 +560,7 @@ function deriveLegacyCoverageSummary(
 
   for (const [legacyKey, typeKey] of LEGACY_COVERAGE_MAP) {
     const sourcePresent = presentTypes.has(typeKey);
-    sections.push(
-      coverageSection(legacyKey, sourcePresent, detectedCount(parsedResume, legacyKey)),
-    );
+    sections.push(coverageSection(legacyKey, sourcePresent, detectedCount(parsedResume, legacyKey)));
   }
 
   const sourceSections = sections.filter((section) => section.sourcePresent);
