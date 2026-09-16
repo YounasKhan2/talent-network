@@ -107,7 +107,9 @@ export class LocalDeterministicResumeParser implements ResumeParser {
   }
 }
 
-function findPreambleSection(document: PreprocessedResumeDocument): ResumePreprocessedSection | undefined {
+function findPreambleSection(
+  document: PreprocessedResumeDocument,
+): ResumePreprocessedSection | undefined {
   const firstSection = document.sections[0];
   return firstSection?.kind === 'OTHER' && firstSection.fragments.length > 0
     ? firstSection
@@ -120,10 +122,14 @@ function deriveIdentityClaims(
 ): { fullName?: ParsedClaim<string>; headline?: ParsedClaim<string> } {
   if (!section) return {};
 
-  const contentFragments = section.fragments.filter((fragment) => isIdentityTextFragment(fragment.text));
+  const contentFragments = section.fragments.filter((fragment) =>
+    isIdentityTextFragment(fragment.text),
+  );
   if (contentFragments.length === 0) return {};
 
-  const nameFragment = contentFragments.find((fragment) => looksLikePersonName(fragment.text));
+  const nameFragment = contentFragments.find((fragment) =>
+    looksLikePersonName(fragment.text),
+  );
   const headlineFragment = nameFragment
     ? contentFragments.find(
         (fragment) =>
@@ -166,7 +172,9 @@ function deriveSummaryClaim(
   const section = document.sections.find((candidate) => candidate.kind === 'SUMMARY');
   if (!section) return undefined;
 
-  const fragments = section.fragments.filter((fragment) => fragment !== section.headingFragment);
+  const fragments = section.fragments.filter(
+    (fragment) => fragment !== section.headingFragment,
+  );
   const text = fragments
     .map((fragment) => fragment.text.trim())
     .filter(Boolean)
@@ -322,7 +330,9 @@ function isIdentityTextFragment(value: string): boolean {
 
 function looksLikeSkillValue(value: string): boolean {
   if (value.length < 1 || value.length > 80) return false;
-  if (/^(skills?|technical skills?|core skills?|competencies|technologies)$/i.test(value)) return false;
+  if (/^(skills?|technical skills?|core skills?|competencies|technologies)$/i.test(value)) {
+    return false;
+  }
   if (/^\d{4}\s*[-–—]/.test(value)) return false;
   if (/[.!?]$/.test(value) && value.split(/\s+/).length > 5) return false;
   return /[A-Za-z0-9+#.]/.test(value);
