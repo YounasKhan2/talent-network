@@ -87,3 +87,69 @@ void test('runtime parser returns a valid empty proposal when no deterministic c
     validateResumeProposal(result.parsedResume, preprocessedDocument, 'extraction-empty'),
   );
 });
+
+void test('runtime parser derives grounded name headline summary and skills without inventing records', async () => {
+  const blocks = [
+    'ALEX MORGAN',
+    'Senior Full Stack Engineer',
+    'alex@example.com',
+    'PROFESSIONAL SUMMARY',
+    'Full-stack engineer building secure multi-tenant SaaS platforms.',
+    'TECHNICAL SKILLS',
+    'Frontend: React, Next.js, TypeScript',
+    'Backend: Node.js, NestJS, PostgreSQL',
+    'EXPERIENCE',
+    'Acme Systems',
+    'Senior Engineer 2024 - 2026',
+  ];
+
+  let offset = 0;
+  const sourceBlocks = blocks.map((text) => {
+    const startOffset = offset;
+    const endOffset = startOffset + text.length;
+    offset = endOffset + 1;
+    return { text, sourceRange: { startOffset, endOffset } };
+  });
+
+  const preprocessedDocument = preprocessResumeDocument({
+    schemaVersion: 'resume-document-v2',
+    resumeVersionId: 'resume-version-semantics',
+    text: blocks.join('\n'),
+    pages: [
+      {
+        pageNumber: 1,
+        text: blocks.join('\n'),
+        blocks: sourceBlocks,
+      },
+    ],
+  });
+
+  const result = await new LocalDeterministicResumeParser().parse({
+    resumeVersionId: 'resume-version-semantics',
+    sourceExtractionId: 'extraction-semantics',
+    processingPipelineVersion: 'resume-v2',
+    sourceDocumentSchemaVersion: 'resume-document-v2',
+    preprocessedDocument,
+  });
+
+  assert.equal(result.parsedResume.identityCandidate?.fullName?.value, 'ALEX MORGAN');
+  assert.equal(result.parsedResume.headline?.value, 'Senior Full Stack Engineer');
+  assert.equal(
+    result.parsedResume.summary?.value,
+    'Full-stack engineer building secure multi-tenant SaaS platforms.',
+  );
+  assert.deepEqual(
+    result.parsedResume.skills.map((skill) => skill.name.value),
+    ['React', 'Next.js', 'TypeScript', 'Node.js', 'NestJS', 'PostgreSQL'],
+  );
+  assert.deepEqual(result.parsedResume.experiences, []);
+  assert.deepEqual(result.parsedResume.education, []);
+
+  const validation = validateResumeProposal(
+    result.parsedResume,
+    preprocessedDocument,
+    'extraction-semantics',
+  );
+  assert.equal(validation.claimCount, 17);
+  assert.equal(validation.confidenceSummary.lowConfidenceClaimCount, 0);
+});
