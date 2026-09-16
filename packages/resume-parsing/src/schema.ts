@@ -363,7 +363,8 @@ function parseCoverageSummary(value: unknown): ParsedResumeCoverageSummary {
   const status = stringValue(data.status, 'coverageSummary.status');
   const derivedStatus =
     ratio === 1 && sourceSectionCount > 0 ? 'COMPLETE' : ratio > 0 ? 'PARTIAL' : 'NONE';
-  if (status !== derivedStatus) fail('coverageSummary.status does not match coverageSummary.ratio.');
+  if (status !== derivedStatus)
+    fail('coverageSummary.status does not match coverageSummary.ratio.');
 
   return {
     ratio,
