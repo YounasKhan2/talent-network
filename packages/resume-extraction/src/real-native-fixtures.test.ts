@@ -37,7 +37,7 @@ function assertValidBlocks(
   }
 }
 
-void test('real native PDF fixture preserves PDF.js text-layer and geometry data', async () => {
+void test('real native PDF fixture preserves PDF.js text-layer geometry and annotations', async () => {
   const bytes = await readFile(fixtureUrl('synthetic-resume.pdf'));
   const extractor = new PdfJsResumeExtractor();
 
@@ -67,6 +67,7 @@ void test('real native PDF fixture preserves PDF.js text-layer and geometry data
     assert.ok((nativePdf?.viewport.width ?? 0) > 0);
     assert.ok((nativePdf?.viewport.height ?? 0) > 0);
     assert.ok((nativePdf?.view.length ?? 0) >= 4);
+    assert.ok(Array.isArray(nativePdf?.annotations));
 
     const textItems = nativePdf?.textContent.items.filter((item) => item.kind === 'TEXT') ?? [];
     assert.ok(textItems.length > 0);
