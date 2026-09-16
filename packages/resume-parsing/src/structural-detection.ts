@@ -349,29 +349,44 @@ function dateAnchorIndexes(
   for (const [index, unit] of units.entries()) {
     if (unit.node.kind !== 'PARAGRAPH') continue;
     const text = unit.node.text?.trim() ?? '';
-    const isAnchor =
-      looksLikeDateBearingRecordLine(text) ||
-      (singleYearSections.has(typeKey) &&
-        SINGLE_YEAR_PATTERN.test(text) &&
-        !isBulletText(text) &&
-        text.length <= 220);
-    if (!isAnchor) continue;
+    const hasDateRange = DATE_RANGE_PATTERN.test(text);
+    const hasEligibleSingleYear =
+      singleYearSections.has(typeKey) &&
+      SINGLE_YEAR_PATTERN.test(text) &&
+      !isBulletText(text) &&
+      text.length <= 220;
+    if (!hasDateRange && !hasEligibleSingleYear && !(/\|/.test(text) && SINGLE_YEAR_PATTERN.test(text))) {
+      continue;
+    }
 
     const previous = units[index - 1];
     const previousText = previous?.node.text?.trim() ?? '';
     const previousMayBeRecordTitle =
+      isMostlyDateLine(text) &&
       previous?.node.kind === 'PARAGRAPH' &&
       previousText &&
       !looksLikeDateBearingRecordLine(previousText) &&
       !SINGLE_YEAR_PATTERN.test(previousText) &&
       !looksLikeLocationLine(previousText) &&
-      !isBulletText(previousText);
+      !isBulletText(previousText) &&
+      !isLikelyInlineHeader(previousText);
     const anchorIndex = previousMayBeRecordTitle ? index - 1 : index;
 
     if (!anchors.includes(anchorIndex)) anchors.push(anchorIndex);
   }
 
-  return anchors.sort((left, right) => left - right);
+  anchors.sort((left, right) => left - right);
+  const firstAnchor = anchors[0];
+  if (firstAnchor !== undefined && firstAnchor > 0) {
+    const firstDataIndex = units.findIndex((unit, index) => {
+      if (index >= firstAnchor) return false;
+      const text = unit.node.text?.trim() ?? '';
+      return isMeaningfulRecordUnit(unit.node) && text.length > 0 && !isLikelyInlineHeader(text);
+    });
+    if (firstDataIndex >= 0) anchors[0] = firstDataIndex;
+  }
+
+  return [...new Set(anchors)].sort((left, right) => left - right);
 }
 
 function referenceAnchorIndexes(units: readonly StructuralUnit[]): number[] {
@@ -393,7 +408,10 @@ function recordsFromSimpleLines(
   units: readonly StructuralUnit[],
 ): ResumeStructuralRecord[] {
   const meaningful = units.filter(
-    (unit) => unit.node.kind === 'PARAGRAPH' && (unit.node.text?.trim().length ?? 0) > 0,
+    (unit) =>
+      unit.node.kind === 'PARAGRAPH' &&
+      (unit.node.text?.trim().length ?? 0) > 0 &&
+      !isLikelyInlineHeader(unit.node.text?.trim() ?? ''),
   );
   if (meaningful.length <= 1) return [];
   return meaningful.map((unit, index) => ({
@@ -428,6 +446,33 @@ function looksLikeDateBearingRecordLine(text: string): boolean {
   if (DATE_RANGE_PATTERN.test(text)) return true;
   if (/\|/.test(text) && SINGLE_YEAR_PATTERN.test(text)) return true;
   return false;
+}
+
+function isMostlyDateLine(text: string): boolean {
+  const withoutRange = text.replace(DATE_RANGE_PATTERN, ' ');
+  const withoutYears = withoutRange.replace(/\b(?:19|20)\d{2}\b/g, ' ');
+  return withoutYears.replace(/[\s()[\],.;:/|+-]/g, '').length === 0;
+}
+
+function isLikelyInlineHeader(text: string): boolean {
+  const normalized = text.trim().toLocaleLowerCase('en-US');
+  if (!normalized) return false;
+  const tokens = [
+    'certification',
+    'issuer',
+    'credential',
+    'year',
+    'language',
+    'proficiency',
+    'name',
+    'title',
+    'company',
+    'email',
+    'phone',
+    'category',
+    'details',
+  ];
+  return tokens.filter((token) => normalized.includes(token)).length >= 2;
 }
 
 function isBulletText(text: string): boolean {
