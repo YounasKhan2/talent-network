@@ -56,6 +56,12 @@ export interface ParsedResumeCoverageSection {
   status: 'NOT_PRESENT' | 'DETECTED' | 'MISSED';
 }
 
+export interface ParsedResumeAdditionalSection {
+  sourceOrder: number;
+  heading: ParsedClaim<string>;
+  entries: ParsedClaim<string>[];
+}
+
 export interface ParsedResumeProposal {
   schemaVersion: string;
   resumeVersionId: string;
@@ -84,6 +90,7 @@ export interface ParsedResumeProposal {
   languages: unknown[];
   links: unknown[];
   locations: unknown[];
+  additionalSections?: ParsedResumeAdditionalSection[];
   warnings: string[];
   confidenceSummary: {
     overall: number;
