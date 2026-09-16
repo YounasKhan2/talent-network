@@ -7,6 +7,7 @@ import {
   ApiError,
   getCandidatePassport,
   getSession,
+  replaceCandidateAwards,
   replaceCandidateCertifications,
   replaceCandidateCustomSections,
   replaceCandidateEducation,
@@ -16,6 +17,7 @@ import {
   replaceCandidateLocations,
   replaceCandidateProjects,
   replaceCandidateSkills,
+  updateCandidateContactInformation,
   updateCandidateOverview,
   updateCandidateSettings,
   type CandidateCustomSectionResponse,
@@ -99,16 +101,18 @@ export default function CareerPassportPage() {
           <p className="career-rail-label">Career Passport</p>
         </div>
         <nav aria-label="Career Passport sections">
-          <a href="#overview">Overview</a>
+          <a href="#contact">Contact</a>
+          <a href="#overview">Summary</a>
           <a href="#experience">Experience</a>
           <a href="#education">Education</a>
           <a href="#skills">Skills</a>
-          <a href="#projects">Projects</a>
           <a href="#certifications">Certifications</a>
+          <a href="#awards">Awards</a>
+          <a href="#projects">Projects</a>
           <a href="#languages">Languages</a>
           <a href="#links">Links</a>
           <a href="#locations">Locations</a>
-          <a href="#custom-sections">Custom</a>
+          <a href="#custom-sections">More sections</a>
           <a href="#privacy">Privacy</a>
         </nav>
         <div className="career-rail-foot">
@@ -139,6 +143,19 @@ export default function CareerPassportPage() {
           </p>
         ) : null}
 
+        <SectionGroupHeading
+          eyebrow="Core profile"
+          title="Your verified professional foundation"
+          note="These seven sections form the canonical Career Passport. They stay available even when empty."
+        />
+        <ContactSection
+          key={`${profile.id}-contact`}
+          profile={profile}
+          pending={pendingSection === 'contact'}
+          onSave={(input) =>
+            runMutation('contact', () => updateCandidateContactInformation(input))
+          }
+        />
         <OverviewSection
           key={`${profile.id}-overview`}
           profile={profile}
@@ -163,12 +180,6 @@ export default function CareerPassportPage() {
           pending={pendingSection === 'skills'}
           onSave={(input) => runMutation('skills', () => replaceCandidateSkills(input))}
         />
-        <ProjectsSection
-          key={`${profile.id}-projects`}
-          profile={profile}
-          pending={pendingSection === 'projects'}
-          onSave={(input) => runMutation('projects', () => replaceCandidateProjects(input))}
-        />
         <CertificationsSection
           key={`${profile.id}-certifications`}
           profile={profile}
@@ -176,6 +187,24 @@ export default function CareerPassportPage() {
           onSave={(input) =>
             runMutation('certifications', () => replaceCandidateCertifications(input))
           }
+        />
+        <AwardsSection
+          key={`${profile.id}-awards`}
+          profile={profile}
+          pending={pendingSection === 'awards'}
+          onSave={(input) => runMutation('awards', () => replaceCandidateAwards(input))}
+        />
+
+        <SectionGroupHeading
+          eyebrow="Additional sections"
+          title="Add evidence that fits your career"
+          note="Projects, languages, links, locations, and resume-discovered sections are optional. Hide them from the editor without deleting saved data."
+        />
+        <ProjectsSection
+          key={`${profile.id}-projects`}
+          profile={profile}
+          pending={pendingSection === 'projects'}
+          onSave={(input) => runMutation('projects', () => replaceCandidateProjects(input))}
         />
         <LanguagesSection
           key={`${profile.id}-languages`}
@@ -203,6 +232,12 @@ export default function CareerPassportPage() {
             runMutation('custom-sections', () => replaceCandidateCustomSections(input))
           }
         />
+
+        <SectionGroupHeading
+          eyebrow="Account controls"
+          title="Privacy & discoverability"
+          note="Control who can discover the Passport independently from the professional information it contains."
+        />
         <PrivacySection
           key={`${profile.id}-privacy`}
           passport={passport}
@@ -211,6 +246,69 @@ export default function CareerPassportPage() {
         />
       </section>
     </main>
+  );
+}
+
+function ContactSection({
+  profile,
+  pending,
+  onSave,
+}: {
+  profile: Profile;
+  pending: boolean;
+  onSave: (input: Parameters<typeof updateCandidateContactInformation>[0]) => Promise<void>;
+}) {
+  const [fullName, setFullName] = useState(profile.contactFullName ?? '');
+  const [email, setEmail] = useState(profile.contactEmail ?? '');
+  const [phone, setPhone] = useState(profile.contactPhone ?? '');
+  const [location, setLocation] = useState(profile.contactLocation ?? '');
+
+  return (
+    <section className="career-section" id="contact">
+      <SectionHeader
+        index="01"
+        title="Contact information"
+        note="Professional contact details belong to the versioned Passport and stay separate from your sign-in identity."
+      />
+      <form
+        className="career-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSave({
+            fullName: fullName.trim() || null,
+            email: email.trim() || null,
+            phone: phone.trim() || null,
+            location: location.trim() || null,
+          });
+        }}
+      >
+        <div className="career-field-grid">
+          <Field label="Full name">
+            <input maxLength={180} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </Field>
+          <Field label="Professional email">
+            <input
+              maxLength={320}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
+          <Field label="Phone">
+            <input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
+          <Field label="Location">
+            <input
+              maxLength={220}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Karachi, Pakistan"
+            />
+          </Field>
+        </div>
+        <SaveButton pending={pending} label="Save contact information" />
+      </form>
+    </section>
   );
 }
 
@@ -241,9 +339,9 @@ function OverviewSection({
   return (
     <section className="career-section" id="overview">
       <SectionHeader
-        index="01"
-        title="Professional overview"
-        note="The top-level signal employers and matching systems will read first."
+        index="02"
+        title="Professional summary"
+        note="Your headline and summary give employers and matching systems the top-level context for the rest of the Passport."
       />
       <form
         className="career-form"
@@ -326,7 +424,7 @@ function OverviewSection({
             ))}
           </div>
         </fieldset>
-        <SaveButton pending={pending} label="Save overview" />
+        <SaveButton pending={pending} label="Save summary" />
       </form>
     </section>
   );
@@ -406,8 +504,8 @@ function ExperienceSection({
   return (
     <section className="career-section" id="experience">
       <SectionHeader
-        index="02"
-        title="Experience"
+        index="03"
+        title="Work experience"
         note="Edit, remove, and reorder work history while every save remains a versioned snapshot."
       />
       <EditableRecordList
@@ -577,7 +675,7 @@ function EducationSection({
   return (
     <section className="career-section" id="education">
       <SectionHeader
-        index="03"
+        index="04"
         title="Education"
         note="Degree dates and study context stay editable without becoming mandatory hiring signals."
       />
@@ -708,7 +806,7 @@ function SkillsSection({
   return (
     <section className="career-section" id="skills">
       <SectionHeader
-        index="04"
+        index="05"
         title="Skills"
         note="Skills are ordered structured signals; candidates can edit, remove, or prioritize them explicitly."
       />
@@ -822,9 +920,9 @@ function ProjectsSection({
   return (
     <section className="career-section" id="projects">
       <SectionHeader
-        index="05"
-        title="Projects"
-        note="Projects capture what the candidate actually built, their role, evidence links, and contribution."
+        index="A1"
+        title="Projects & portfolio"
+        note="Projects capture what you built, your role, contribution, and supporting evidence."
       />
       <EditableRecordList
         pending={pending}
@@ -1021,6 +1119,122 @@ function CertificationsSection({
   );
 }
 
+function AwardsSection({
+  profile,
+  pending,
+  onSave,
+}: {
+  profile: Profile;
+  pending: boolean;
+  onSave: (input: Parameters<typeof replaceCandidateAwards>[0]) => Promise<void>;
+}) {
+  const existing = profile.awards;
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [issuer, setIssuer] = useState('');
+  const [awardedMonth, setAwardedMonth] = useState('');
+  const [description, setDescription] = useState('');
+  const [url, setUrl] = useState('');
+
+  function reset() {
+    setEditingId(null);
+    setTitle('');
+    setIssuer('');
+    setAwardedMonth('');
+    setDescription('');
+    setUrl('');
+  }
+
+  function edit(id: string) {
+    const item = existing.find((entry) => entry.id === id);
+    if (!item) return;
+    setEditingId(id);
+    setTitle(item.title);
+    setIssuer(item.issuer ?? '');
+    setAwardedMonth(isoToMonth(item.awardedAt));
+    setDescription(item.description ?? '');
+    setUrl(item.url ?? '');
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!title.trim()) return;
+    const next = serializeAwards(existing);
+    const value = {
+      title: title.trim(),
+      issuer: issuer.trim() || null,
+      awardedAt: monthToIso(awardedMonth),
+      description: description.trim() || null,
+      url: url.trim() || null,
+    };
+    const index = editingId ? existing.findIndex((item) => item.id === editingId) : -1;
+    if (index >= 0) next[index] = value;
+    else next.push(value);
+    await onSave(next);
+    reset();
+  }
+
+  return (
+    <section className="career-section" id="awards">
+      <SectionHeader
+        index="07"
+        title="Awards"
+        note="Recognition and competitive achievements stay structured rather than buried in free-form resume text."
+      />
+      <EditableRecordList
+        pending={pending}
+        records={existing.map((item) => ({
+          id: item.id,
+          title: item.title,
+          subtitle: item.issuer || 'Issuer not specified',
+          meta: formatDateRange(item.awardedAt, null),
+          description: item.description,
+        }))}
+        onEdit={edit}
+        onRemove={(id) => void onSave(serializeAwards(existing.filter((item) => item.id !== id)))}
+        onMove={(id, direction) => void onSave(serializeAwards(moveById(existing, id, direction)))}
+      />
+      <form className="career-form career-entry-form" onSubmit={(event) => void submit(event)}>
+        <div className="career-entry-heading">
+          <strong>{editingId ? 'Edit award' : 'Add award'}</strong>
+          {editingId ? (
+            <button type="button" onClick={reset}>
+              Cancel edit
+            </button>
+          ) : null}
+        </div>
+        <div className="career-field-grid">
+          <Field label="Award title">
+            <input maxLength={220} value={title} onChange={(e) => setTitle(e.target.value)} />
+          </Field>
+          <Field label="Issuer">
+            <input maxLength={220} value={issuer} onChange={(e) => setIssuer(e.target.value)} />
+          </Field>
+          <Field label="Awarded">
+            <input
+              type="month"
+              value={awardedMonth}
+              onChange={(e) => setAwardedMonth(e.target.value)}
+            />
+          </Field>
+          <Field label="Evidence URL">
+            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Description">
+          <textarea
+            maxLength={3000}
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </Field>
+        <SaveButton pending={pending} label={editingId ? 'Save award' : 'Add award'} />
+      </form>
+    </section>
+  );
+}
+
 function LanguagesSection({
   profile,
   pending,
@@ -1060,9 +1274,9 @@ function LanguagesSection({
   return (
     <section className="career-section" id="languages">
       <SectionHeader
-        index="07"
-        title="Languages"
-        note="Language capability stays explicit and candidate-controlled."
+        index="A2"
+        title="Languages & interests"
+        note="Language capability and related interests are additional context you control explicitly."
       />
       <EditableRecordList
         pending={pending}
@@ -1144,7 +1358,7 @@ function LinksSection({
   return (
     <section className="career-section" id="links">
       <SectionHeader
-        index="08"
+        index="A3"
         title="Professional links"
         note="Portfolio, GitHub, LinkedIn, and other evidence remain ordered and editable."
       />
@@ -1243,7 +1457,7 @@ function LocationsSection({
   return (
     <section className="career-section" id="locations">
       <SectionHeader
-        index="09"
+        index="A4"
         title="Location preferences"
         note="Location and remote preferences stay explicit rather than inferred."
       />
@@ -1335,9 +1549,9 @@ function CustomSectionsSection({
   return (
     <section className="career-section" id="custom-sections">
       <SectionHeader
-        index="10"
-        title="Custom sections"
-        note="Add awards, publications, volunteering, research, speaking, open-source work, or other career evidence without weakening the canonical structured profile."
+        index="A5"
+        title="More career sections"
+        note="Add publications, volunteering, research, speaking, open-source work, or any resume-discovered section without losing its original meaning."
       />
       <div className="career-custom-sections">
         {existing.length ? (
@@ -1368,14 +1582,14 @@ function CustomSectionsSection({
           ))
         ) : (
           <p className="career-empty-copy">
-            No custom sections yet. Use them for evidence that does not fit the canonical profile
-            structure.
+            No additional custom sections yet. Resume imports can also surface unfamiliar sections
+            here for your review instead of discarding them.
           </p>
         )}
       </div>
       <form className="career-form career-entry-form" onSubmit={(event) => void addSection(event)}>
         <div className="career-entry-heading">
-          <strong>Add custom section</strong>
+          <strong>Add career section</strong>
         </div>
         <div className="career-field-grid">
           <Field label="Section title">
@@ -1383,7 +1597,7 @@ function CustomSectionsSection({
               maxLength={160}
               value={sectionTitle}
               onChange={(e) => setSectionTitle(e.target.value)}
-              placeholder="Awards, Publications, Volunteering…"
+              placeholder="Publications, Volunteering, Research…"
             />
           </Field>
           <Field label="Optional introduction">
@@ -1394,7 +1608,7 @@ function CustomSectionsSection({
             />
           </Field>
         </div>
-        <SaveButton pending={pending} label="Add custom section" />
+        <SaveButton pending={pending} label="Add section" />
       </form>
     </section>
   );
@@ -1476,6 +1690,9 @@ function CustomSectionEditor({
           <span className="career-custom-index">C{String(sectionIndex + 1).padStart(2, '0')}</span>
           <h3>{section.title}</h3>
           {section.description ? <p>{section.description}</p> : null}
+          {section.classificationStatus === 'NEEDS_REVIEW' ? (
+            <small>Imported section · classification needs review</small>
+          ) : null}
         </div>
         <div className="career-record-actions">
           <button
@@ -1599,7 +1816,7 @@ function PrivacySection({
   return (
     <section className="career-section" id="privacy">
       <SectionHeader
-        index="11"
+        index="SET"
         title="Privacy & discoverability"
         note="Private by default. Visibility and recruiter discoverability are separate controls."
       />
@@ -1708,6 +1925,27 @@ function EditableRecordList({
           </div>
         </article>
       ))}
+    </div>
+  );
+}
+
+function SectionGroupHeading({
+  eyebrow,
+  title,
+  note,
+}: {
+  eyebrow: string;
+  title: string;
+  note: string;
+}) {
+  return (
+    <div className="career-section-header" aria-label={`${eyebrow}: ${title}`}>
+      <span>••</span>
+      <div>
+        <p className="eyebrow">{eyebrow}</p>
+        <h2>{title}</h2>
+        <p>{note}</p>
+      </div>
     </div>
   );
 }
@@ -1864,6 +2102,15 @@ function serializeCertifications(
     expiresAt,
   }));
 }
+function serializeAwards(items: Profile['awards']): Parameters<typeof replaceCandidateAwards>[0] {
+  return items.map(({ title, issuer, awardedAt, description, url }) => ({
+    title,
+    issuer,
+    awardedAt,
+    description,
+    url,
+  }));
+}
 function serializeLanguages(
   items: Profile['languages'],
 ): Parameters<typeof replaceCandidateLanguages>[0] {
@@ -1898,25 +2145,38 @@ function serializeCustomItems(
 function serializeCustomSections(
   items: CandidateCustomSectionResponse[],
 ): Parameters<typeof replaceCandidateCustomSections>[0] {
-  return items.map(({ title, description, items: sectionItems }) => ({
-    title,
-    description,
-    items: serializeCustomItems(sectionItems),
-  }));
+  return items.map(
+    ({
+      title,
+      description,
+      sectionTypeKey,
+      sourceHeading,
+      classificationConfidence,
+      classificationStatus,
+      items: sectionItems,
+    }) => ({
+      title,
+      description,
+      sectionTypeKey,
+      sourceHeading,
+      classificationConfidence,
+      classificationStatus,
+      items: serializeCustomItems(sectionItems),
+    }),
+  );
 }
 
 function calculateCompleteness(passport: CandidatePassportResponse | null): number {
   const profile = passport?.currentProfileVersion;
   if (!profile) return 0;
   const checks = [
+    Boolean(profile.contactFullName),
+    Boolean(profile.contactEmail),
     Boolean(profile.headline),
     Boolean(profile.summary),
     profile.employments.length > 0,
     profile.education.length > 0,
     profile.skills.length > 0,
-    profile.projects.length > 0,
-    profile.links.length > 0,
-    profile.locationPreferences.length > 0,
     profile.preferredWorkModes.length > 0,
     Boolean(profile.availabilityStatus),
   ];
