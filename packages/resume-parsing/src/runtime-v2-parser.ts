@@ -249,7 +249,7 @@ function extractHeadedContactFields(
         }
       }
 
-      if (residual.replace(/[\s|,;:/·•()\[\]{}-]+/g, '').length > 0) {
+      if (residual.replace(/[\s|,;:/·•()[\]{}-]+/g, '').length > 0) {
         hasUnaccountedText = true;
       }
     }
