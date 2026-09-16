@@ -326,10 +326,14 @@ export class CandidatesService {
           versionNumber: current.versionNumber + 1,
           status: 'APPROVED',
           source: 'MANUAL',
-          contactFullName: contactInformation ? contactInformation.fullName : current.contactFullName,
+          contactFullName: contactInformation
+            ? contactInformation.fullName
+            : current.contactFullName,
           contactEmail: contactInformation ? contactInformation.email : current.contactEmail,
           contactPhone: contactInformation ? contactInformation.phone : current.contactPhone,
-          contactLocation: contactInformation ? contactInformation.location : current.contactLocation,
+          contactLocation: contactInformation
+            ? contactInformation.location
+            : current.contactLocation,
           headline: overview?.headline !== undefined ? overview.headline : current.headline,
           summary: overview?.summary !== undefined ? overview.summary : current.summary,
           availabilityStatus:

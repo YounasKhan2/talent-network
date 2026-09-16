@@ -8,8 +8,7 @@ export const CAREER_PASSPORT_CORE_SECTION_KEYS = [
   'AWARDS',
 ] as const;
 
-export type CareerPassportCoreSectionKey =
-  (typeof CAREER_PASSPORT_CORE_SECTION_KEYS)[number];
+export type CareerPassportCoreSectionKey = (typeof CAREER_PASSPORT_CORE_SECTION_KEYS)[number];
 
 export const CAREER_PASSPORT_EXTENSION_SECTION_KEYS = [
   'PROJECTS',
@@ -41,22 +40,16 @@ export type CareerPassportExtensionSectionKey =
   (typeof CAREER_PASSPORT_EXTENSION_SECTION_KEYS)[number];
 
 export type CareerPassportKnownSectionKey =
-  | CareerPassportCoreSectionKey
-  | CareerPassportExtensionSectionKey;
+  CareerPassportCoreSectionKey | CareerPassportExtensionSectionKey;
 
 export type CareerPassportSectionTypeKey = CareerPassportKnownSectionKey | 'CUSTOM';
 
 export type CareerPassportSectionCategory = 'CORE' | 'EXTENSION' | 'CUSTOM';
 
-export type CareerPassportSectionStorage =
-  | 'CORE_TYPED'
-  | 'TYPED_EXTENSION'
-  | 'CUSTOM_SECTION';
+export type CareerPassportSectionStorage = 'CORE_TYPED' | 'TYPED_EXTENSION' | 'CUSTOM_SECTION';
 
 export type CareerPassportSectionReviewStatus =
-  | 'AUTO_CLASSIFIED'
-  | 'NEEDS_REVIEW'
-  | 'CANDIDATE_CLASSIFIED';
+  'AUTO_CLASSIFIED' | 'NEEDS_REVIEW' | 'CANDIDATE_CLASSIFIED';
 
 export interface CareerPassportSectionDefinition {
   key: CareerPassportKnownSectionKey;
@@ -144,7 +137,14 @@ export const CAREER_PASSPORT_SECTION_DEFINITIONS: readonly CareerPassportSection
     label: 'Awards',
     category: 'CORE',
     storage: 'CORE_TYPED',
-    aliases: ['awards', 'awards & honors', 'awards and honors', 'honors', 'honours', 'achievements'],
+    aliases: [
+      'awards',
+      'awards & honors',
+      'awards and honors',
+      'honors',
+      'honours',
+      'achievements',
+    ],
   },
   {
     key: 'PROJECTS',
@@ -247,7 +247,13 @@ export const CAREER_PASSPORT_SECTION_DEFINITIONS: readonly CareerPassportSection
     label: 'Speaking Engagements',
     category: 'EXTENSION',
     storage: 'CUSTOM_SECTION',
-    aliases: ['speaking', 'speaking engagements', 'talks', 'conferences & talks', 'conferences and talks'],
+    aliases: [
+      'speaking',
+      'speaking engagements',
+      'talks',
+      'conferences & talks',
+      'conferences and talks',
+    ],
   },
   {
     key: 'TRAINING',
@@ -339,9 +345,7 @@ export function getCareerPassportSectionDefinition(
   return definition;
 }
 
-export function classifyCareerSectionHeading(
-  heading: string,
-): CareerPassportSectionClassification {
+export function classifyCareerSectionHeading(heading: string): CareerPassportSectionClassification {
   const normalizedHeading = normalizeCareerSectionHeading(heading);
   const definition = ALIAS_TO_DEFINITION.get(normalizedHeading);
 

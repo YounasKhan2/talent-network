@@ -152,9 +152,7 @@ export default function CareerPassportPage() {
           key={`${profile.id}-contact`}
           profile={profile}
           pending={pendingSection === 'contact'}
-          onSave={(input) =>
-            runMutation('contact', () => updateCandidateContactInformation(input))
-          }
+          onSave={(input) => runMutation('contact', () => updateCandidateContactInformation(input))}
         />
         <OverviewSection
           key={`${profile.id}-overview`}
