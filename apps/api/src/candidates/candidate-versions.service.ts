@@ -8,6 +8,7 @@ const versionInclude = {
   skills: { orderBy: { sortOrder: 'asc' as const } },
   projects: { orderBy: { sortOrder: 'asc' as const } },
   certifications: { orderBy: { sortOrder: 'asc' as const } },
+  awards: { orderBy: { sortOrder: 'asc' as const } },
   languages: { orderBy: { sortOrder: 'asc' as const } },
   links: { orderBy: { sortOrder: 'asc' as const } },
   locationPreferences: { orderBy: { sortOrder: 'asc' as const } },
