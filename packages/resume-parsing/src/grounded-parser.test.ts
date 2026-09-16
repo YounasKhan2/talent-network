@@ -5,7 +5,7 @@ import { preprocessResumeDocument } from './preprocessing.js';
 import { validateResumeProposal } from './proposal-validation.js';
 import { validateParsedResume } from './schema.js';
 
-void test('parser v4 preserves annotation link provenance and separates coverage from confidence', async () => {
+void test('parser v5 preserves annotation link provenance and separates coverage from confidence', async () => {
   const blocks = [
     {
       text: 'ALEX MORGAN',
@@ -46,7 +46,7 @@ void test('parser v4 preserves annotation link provenance and separates coverage
 
   const preprocessedDocument = preprocessResumeDocument({
     schemaVersion: 'resume-document-v2',
-    resumeVersionId: 'resume-version-v4',
+    resumeVersionId: 'resume-version-v5',
     text: blocks.map((block) => block.text).join('\n'),
     pages: [
       {
@@ -67,14 +67,14 @@ void test('parser v4 preserves annotation link provenance and separates coverage
   });
 
   const result = await new GroundedResumeParser().parse({
-    resumeVersionId: 'resume-version-v4',
-    sourceExtractionId: 'extraction-v4',
+    resumeVersionId: 'resume-version-v5',
+    sourceExtractionId: 'extraction-v5',
     processingPipelineVersion: 'resume-v2',
     sourceDocumentSchemaVersion: 'resume-document-v2',
     preprocessedDocument,
   });
 
-  assert.equal(result.parsedResume.parser.version, '4');
+  assert.equal(result.parsedResume.parser.version, '5');
   assert.equal(result.parsedResume.links.length, 1);
   assert.equal(
     result.parsedResume.links[0]?.url.normalizedValue,
@@ -87,14 +87,70 @@ void test('parser v4 preserves annotation link provenance and separates coverage
   assert.equal(result.parsedResume.coverageSummary?.ratio, 1);
 
   assert.doesNotThrow(() =>
-    validateResumeProposal(result.parsedResume, preprocessedDocument, 'extraction-v4'),
+    validateResumeProposal(result.parsedResume, preprocessedDocument, 'extraction-v5'),
   );
 
   const structured = validateParsedResume(result.parsedResume, {
-    resumeVersionId: 'resume-version-v4',
-    sourceExtractionId: 'extraction-v4',
+    resumeVersionId: 'resume-version-v5',
+    sourceExtractionId: 'extraction-v5',
   });
   assert.deepEqual(structured.coverageSummary, result.parsedResume.coverageSummary);
+});
+
+void test('parser v5 preserves recognized and unknown headed sections without treating the preamble as custom', async () => {
+  const texts = [
+    'ALEX MORGAN',
+    'Senior Engineer',
+    'alex@example.com',
+    'PUBLICATIONS',
+    'Reliable Multi-Tenant Systems, 2026',
+    'INDUSTRY ACTIVITIES',
+    'Mentored founders on secure SaaS architecture',
+  ];
+  let offset = 0;
+  const blocks = texts.map((text) => {
+    const startOffset = offset;
+    offset += text.length + 1;
+    return { text, sourceRange: { startOffset, endOffset: startOffset + text.length } };
+  });
+  const text = texts.join('\n');
+  const preprocessedDocument = preprocessResumeDocument({
+    schemaVersion: 'resume-document-v2',
+    resumeVersionId: 'resume-version-open-world',
+    text,
+    pages: [{ pageNumber: 1, text, blocks }],
+  });
+
+  const result = await new GroundedResumeParser().parse({
+    resumeVersionId: 'resume-version-open-world',
+    sourceExtractionId: 'extraction-open-world',
+    processingPipelineVersion: 'resume-v2',
+    sourceDocumentSchemaVersion: 'resume-document-v2',
+    preprocessedDocument,
+  });
+
+  assert.deepEqual(
+    result.parsedResume.additionalSections?.map((section) => section.heading.value),
+    ['PUBLICATIONS', 'INDUSTRY ACTIVITIES'],
+  );
+  assert.equal(result.parsedResume.additionalSections?.[0]?.entries[0]?.value, 'Reliable Multi-Tenant Systems, 2026');
+  assert.equal(
+    result.parsedResume.additionalSections?.[1]?.entries[0]?.value,
+    'Mentored founders on secure SaaS architecture',
+  );
+  assert.equal(
+    result.parsedResume.additionalSections?.some((section) => section.heading.value === 'ALEX MORGAN'),
+    false,
+  );
+
+  assert.doesNotThrow(() =>
+    validateResumeProposal(result.parsedResume, preprocessedDocument, 'extraction-open-world'),
+  );
+  const structured = validateParsedResume(result.parsedResume, {
+    resumeVersionId: 'resume-version-open-world',
+    sourceExtractionId: 'extraction-open-world',
+  });
+  assert.deepEqual(structured.additionalSections, result.parsedResume.additionalSections);
 });
 
 void test('coverage does not penalize sections that are absent from the source', async () => {
