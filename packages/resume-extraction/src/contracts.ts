@@ -80,7 +80,7 @@ export type ResumePdfNativePage = {
     lang: string | null;
   };
   structTree: ResumeJsonValue | null;
-  annotations: ResumeJsonValue[];
+  annotations?: ResumeJsonValue[];
 };
 
 export type ResumeDocumentPage = {
