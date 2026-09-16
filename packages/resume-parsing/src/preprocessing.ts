@@ -386,31 +386,41 @@ function bestOverlappingBlock(
   blocks: ResumePreprocessingBlockInput[],
   annotation: ResumePreprocessingBoundingBox,
 ): { index: number; block: ResumePreprocessingBlockInput } | null {
-  let best: { index: number; block: ResumePreprocessingBlockInput; overlap: number } | null = null;
+  let bestIndex = -1;
+  let bestOverlap = 0;
 
-  blocks.forEach((block, index) => {
-    if (!block.boundingBox) return;
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index];
+    if (!block?.boundingBox) continue;
     const overlap = intersectionArea(block.boundingBox, annotation);
-    if (overlap <= 0 || (best && best.overlap >= overlap)) return;
-    best = { index, block, overlap };
-  });
+    if (overlap <= bestOverlap) continue;
+    bestIndex = index;
+    bestOverlap = overlap;
+  }
 
-  return best ? { index: best.index, block: best.block } : null;
+  const block = bestIndex >= 0 ? blocks[bestIndex] : undefined;
+  return block ? { index: bestIndex, block } : null;
 }
 
 function annotationRect(value: unknown): ResumePreprocessingBoundingBox | null {
   if (!Array.isArray(value) || value.length < 4) return null;
-  const [x1, y1, x2, y2] = value;
-  if (![x1, y1, x2, y2].every((entry) => typeof entry === 'number' && Number.isFinite(entry))) {
+
+  const x1 = value[0];
+  const y1 = value[1];
+  const x2 = value[2];
+  const y2 = value[3];
+  if (![x1, y1, x2, y2].every(isFiniteNumber)) return null;
+  if (!isFiniteNumber(x1) || !isFiniteNumber(y1) || !isFiniteNumber(x2) || !isFiniteNumber(y2)) {
     return null;
   }
-  const left = Math.min(x1 as number, x2 as number);
-  const bottom = Math.min(y1 as number, y2 as number);
+
+  const left = Math.min(x1, x2);
+  const bottom = Math.min(y1, y2);
   return {
     x: left,
     y: bottom,
-    width: Math.abs((x2 as number) - (x1 as number)),
-    height: Math.abs((y2 as number) - (y1 as number)),
+    width: Math.abs(x2 - x1),
+    height: Math.abs(y2 - y1),
   };
 }
 
@@ -531,4 +541,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
