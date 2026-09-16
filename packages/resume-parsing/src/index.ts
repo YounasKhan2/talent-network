@@ -4,6 +4,7 @@ export * from './benchmark.js';
 export * from './contracts.js';
 export * from './core-typed-extraction.js';
 export * from './document-graph.js';
+export * from './extension-typed-extraction.js';
 export * from './gateway-parser.js';
 export * from './grounded-parser.js';
 export * from './local-parser.js';
