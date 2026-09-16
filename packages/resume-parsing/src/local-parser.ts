@@ -127,9 +127,7 @@ function deriveIdentityClaims(
   );
   if (contentFragments.length === 0) return {};
 
-  const nameFragment = contentFragments.find((fragment) =>
-    looksLikePersonName(fragment.text),
-  );
+  const nameFragment = contentFragments.find((fragment) => looksLikePersonName(fragment.text));
   const headlineFragment = nameFragment
     ? contentFragments.find(
         (fragment) =>
@@ -172,9 +170,7 @@ function deriveSummaryClaim(
   const section = document.sections.find((candidate) => candidate.kind === 'SUMMARY');
   if (!section) return undefined;
 
-  const fragments = section.fragments.filter(
-    (fragment) => fragment !== section.headingFragment,
-  );
+  const fragments = section.fragments.filter((fragment) => fragment !== section.headingFragment);
   const text = fragments
     .map((fragment) => fragment.text.trim())
     .filter(Boolean)
@@ -306,9 +302,7 @@ function looksLikePersonName(value: string): boolean {
   if (words.length < 2 || words.length > 5) return false;
   if (!words.every((word) => /^[A-Za-z][A-Za-z'.-]*$/.test(word))) return false;
 
-  return words.every(
-    (word) => word === word.toUpperCase() || /^[A-Z][a-z'.-]+$/.test(word),
-  );
+  return words.every((word) => word === word.toUpperCase() || /^[A-Z][a-z'.-]+$/.test(word));
 }
 
 function looksLikeHeadline(value: string): boolean {
