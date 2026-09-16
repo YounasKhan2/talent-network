@@ -95,9 +95,7 @@ void test('list-only sections preserve each item as a record while ambiguous pro
   assert.equal(proseResult.records.length, 1);
   assert.equal(proseResult.records[0]?.recordBoundaryConfidence, 0.35);
   assert.ok(
-    proseResult.diagnostics.some(
-      (diagnostic) => diagnostic.code === 'RECORD_BOUNDARY_UNCERTAIN',
-    ),
+    proseResult.diagnostics.some((diagnostic) => diagnostic.code === 'RECORD_BOUNDARY_UNCERTAIN'),
   );
 });
 
@@ -203,17 +201,15 @@ function syntheticChildren(parent: DocumentGraphNode): DocumentGraphNode[] {
         childIds: cellIds,
         readingOrder: parent.readingOrder + (rowIndex + 1) / 10,
       };
-      const cells = cellIds.map(
-        (cellId, cellIndex): DocumentGraphNode => ({
-          id: cellId,
-          kind: 'TABLE_CELL',
-          text: `Cell ${rowIndex + 1}.${cellIndex + 1}`,
-          pageNumber: 1,
-          parentId: rowId,
-          childIds: [],
-          readingOrder: row.readingOrder + (cellIndex + 1) / 100,
-        }),
-      );
+      const cells = cellIds.map((cellId, cellIndex): DocumentGraphNode => ({
+        id: cellId,
+        kind: 'TABLE_CELL',
+        text: `Cell ${rowIndex + 1}.${cellIndex + 1}`,
+        pageNumber: 1,
+        parentId: rowId,
+        childIds: [],
+        readingOrder: row.readingOrder + (cellIndex + 1) / 100,
+      }));
       return [row, ...cells];
     });
   }
