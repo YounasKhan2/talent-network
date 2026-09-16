@@ -52,7 +52,10 @@ export class LocalDeterministicResumeParser implements ResumeParser {
       ...(phoneClaim ? [phoneClaim.confidence] : []),
       ...(identity.headline ? [identity.headline.confidence] : []),
       ...(summary ? [summary.confidence] : []),
-      ...skills.map((skill) => skill.name.confidence),
+      ...skills.flatMap((skill) => [
+        skill.name.confidence,
+        ...(skill.category ? [skill.category.confidence] : []),
+      ]),
       ...linkClaims.map((link) => link.url.confidence),
     ];
     const overall =
@@ -105,9 +108,10 @@ export class LocalDeterministicResumeParser implements ResumeParser {
 }
 
 function findPreambleSection(document: PreprocessedResumeDocument): ResumePreprocessedSection | undefined {
-  return document.sections.find(
-    (section) => section.kind === 'OTHER' && section.heading === null && section.fragments.length > 0,
-  );
+  const firstSection = document.sections[0];
+  return firstSection?.kind === 'OTHER' && firstSection.fragments.length > 0
+    ? firstSection
+    : undefined;
 }
 
 function deriveIdentityClaims(
