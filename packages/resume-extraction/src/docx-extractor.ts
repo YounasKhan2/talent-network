@@ -92,7 +92,7 @@ export class MammothDocxResumeExtractor implements ResumeExtractor {
   }
 }
 
-function parseMammothHtml(html: string): ResumeDocxNativeBlock[] {
+export function parseMammothHtml(html: string): ResumeDocxNativeBlock[] {
   const output: ResumeDocxNativeBlock[] = [];
   let tableDepth = 0;
   let rowCells: string[] | null = null;
