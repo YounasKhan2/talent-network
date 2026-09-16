@@ -156,14 +156,17 @@ Quality gate:
 
 Implement structured candidate profile:
 
-- headline
-- summary
-- employment
-- education
-- skills
-- projects
-- certifications
-- links
+- Contact Information
+- Professional Summary
+- Work Experience
+- Education
+- Skills
+- Certifications
+- Awards
+- additional/extension sections
+- projects/portfolio
+- languages/interests
+- professional links
 - preferences
 - compensation expectations
 - availability
@@ -178,40 +181,105 @@ Quality gate:
 - privacy settings are enforced server-side
 - candidate UI uses section-based editing
 - schema/API/docs agree
+- default core sections remain typed and stable
+- additional/custom sections do not require destructive schema redesign
 
 ---
 
 # Phase 3 — Resume Intelligence Foundation
 
-Implement:
+Phase 3 is intentionally broader than “upload + regex parser”. It establishes secure resume ingestion first, then evolves into a benchmark-driven document-intelligence system before later matching/search phases depend on its outputs.
+
+Baseline capabilities:
 
 ```text
 upload authorization
 presigned/direct upload
 file metadata
 validation
-malware scan hook
+malware scan
 queue orchestration
-text extraction
-OCR fallback interface
-resume parser through AI gateway
+native PDF/DOCX extraction
+OCR fallback
+source-grounded parser
 normalized proposal
 candidate review
 approved Career Passport update
 resume version history
 ```
 
-The initial production implementation may use one extraction/parser provider behind adapters.
+Verified/active slices before 3G:
 
-Quality gate:
+```text
+3A Resume domain + processing state
+3B Private object storage + direct upload
+3C Validation + malware scanning
+3D Native extraction + OCR fallback
+3E Structured parsing + evidence mapping
+3F Candidate review + Passport approval baseline
+```
+
+## Phase 3G — Resume Intelligence Architecture V2
+
+Phase 3G is required before Resume Intelligence is considered production-mature for diverse real-world CVs.
+
+It introduces:
+
+```text
+DocumentGraph V1
+structural section detection
+record-boundary detection
+Career ontology classification
+hybrid typed extractors
+Source Ledger accounting
+record-level reconciliation
+quality/confidence/coverage separation
+open-world unknown/custom preservation
+private References handling
+Candidate Review UX V2
+benchmark-driven regression gates
+semantic/model recovery capability gate
+```
+
+The key guarantee is architectural rather than probabilistic:
+
+> meaningful source information may be uncertain or unmapped, but it must not disappear silently.
+
+Planned 3G sequence:
+
+```text
+3G-A Contracts + benchmark vocabulary
+3G-B Layout-aware DocumentGraph
+3G-C Structural section/record detection
+3G-D Source Ledger + reconciliation
+3G-E Core typed extractors V2
+3G-F Extensions + open-world fallback
+3G-G Semantic recovery capability gate
+3G-H Candidate Review UX V2
+3G-I Benchmark expansion + regression gate
+3G-J Runtime closure
+```
+
+Detailed contract: [`phase-3g-resume-intelligence-v2.md`](./phase-3g-resume-intelligence-v2.md).
+
+Phase 3 quality gate:
 
 - upload endpoint never proxies large files unnecessarily
 - malicious/unsupported files fail safely
 - retries are idempotent
-- parse output is schema-validated
+- parse output is schema-validated and versioned
 - candidate must approve authoritative profile mutation
 - original resume remains versioned/traceable
 - queue backlog and processing duration are observable
+- source evidence remains traceable
+- unknown/custom sections remain preserved
+- References remain private by default
+- claim confidence is not presented as source coverage
+- meaningful source accounting is measurable
+- benchmark regressions are visible before production release
+- new model/provider/tool adoption passes capability/privacy/cost/licensing review first
+
+The initial production implementation may use one semantic/document provider behind adapters only if benchmark evidence justifies it. No provider owns the Career Passport, evidence, graph, taxonomy, or review contracts.
 
 ---
 
@@ -460,6 +528,9 @@ Update in the same change when modifying:
 - permissions
 - infrastructure
 - AI behavior
+- benchmark/quality expectations
+
+For Phase 3G specifically, each verified slice must update the 3G architecture/status document in the same development cycle. A slice is not marked `VERIFIED` from code inspection alone.
 
 ---
 
@@ -488,7 +559,8 @@ Use flags for risky/incremental capabilities such as:
 
 - new matching models
 - AI explanation versions
-- new resume parser
+- new resume parser/DocumentGraph pipeline
+- semantic recovery providers
 - blind review
 - experimental job ranking
 - paid feature rollout
@@ -505,9 +577,15 @@ Before launch, maintain realistic generated fixtures for:
 - large talent pools
 - candidates with long career histories
 - resumes with multiple pages
+- complex PDF/DOCX layouts
+- scanned resumes
+- resumes with tables/columns/text boxes
+- long academic/research CVs
 - processing queue bursts
 
 Use these fixtures for table/render/API/load validation.
+
+Phase 3G additionally maintains a ground-truth Resume Intelligence Benchmark for section, record, field, evidence, reading-order, unknown-preservation, source-accounting, and privacy metrics.
 
 ---
 
@@ -524,6 +602,7 @@ schema/migration validation
 build
 security/dependency checks
 critical E2E smoke tests
+benchmark regression checks where stable
 ```
 
 Production deploy must have health verification and rollback capability.
@@ -539,6 +618,7 @@ Required categories:
 ### Product
 
 - candidate can create/review Career Passport
+- candidate can import complex resumes without silent meaningful-data loss
 - employer can create/publish job
 - candidate can discover/apply
 - recruiter can review/shortlist/manage stage
@@ -550,6 +630,7 @@ Required categories:
 - tenancy tests pass
 - private candidate data controls work
 - file upload threat controls work
+- third-party reference data remains private by default
 - admin permissions audited
 
 ### Reliability
@@ -558,6 +639,7 @@ Required categories:
 - idempotency tested
 - backup/restore procedure documented
 - provider failure has graceful behavior
+- unresolved semantic extraction degrades to preserved/unmapped data rather than silent loss
 
 ### Performance
 
@@ -565,6 +647,7 @@ Required categories:
 - job search load tested
 - application burst tested
 - resume queue burst tested
+- complex-resume processing latency measured
 
 ### Operations
 
@@ -578,6 +661,7 @@ Required categories:
 - architecture and API docs match implementation
 - README local/deployment instructions work
 - ADRs updated for deviations
+- Phase 3G benchmark and verified-slice status match actual runtime evidence
 
 ---
 
@@ -616,6 +700,7 @@ The architecture keeps seams for these features without paying their complexity 
 2 Candidate Career Passport
         ↓
 3 Resume Intelligence
+   └─ 3G Resume Intelligence Architecture V2 before production maturity
         ↓
 4 Employer + Jobs
         ↓
@@ -636,4 +721,4 @@ The architecture keeps seams for these features without paying their complexity 
 Production hardening / MVP launch
 ```
 
-This order intentionally establishes authoritative data and security boundaries before dependent AI and workflow features.
+This order intentionally establishes authoritative data, document-understanding quality, and security boundaries before dependent AI and workflow features.
