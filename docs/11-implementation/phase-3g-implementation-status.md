@@ -11,8 +11,8 @@ This file is the live implementation checkpoint for Phase 3G while the architect
 3G-D Source Ledger + reconciliation           ✅ VERIFIED
 3G-E Core typed extractors V2                 ✅ VERIFIED
 3G-F Extensions + open-world fallback         ✅ VERIFIED
-3G-G Semantic recovery capability gate        🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
-3G-H Candidate Review UX V2                   ⬜ NOT STARTED
+3G-G Semantic recovery capability gate        ✅ VERIFIED
+3G-H Candidate Review UX V2                   🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
 3G-I Benchmark expansion + regression gate    ⬜ NOT STARTED
 3G-J Runtime closure                          ⬜ NOT STARTED
 ```
@@ -92,138 +92,109 @@ Verified locally on 2026-09-17:
 - technology presentation labels were normalized without losing evidence provenance
 - formatting cleanup was committed/pushed and the stage was consolidated into one final commit
 
-## 3G-G implementation scope
+### 3G-G
 
-3G-G adds a provider-agnostic capability gate for semantic/model-assisted recovery. It does **not** select or wire a provider into the runtime parser.
+Verified locally on 2026-09-17:
 
-The stage exists to prevent a model fallback from becoming an unreviewed accuracy, privacy, latency, cost, or vendor-lock-in dependency.
+- contracts lint/typecheck/build passed
+- resume-parsing lint/typecheck/build passed
+- 59/59 resume-parsing tests passed
+- semantic recovery remained off when deterministic parsing left no unresolved source
+- unresolved candidate-owned source became eligible only when provider/privacy/benchmark/latency/cost controls passed
+- third-party-private reference source stayed blocked from remote recovery by default
+- provider/benchmark/privacy/latency/cost failures returned explicit fail-closed reason codes
+- formatting cleanup was committed/pushed and the stage was consolidated into one final commit
 
-The capability gate evaluates:
+## 3G-H implementation scope
 
-- whether deterministic processing actually left `UNMAPPED` or `PARTIALLY_MAPPED` source
-- candidate-owned vs third-party-private source classes
-- structured-output support
-- model-version pinning
-- provider training/data-use posture
-- retention guarantees
-- regional-processing controls for remote APIs
-- documented rate limits
-- usage/observability metrics
-- Talent Resume Benchmark fixture count
-- record F1
-- field F1
-- evidence-grounding rate
-- unknown-section preservation
-- meaningful-source accounting
-- privacy violations
-- p95 latency
-- estimated cost per resume
+3G-H upgrades the candidate-facing resume review workspace so quality and completeness are no longer represented by one misleading confidence percentage.
 
-The default gate is intentionally strict. A provider or model is not eligible merely because it can return schema-valid JSON.
+The stage intentionally remains compatible with the currently persisted Phase 3 runtime proposal. It does not fabricate Source Ledger or structural metrics that are not yet persisted.
 
-### 3G-G privacy invariant
+The Review V2 experience adds:
 
-```text
-third-party private source
-+ remote provider
-+ no explicit policy approval
-→ BLOCKED
-```
+- `Claim confidence` as an explicitly claim-level metric
+- `Source coverage` as a separate metric from `coverageSummary`
+- detected-vs-missed source section visibility
+- preserved additional/custom sections surfaced before candidate approval
+- References/private third-party data withheld from ordinary displayed content
+- an explicit privacy explanation for References
+- document-quality and structural-quality cards that truthfully state `Pending V2 runtime` until 3G-J persists those signals
+- an explanation that Source Ledger record counts/reconciliation will arrive with the V2 runtime rather than being guessed in the browser
+- removal of the old `Overall confidence` summary from the review UI
+- no change to candidate authority: Accept/Edit/Ignore remain the only paths that can apply or reject a proposal
 
-References therefore remain ineligible for ordinary remote semantic recovery under the default policy.
-
-### 3G-G fallback invariant
+### 3G-H quality-model invariant
 
 ```text
-deterministic pipeline resolved the source
-→ semantic recovery OFF
+Claim confidence
+!=
+Source coverage
+!=
+Document extraction quality
+!=
+Structural quality
 ```
+
+The UI must never use one of these dimensions as a substitute for another.
+
+### 3G-H compatibility invariant
 
 ```text
-unresolved source exists
-+ provider capability passes
-+ benchmark passes
-+ privacy passes
-+ cost/latency pass
-→ source may become eligible for semantic recovery
+runtime telemetry persisted
+→ display measured value
+
+runtime telemetry not persisted
+→ display explicit unavailable/pending state
+→ never infer or manufacture a score in the browser
 ```
 
-Eligibility is not authority. Any recovered fact must still be schema-validated, evidence-reconciled, surfaced for candidate review where required, and cannot become authoritative Career Passport state without candidate approval.
-
-## Provider/tool research checkpoint
-
-3G-G research reviewed current official documentation for representative managed providers before any integration decision.
-
-### OpenAI API
-
-Relevant official documentation:
-
-- Structured Outputs / JSON Schema: https://platform.openai.com/docs/guides/structured-outputs
-- Data controls and API data usage: https://platform.openai.com/docs/guides/your-data
-
-Observed design implications:
-
-- schema-constrained output is available
-- API business data is not used for training by default
-- retention/ZDR eligibility depends on endpoint/account configuration
-- provider capability must therefore be recorded as configuration, not assumed globally
-
-### Anthropic API
-
-Relevant official documentation:
-
-- Data usage and retention: https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-data
-- API documentation: https://docs.anthropic.com/
-
-Observed design implications:
-
-- commercial API input/output is not used for model training by default
-- standard retention and approved zero-data-retention arrangements differ
-- any future adoption must bind the exact commercial/privacy configuration used by Talent Network
-
-### Google Gemini / Vertex AI
-
-Relevant official documentation:
-
-- Structured output: https://ai.google.dev/gemini-api/docs/structured-output
-- Gemini API terms/data-use guidance: https://ai.google.dev/gemini-api/terms
-- Vertex AI generative AI data governance: https://cloud.google.com/vertex-ai/generative-ai/docs/data-governance
-
-Observed design implications:
-
-- structured output does not guarantee semantic correctness
-- data handling differs between Gemini API product tiers/configurations and Vertex AI enterprise processing
-- workloads requiring stronger retention/regional guarantees must be evaluated against the exact deployment product
-
-### 3G-G provider decision
-
-No provider is adopted in 3G-G.
-
-No new SDK, model, infrastructure dependency, or production network call is introduced.
-
-A later provider decision must supply measured benchmark and operational evidence that satisfies this gate. If no provider passes, the correct runtime behavior is to preserve the unresolved source for review rather than silently degrade privacy or correctness.
-
-### 3G-G acceptance gate
-
-3G-G is verified only after:
+### 3G-H privacy invariant
 
 ```text
-contracts lint                         PASS
-contracts typecheck                    PASS
-contracts build                        PASS
-resume-parsing lint                    PASS
-resume-parsing typecheck               PASS
-resume-parsing test                    PASS
-resume-parsing build                   PASS
-pnpm format                            no unexpected changes
-git status --short                     clean
+References / third-party contact data
+→ private-only explanation
+→ not rendered as ordinary Career Passport content
+→ organization visibility unchanged
 ```
 
-Expected capability-gate tests cover:
+### 3G-H authority invariant
 
-- eligible unresolved candidate-owned source when every control passes
-- no semantic recovery when deterministic processing leaves no unresolved source
-- third-party-private source blocked from remote recovery by default
-- provider/privacy/benchmark/latency/cost weaknesses fail closed with explicit reason codes
+```text
+resume proposal
+→ review evidence only
+
+candidate ACCEPT / EDIT
+→ may create new RESUME_IMPORT Passport version
+
+candidate IGNORE
+→ Passport unchanged
+```
+
+3G-H does not alter the server-side approval transaction or authentication identity boundary.
+
+### 3G-H acceptance gate
+
+3G-H is verified only after:
+
+```text
+web lint                              PASS
+web typecheck                         PASS
+web build                             PASS (or documented environment-only blocker)
+resume-parsing regression tests       PASS
+API Phase 3 review integration        PASS
+pnpm format                           no unexpected changes
+git status --short                    clean
+```
+
+Browser acceptance should confirm:
+
+- no `Overall confidence` label remains
+- Claim confidence and Source coverage render independently
+- detected/missed coverage sections are visible when coverage exists
+- additional/custom sections are visible without exposing References content
+- document/structural metrics show pending runtime state rather than fake values
+- existing Accept/Edit/Ignore behavior remains intact
+- contact data remains clearly separated from login/auth identity
 
 The stage must not be marked verified from code inspection alone.

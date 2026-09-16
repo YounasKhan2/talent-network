@@ -18,6 +18,7 @@ import {
   type ParsedResumeProposal,
   type ResumeReviewDecisionRequest,
 } from '../../../lib/resume-review-api';
+import { ReviewV2Insights } from './review-v2-insights';
 import styles from './resume-workspace.module.css';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -226,7 +227,7 @@ export default function CareerResumesPage() {
             before anything can change your Career Passport.
           </p>
         </div>
-        <div className={styles.phaseBadge}>Phase 3F · Review</div>
+        <div className={styles.phaseBadge}>Review V2 · Candidate controlled</div>
       </header>
 
       <section className={styles.uploadPanel} aria-label="Upload resume">
@@ -346,7 +347,6 @@ function ReviewPanel({
   deleting: boolean;
 }) {
   const parsed = review.proposal?.parsedJson ?? null;
-  const confidence = parsed?.confidenceSummary;
   const profile = review.passport.currentProfileVersion;
   const counts = useMemo(() => summarizeProposal(parsed), [parsed]);
   const [editing, setEditing] = useState(false);
@@ -403,15 +403,7 @@ function ReviewPanel({
 
       <ProcessingTimeline state={review.version?.processingState ?? 'UNKNOWN'} />
 
-      <section className={styles.metrics} aria-label="Resume review summary">
-        <Metric label="Claims" value={confidence?.totalClaimCount ?? 0} />
-        <Metric label="Low confidence" value={confidence?.lowConfidenceClaimCount ?? 0} />
-        <Metric
-          label="Overall confidence"
-          value={confidence ? `${Math.round(confidence.overall * 100)}%` : '—'}
-        />
-        <Metric label="Parser" value={review.proposal?.parserName ?? 'Pending'} />
-      </section>
+      <ReviewV2Insights parsed={parsed} parserName={review.proposal?.parserName ?? null} />
 
       {!review.review.available && !finalDecision ? (
         <section className={styles.notice}>
@@ -698,15 +690,6 @@ function CompareCard({
         <span>Resume proposal</span>
         <p>{proposed || 'Not detected'}</p>
       </div>
-    </article>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string | number }) {
-  return (
-    <article>
-      <span>{label}</span>
-      <strong>{value}</strong>
     </article>
   );
 }
