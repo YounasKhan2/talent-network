@@ -64,13 +64,14 @@ void test('runtime V2 parser fails closed without the verified source document',
   const parser = new ResumeIntelligenceV2Parser();
 
   await assert.rejects(
-    parser.parse({
-      resumeVersionId: RESUME_VERSION_ID,
-      sourceExtractionId: EXTRACTION_ID,
-      processingPipelineVersion: 'resume-v1',
-      sourceDocumentSchemaVersion: document.schemaVersion,
-      preprocessedDocument: preprocessResumeDocument(document),
-    }),
+    async () =>
+      parser.parse({
+        resumeVersionId: RESUME_VERSION_ID,
+        sourceExtractionId: EXTRACTION_ID,
+        processingPipelineVersion: 'resume-v1',
+        sourceDocumentSchemaVersion: document.schemaVersion,
+        preprocessedDocument: preprocessResumeDocument(document),
+      }),
     /requires the verified source ResumeDocument/i,
   );
 });
