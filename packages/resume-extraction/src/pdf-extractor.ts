@@ -52,12 +52,13 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
         const viewport = page.getViewport({ scale: 1 });
-        const [content, structTree] = await Promise.all([
+        const [content, structTree, annotations] = await Promise.all([
           page.getTextContent({
             includeMarkedContent: true,
             disableNormalization: true,
           }),
           page.getStructTree(),
+          page.getAnnotations({ intent: 'display' }),
         ]);
         const items = content.items
           .map((item) => toResumePdfTextContentItem(item))
@@ -91,6 +92,9 @@ export class PdfJsResumeExtractor implements ResumeExtractor {
               lang: content.lang ?? null,
             },
             structTree: toResumeJsonValue(structTree),
+            annotations: annotations
+              .map((annotation) => toResumeJsonValue(annotation))
+              .filter((annotation) => annotation !== null),
           },
         });
       }
