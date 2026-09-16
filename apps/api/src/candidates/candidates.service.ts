@@ -118,10 +118,10 @@ export interface CandidateCustomSectionItemInput {
 export interface CandidateCustomSectionInput {
   title: string;
   description: string | null;
-  sectionTypeKey: string | null;
-  sourceHeading: string | null;
-  classificationConfidence: number | null;
-  classificationStatus: string | null;
+  sectionTypeKey?: string | null;
+  sourceHeading?: string | null;
+  classificationConfidence?: number | null;
+  classificationStatus?: string | null;
   items: CandidateCustomSectionItemInput[];
 }
 
@@ -457,10 +457,10 @@ export class CandidatesService {
             create: customSections.map((section, sectionIndex) => ({
               title: section.title,
               description: section.description,
-              sectionTypeKey: section.sectionTypeKey,
-              sourceHeading: section.sourceHeading,
-              classificationConfidence: section.classificationConfidence,
-              classificationStatus: section.classificationStatus,
+              sectionTypeKey: section.sectionTypeKey ?? null,
+              sourceHeading: section.sourceHeading ?? null,
+              classificationConfidence: section.classificationConfidence ?? null,
+              classificationStatus: section.classificationStatus ?? null,
               sortOrder: sectionIndex,
               items: {
                 create: section.items.map((item, itemIndex) => ({
