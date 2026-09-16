@@ -13,6 +13,7 @@ export * from './local-parser.js';
 export * from './preprocessing.js';
 export * from './proposal-validation.js';
 export * from './queue-contract.js';
+export * from './runtime-v2-parser.js';
 export * from './schema.js';
 export * from './semantic-recovery-gate.js';
 export * from './source-ledger.js';

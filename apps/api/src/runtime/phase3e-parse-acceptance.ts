@@ -145,8 +145,18 @@ async function main(): Promise<void> {
     const parseResult = parseResults[0];
     assert(parseResult?.status === 'COMPLETED', 'Expected completed ResumeParseResult.');
     assert(
-      JSON.stringify(parseResult.parsedJson).includes(PRIVATE_MARKERS[0] ?? ''),
-      'Expected deterministic private email claim in candidate-private parsedJson.',
+      parseResult?.parserName === 'resume-intelligence-v2-parser',
+      `Expected V2 parser identity, received ${parseResult?.parserName ?? 'missing'}.`,
+    );
+    assert(parseResult.parserVersion === '1', 'Expected resume-intelligence-v2-parser version 1.');
+    const parsedJson = JSON.stringify(parseResult.parsedJson);
+    assert(
+      parsedJson.includes('resume-intelligence-runtime-v2'),
+      'Expected persisted runtimeV2 telemetry in parsedJson.',
+    );
+    assert(
+      parsedJson.includes(PRIVATE_MARKERS[0] ?? ''),
+      'Expected deterministic private candidate email claim in candidate-private parsedJson.',
     );
 
     const outboxEvents = await database.outboxEvent.findMany({
@@ -185,14 +195,11 @@ async function main(): Promise<void> {
     assertNoPrivateMarkers(auditEvents, 'audit events');
     assert(profileVersionCount === 0, 'Parsing must not create a Career Passport version.');
 
-    console.log(
-      'Duplicate delivery assertion passed: one ResumeParseResult for two source events.',
-    );
-    console.log(
-      'Privacy assertion passed: private parsed values absent from audit/outbox metadata.',
-    );
+    console.log('V2 parser assertion passed: resume-intelligence-v2-parser@1 persisted runtimeV2.');
+    console.log('Duplicate delivery assertion passed: one ResumeParseResult for two source events.');
+    console.log('Privacy assertion passed: private parsed values absent from audit/outbox metadata.');
     console.log('Career Passport assertion passed: no CandidateProfileVersion was created.');
-    console.log('Phase 3E runtime acceptance PASSED: PARSING -> resume.parse -> READY_FOR_REVIEW.');
+    console.log('Phase 3G runtime closure PASSED: PARSING -> V2 parse -> READY_FOR_REVIEW.');
     succeeded = true;
   } finally {
     const shouldCleanup = succeeded ? !keepOnSuccess : false;

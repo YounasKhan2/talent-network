@@ -174,6 +174,7 @@ export async function processResumeParseJob(
       sourceExtractionId: sourceExtraction.id,
       processingPipelineVersion: version.processingPipelineVersion,
       sourceDocumentSchemaVersion: sourceExtraction.schemaVersion,
+      sourceDocument: document,
       preprocessedDocument,
     });
     const validation = validateResumeProposal(

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { DatabaseClient } from '@talent-network/database';
-import { LocalDeterministicResumeParser } from '@talent-network/resume-parsing';
+import {
+  LocalDeterministicResumeParser,
+  ResumeIntelligenceV2Parser,
+} from '@talent-network/resume-parsing';
 import { processResumeParseJob } from './resume-parse-worker.js';
 
 void test('successful parse persists proposal and advances exactly to READY_FOR_REVIEW', async () => {
@@ -28,6 +31,34 @@ void test('successful parse persists proposal and advances exactly to READY_FOR_
     JSON.stringify(fixture.parseResult.parsedJson).includes('private@example.com'),
     true,
   );
+});
+
+void test('V2 runtime parse persists sanitized intelligence telemetry and reaches review', async () => {
+  const fixture = createFixture();
+
+  await processResumeParseJob(
+    {
+      resumeVersionId: fixture.version.id,
+      processingPipelineVersion: fixture.version.processingPipelineVersion,
+      extractionId: fixture.extraction.id,
+    },
+    { database: fixture.database, parser: new ResumeIntelligenceV2Parser() },
+  );
+
+  assert.equal(fixture.version.processingState, 'READY_FOR_REVIEW');
+  assert.equal(fixture.parseResult.status, 'COMPLETED');
+  const proposal = fixture.parseResult.parsedJson as {
+    parser?: { name?: string };
+    runtimeV2?: {
+      schemaVersion?: string;
+      sourceCoverage?: { status?: string };
+      privateContentPersisted?: boolean;
+    };
+  };
+  assert.equal(proposal.parser?.name, 'resume-intelligence-v2-parser');
+  assert.equal(proposal.runtimeV2?.schemaVersion, 'resume-intelligence-runtime-v2');
+  assert.equal(proposal.runtimeV2?.sourceCoverage?.status, 'COMPLETE');
+  assert.equal(proposal.runtimeV2?.privateContentPersisted, false);
 });
 
 void test('duplicate delivery after completion is idempotent', async () => {

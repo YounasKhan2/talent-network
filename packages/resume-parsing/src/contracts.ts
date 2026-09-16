@@ -1,3 +1,9 @@
+import type {
+  ResumeIntelligenceDiagnosticCode,
+  ResumeRecordReconciliation,
+  ResumeSourceCoverageSummary,
+} from '@talent-network/contracts';
+import type { ResumeDocumentGraphSource } from './document-graph.js';
 import type { PreprocessedResumeDocument } from './preprocessing.js';
 import type {
   ParsedResumeSchemaVersion,
@@ -74,6 +80,13 @@ export interface ParsedCertification {
   credentialUrl?: ParsedClaim<string>;
 }
 
+export interface ParsedAward {
+  name: ParsedClaim<string>;
+  issuer?: ParsedClaim<string>;
+  issuedAt?: ParsedClaim<string>;
+  details?: ParsedClaim<string>;
+}
+
 export interface ParsedLanguage {
   name: ParsedClaim<string>;
   proficiency?: ParsedClaim<string>;
@@ -145,6 +158,23 @@ export interface ParsedResumeCoverageSummary {
   sections: ParsedResumeCoverageSection[];
 }
 
+export interface ParsedResumeRuntimeDiagnostic {
+  code: ResumeIntelligenceDiagnosticCode;
+  severity: 'INFO' | 'WARNING' | 'ERROR';
+  reviewRequired: boolean;
+}
+
+export interface ParsedResumeRuntimeV2 {
+  schemaVersion: 'resume-intelligence-runtime-v2';
+  documentQuality: number | null;
+  structuralConfidence: number | null;
+  sourceCoverage: ResumeSourceCoverageSummary;
+  reconciliations: ResumeRecordReconciliation[];
+  diagnostics: ParsedResumeRuntimeDiagnostic[];
+  privateSourceCount: number;
+  privateContentPersisted: false;
+}
+
 export interface ParsedResume {
   schemaVersion: ParsedResumeSchemaVersion;
   resumeVersionId: string;
@@ -158,6 +188,7 @@ export interface ParsedResume {
   skills: ParsedSkill[];
   projects: ParsedProject[];
   certifications: ParsedCertification[];
+  awards?: ParsedAward[];
   languages: ParsedLanguage[];
   links: ParsedLink[];
   locations: ParsedLocation[];
@@ -165,6 +196,7 @@ export interface ParsedResume {
   warnings: string[];
   confidenceSummary: ParsedResumeConfidenceSummary;
   coverageSummary?: ParsedResumeCoverageSummary;
+  runtimeV2?: ParsedResumeRuntimeV2;
 }
 
 export interface ResumeParseInput {
@@ -172,6 +204,7 @@ export interface ResumeParseInput {
   sourceExtractionId: string;
   processingPipelineVersion: string;
   sourceDocumentSchemaVersion: string;
+  sourceDocument?: ResumeDocumentGraphSource;
   preprocessedDocument: PreprocessedResumeDocument;
 }
 

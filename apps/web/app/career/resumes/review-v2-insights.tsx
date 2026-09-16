@@ -10,15 +10,20 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
   if (!parsed) return null;
 
   const coverage = parsed.coverageSummary;
+  const runtime = parsed.runtimeV2;
   const detectedSections =
     coverage?.sections.filter((section) => section.status === 'DETECTED') ?? [];
   const missedSections = coverage?.sections.filter((section) => section.status === 'MISSED') ?? [];
   const additionalSections = (parsed.additionalSections ?? []).filter(
     (section) => !isPrivateReferenceHeading(section.heading.value),
   );
-  const privateReferenceCount = (parsed.additionalSections ?? []).filter((section) =>
+  const legacyPrivateReferenceCount = (parsed.additionalSections ?? []).filter((section) =>
     isPrivateReferenceHeading(section.heading.value),
   ).length;
+  const privateReferenceCount = runtime?.privateSourceCount ?? legacyPrivateReferenceCount;
+  const records = summarizeReconciliations(runtime?.reconciliations ?? []);
+  const reviewDiagnostics = runtime?.diagnostics.filter((diagnostic) => diagnostic.reviewRequired) ?? [];
+  const sourceCoverageRatio = runtime?.sourceCoverage.ratio ?? coverage?.ratio ?? null;
 
   return (
     <section className={styles.panel} aria-label="Resume understanding quality">
@@ -27,8 +32,8 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           <span className={styles.kicker}>Review V2</span>
           <h3>What the system understood</h3>
           <p>
-            Claim confidence and source coverage answer different questions. A high-confidence claim
-            does not prove the entire resume was understood.
+            Claim confidence, source accounting, extraction quality, and structural confidence are
+            independent signals. A strong claim score does not prove the entire resume was understood.
           </p>
         </div>
         <span className={styles.parserBadge}>{parserName ?? 'Parser pending'}</span>
@@ -41,25 +46,35 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           detail={`${parsed.confidenceSummary.totalClaimCount} grounded claims · ${parsed.confidenceSummary.lowConfidenceClaimCount} low confidence`}
         />
         <QualityMetric
-          label="Source coverage"
-          value={coverage ? `${Math.round(coverage.ratio * 100)}%` : 'Not reported'}
+          label="Source accounting"
+          value={sourceCoverageRatio === null ? 'Not reported' : `${Math.round(sourceCoverageRatio * 100)}%`}
           detail={
-            coverage
-              ? `${coverage.coveredSectionCount} of ${coverage.sourceSectionCount} source sections detected`
-              : 'Legacy proposal does not expose section coverage.'
+            runtime
+              ? `${runtime.sourceCoverage.accountedSourceCount} of ${runtime.sourceCoverage.meaningfulSourceCount} meaningful source items accounted · ${records.mapped} mapped · ${records.partial} partial · ${records.unmapped} unmapped · ${records.privateOnly} private`
+              : coverage
+                ? `${coverage.coveredSectionCount} of ${coverage.sourceSectionCount} source sections detected by the legacy proposal`
+                : 'This proposal does not expose source-accounting telemetry.'
           }
         />
         <QualityMetric
           label="Document quality"
-          value="Pending V2 runtime"
-          detail="Extraction-quality telemetry is introduced by the V2 runtime closure, not inferred in the browser."
-          muted
+          value={formatQuality(runtime?.documentQuality)}
+          detail={
+            runtime
+              ? 'Derived from persisted extraction completeness, character-noise, and extraction-warning signals.'
+              : 'Available after a resume is processed by the V2 runtime.'
+          }
+          muted={!runtime}
         />
         <QualityMetric
           label="Structural quality"
-          value="Pending V2 runtime"
-          detail="Record-boundary confidence will appear when DocumentGraph/Source Ledger outputs are persisted."
-          muted
+          value={formatQuality(runtime?.structuralConfidence)}
+          detail={
+            runtime
+              ? 'Average confidence across persisted section and record boundaries.'
+              : 'Available after DocumentGraph and structural detection run in the V2 runtime.'
+          }
+          muted={!runtime}
         />
       </div>
 
@@ -67,7 +82,7 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
         <div className={styles.coverageArea}>
           <div className={styles.subheading}>
             <div>
-              <span className={styles.kicker}>Source coverage</span>
+              <span className={styles.kicker}>Section coverage</span>
               <h4>Detected and missed sections</h4>
             </div>
             <strong
@@ -89,6 +104,44 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
               empty="No source sections are currently reported as missed."
               items={missedSections.map((section) => ({ key: section.key, meta: 'Needs review' }))}
               label="Missed"
+              warning
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {runtime ? (
+        <div className={styles.coverageArea}>
+          <div className={styles.subheading}>
+            <div>
+              <span className={styles.kicker}>Source Ledger</span>
+              <h4>Record reconciliation</h4>
+            </div>
+            <strong
+              className={
+                runtime.sourceCoverage.status === 'COMPLETE' ? styles.complete : styles.needsReview
+              }
+            >
+              {readable(runtime.sourceCoverage.status)}
+            </strong>
+          </div>
+          <div className={styles.coverageColumns}>
+            <CoverageList
+              empty="No typed record reconciliation was emitted."
+              items={runtime.reconciliations.map((item) => ({
+                key: item.sectionTypeKey,
+                meta: `${item.mappedRecordCount} mapped · ${item.partiallyMappedRecordCount} partial · ${item.unmappedRecordCount} unmapped · ${item.privateOnlyRecordCount} private`,
+              }))}
+              label="By section"
+            />
+            <CoverageList
+              empty="No V2 diagnostics currently require candidate review."
+              items={reviewDiagnostics.map((diagnostic, index) => ({
+                key: `${diagnostic.code}-${index}`,
+                label: diagnostic.code,
+                meta: readable(diagnostic.severity),
+              }))}
+              label="Needs review"
               warning
             />
           </div>
@@ -130,26 +183,28 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           <span className={styles.kicker}>Private source data</span>
           <h4>References stay private</h4>
           <p>
-            Third-party reference details are not ordinary Career Passport content and must not be
-            exposed to organization workspaces by resume review.
+            Third-party reference details are not ordinary Career Passport content. The V2 runtime
+            persists only private-source counts and status telemetry in the review proposal, never
+            the reference names, emails, or phone numbers themselves.
           </p>
           <strong>
             {privateReferenceCount > 0
-              ? `${privateReferenceCount} reference section${privateReferenceCount === 1 ? '' : 's'} withheld from display`
-              : 'No reference section is exposed by this proposal'}
+              ? `${privateReferenceCount} private reference record${privateReferenceCount === 1 ? '' : 's'} withheld from the proposal payload`
+              : 'No private reference records were detected'}
           </strong>
         </div>
       </div>
 
-      <div className={styles.runtimeNotice}>
-        <strong>Why some V2 metrics are pending</strong>
-        <p>
-          This review page can only display persisted runtime evidence. Source Ledger record counts,
-          reconciliation, document extraction quality, and structural confidence will become
-          available after the V2 runtime pipeline is wired and persisted; this UI does not
-          manufacture substitute scores.
-        </p>
-      </div>
+      {!runtime ? (
+        <div className={styles.runtimeNotice}>
+          <strong>Historical proposal</strong>
+          <p>
+            This resume was parsed before the V2 runtime closure. Re-upload or reprocess it through
+            the V2 parser to obtain DocumentGraph quality, Source Ledger reconciliation, and
+            structural-confidence telemetry. This UI does not manufacture substitute scores.
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -181,7 +236,7 @@ function CoverageList({
   warning = false,
 }: {
   label: string;
-  items: Array<{ key: string; meta: string }>;
+  items: Array<{ key: string; label?: string; meta: string }>;
   empty: string;
   warning?: boolean;
 }) {
@@ -192,7 +247,7 @@ function CoverageList({
         <ul>
           {items.map((item) => (
             <li key={item.key}>
-              <span>{readable(item.key)}</span>
+              <span>{readable(item.label ?? item.key)}</span>
               <small>{item.meta}</small>
             </li>
           ))}
@@ -202,6 +257,24 @@ function CoverageList({
       )}
     </div>
   );
+}
+
+function summarizeReconciliations(
+  reconciliations: NonNullable<ParsedResumeProposal['runtimeV2']>['reconciliations'],
+) {
+  return reconciliations.reduce(
+    (summary, item) => ({
+      mapped: summary.mapped + item.mappedRecordCount,
+      partial: summary.partial + item.partiallyMappedRecordCount,
+      unmapped: summary.unmapped + item.unmappedRecordCount + item.unprocessedRecordCount,
+      privateOnly: summary.privateOnly + item.privateOnlyRecordCount,
+    }),
+    { mapped: 0, partial: 0, unmapped: 0, privateOnly: 0 },
+  );
+}
+
+function formatQuality(value: number | null | undefined): string {
+  return typeof value === 'number' ? `${Math.round(value * 100)}%` : 'Not reported';
 }
 
 function isPrivateReferenceHeading(value: string): boolean {

@@ -13,8 +13,8 @@ This file is the live implementation checkpoint for Phase 3G while the architect
 3G-F Extensions + open-world fallback         ✅ VERIFIED
 3G-G Semantic recovery capability gate        ✅ VERIFIED
 3G-H Candidate Review UX V2                   ✅ VERIFIED
-3G-I Benchmark expansion + regression gate    🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
-3G-J Runtime closure                          ⬜ NOT STARTED
+3G-I Benchmark expansion + regression gate    ✅ VERIFIED
+3G-J Runtime closure                          🟡 IMPLEMENTED / AWAITING LOCAL + RUNTIME VERIFICATION
 ```
 
 ## Verification evidence
@@ -117,64 +117,103 @@ Verified locally on 2026-09-17:
 - Review V2 removed the misleading `Overall confidence` presentation
 - Claim confidence and Source coverage are presented independently
 - additional/custom sections and private-reference guidance are visible without changing candidate authority
-- document/structural quality remain explicit pending-runtime states instead of fabricated browser scores
+- document/structural quality remained explicit pending-runtime states instead of fabricated browser scores
 - formatting cleanup was committed/pushed and the stage was consolidated into one final commit
 
-## 3G-I implementation scope
+### 3G-I
 
-3G-I converts the Phase 3G benchmark from a single golden-fixture harness into an explicit regression gate while keeping production-readiness claims honest.
+Verified locally on 2026-09-17:
+
+- the contracts and resume-parsing quality gate passed
+- seed regression tests passed
+- silent record-loss, unknown-preservation, and privacy regressions fail closed
+- production readiness remains blocked until the real artifact-backed benchmark corpus satisfies policy
+- formatting/status gate was green before 3G-J began
+
+## 3G-J implementation scope
+
+3G-J closes the Phase 3G architecture by making the V2 pipeline the production worker path rather than a parallel library implementation.
+
+The runtime path is now:
+
+```text
+verified ResumeDocument
+→ DocumentGraph V1
+→ structural sections + records
+→ core typed extraction V2
+→ extension/open-world extraction V2
+→ Source Ledger + reconciliation
+→ document/structural/claim/source quality signals
+→ persisted ParsedResume compatibility proposal + sanitized runtimeV2 telemetry
+→ Candidate Review V2
+→ candidate ACCEPT / EDIT / IGNORE
+→ Career Passport
+```
 
 The stage adds:
 
-- a seed benchmark matrix spanning PDF, DOCX, scanned/OCR, two-column layout, open-world custom sections, and private References
-- fixture metadata that distinguishes `AVAILABLE` artifacts from source-truth contracts that are only `SPECIFIED`
-- suite-level fixture pass-rate and source-coverage calculations
-- record F1 and field F1 thresholds
-- evidence-grounding and unknown-preservation thresholds
-- zero-tolerance privacy-violation gating
-- a Phase 3G seed policy for immediate regression protection
-- a separate production-readiness policy requiring at least 100 real artifact-backed fixtures
-- explicit failure reasons when corpus size, artifact backing, quality, coverage, preservation, or privacy gates fail
-- a hard rule that the seed suite passing does not imply production readiness
+- `ResumeIntelligenceV2Parser` as the production worker parser
+- verified source `ResumeDocument` passed directly into the parser instead of reconstructing layout from flattened text
+- no silent legacy-parser fallback for V2-owned fields
+- persisted `runtimeV2` telemetry inside the versioned private parse proposal
+- measured document quality and structural confidence
+- Source Ledger accounting and record reconciliation exposed to Candidate Review V2
+- sanitized diagnostics without raw source text
+- private References represented only by private-source counts/status in the review proposal
+- third-party reference names/emails/phones excluded from `parsedJson`
+- typed Awards retained in V2 output while an evidence-grounded compatibility Award section preserves the existing Phase 3F import path
+- historical pre-3G-J parse results remain readable; Review V2 falls back to their legacy coverage metrics without inventing V2 scores
+- worker-level persistence coverage proving V2 telemetry reaches `READY_FOR_REVIEW`
+- no new provider, SDK, infrastructure service, database migration, or semantic-recovery network call
 
-### 3G-I benchmark integrity invariant
-
-```text
-synthetic/specification-only fixture contract
-→ useful for regression vocabulary and deterministic tests
-→ does NOT count as a real artifact-backed production fixture
-```
+### 3G-J runtime ownership invariant
 
 ```text
-production ready
-→ >= 100 artifact-backed legal-safe fixtures
-→ record F1 >= 0.95
-→ field F1 >= 0.95
-→ evidence grounding >= 0.99
-→ meaningful-source accounting = 1.00
-→ unknown preservation = 1.00
-→ privacy violations = 0
+production worker
+→ ResumeIntelligenceV2Parser
+→ V2 structural pipeline owns extraction
+
+legacy parser classes
+→ compatibility/tests only
+→ never used as silent field fallback
 ```
 
-The project must not manufacture fixture count by cloning generated observations or duplicating the same resume layout.
+### 3G-J privacy invariant
 
-### 3G-I seed matrix
+```text
+References source record
+→ PRIVATE_ONLY in Source Ledger
+→ private count/status may be persisted
+→ third-party source text MUST NOT be persisted in review parsedJson
+→ MUST NOT become ordinary Career Passport content
+```
 
-The seed suite currently describes these distinct regression classes:
+### 3G-J quality invariant
 
-- complex five-page PDF
-- simple one-page PDF
-- table-backed DOCX
-- scanned/OCR image resume
-- two-column PDF
-- open-world custom-section resume
-- third-party References/privacy resume
+```text
+Claim confidence
+!= Document quality
+!= Structural confidence
+!= Source accounting
+```
 
-Only artifacts actually stored/available to the benchmark runner count toward `artifactBackedFixtureCount`.
+All four signals are persisted/displayed independently when available.
 
-### 3G-I acceptance gate
+### 3G-J compatibility invariant
 
-3G-I is verified only after:
+```text
+new V2 parse
+→ existing ParsedResume review/import boundary preserved
+→ runtimeV2 telemetry added
+
+historical parse
+→ still reviewable
+→ no fake V2 telemetry
+```
+
+### 3G-J acceptance gate
+
+3G-J is verified only after the local code gate passes:
 
 ```text
 contracts lint                         PASS
@@ -184,16 +223,46 @@ resume-parsing lint                    PASS
 resume-parsing typecheck               PASS
 resume-parsing test                    PASS
 resume-parsing build                   PASS
+worker lint                            PASS
+worker typecheck                       PASS
+worker test                            PASS
+worker build                           PASS
+web lint                               PASS
+web typecheck                          PASS
+web build                              PASS
+API lint                               PASS
+API typecheck                          PASS
+API Phase 3 integration                PASS
 pnpm format                            no unexpected changes
 git status --short                     clean
 ```
 
-Expected regression tests cover:
+The live runtime gate must also pass with PostgreSQL, Redis, scheduler, and worker running:
 
-- seed suite spans multiple formats/layouts/privacy classes
-- seed gate passes when every seed fixture and quality invariant passes
-- one silent source-record regression fails the suite
-- unknown-preservation or privacy regression fails closed
-- production readiness remains blocked while the real artifact-backed corpus is below policy
+```text
+pnpm --filter @talent-network/api test:runtime:phase3e-parse
+```
 
-The stage must not be marked verified from code inspection alone.
+Runtime evidence must show:
+
+- parse reaches `READY_FOR_REVIEW`
+- persisted parser identity is `resume-intelligence-v2-parser@1`
+- `runtimeV2` telemetry is present
+- source accounting is explicit
+- audit/outbox remain metadata-only
+- parsing alone creates no Career Passport version
+- duplicate delivery remains idempotent
+
+The complex five-page acceptance resume must then be reprocessed through the actual worker and reviewed in the browser. Before 3G-J can be marked verified, record the observed V2 counts/coverage and confirm:
+
+- four Work Experience records are not silently reduced
+- two Education records are accounted for
+- three Projects are accounted for
+- five Certifications are accounted for
+- four Languages are accounted for
+- Publications, Patents, Volunteering, Professional Memberships, Interests, Awards, and unknown/additional content remain visible or explicitly accounted for
+- three References are private-only and their third-party contact contents are not present in the review proposal payload
+- Review V2 displays real Document quality, Structural quality, Source accounting, and reconciliation rather than `Pending V2 runtime`
+- any unresolved record is explicitly partial/unmapped instead of disappearing
+
+The stage must not be marked verified from code inspection or unit tests alone.

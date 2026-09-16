@@ -62,6 +62,40 @@ export interface ParsedResumeAdditionalSection {
   entries: ParsedClaim<string>[];
 }
 
+export interface ParsedResumeRuntimeReconciliation {
+  sectionTypeKey: string;
+  sourceRecordCount: number;
+  mappedRecordCount: number;
+  partiallyMappedRecordCount: number;
+  unmappedRecordCount: number;
+  privateOnlyRecordCount: number;
+  intentionallyIgnoredRecordCount: number;
+  unprocessedRecordCount: number;
+  accountedRecordCount: number;
+  recordCoverageRatio: number;
+}
+
+export interface ParsedResumeRuntimeV2 {
+  schemaVersion: 'resume-intelligence-runtime-v2';
+  documentQuality: number | null;
+  structuralConfidence: number | null;
+  sourceCoverage: {
+    status: 'INCOMPLETE' | 'COMPLETE';
+    meaningfulSourceCount: number;
+    accountedSourceCount: number;
+    unprocessedSourceCount: number;
+    ratio: number;
+  };
+  reconciliations: ParsedResumeRuntimeReconciliation[];
+  diagnostics: Array<{
+    code: string;
+    severity: 'INFO' | 'WARNING' | 'ERROR';
+    reviewRequired: boolean;
+  }>;
+  privateSourceCount: number;
+  privateContentPersisted: false;
+}
+
 export interface ParsedResumeProposal {
   schemaVersion: string;
   resumeVersionId: string;
@@ -87,6 +121,7 @@ export interface ParsedResumeProposal {
   skills: unknown[];
   projects: unknown[];
   certifications: unknown[];
+  awards?: unknown[];
   languages: unknown[];
   links: unknown[];
   locations: unknown[];
@@ -104,6 +139,7 @@ export interface ParsedResumeProposal {
     status: 'COMPLETE' | 'PARTIAL' | 'NONE';
     sections: ParsedResumeCoverageSection[];
   };
+  runtimeV2?: ParsedResumeRuntimeV2;
 }
 
 export interface CandidateResumeReviewResponse {
