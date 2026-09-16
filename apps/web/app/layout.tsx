@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import CareerSectionControls from './career/career-section-controls';
 import './globals.css';
 import './account-workflows.css';
 import './team-workflows.css';
 import './career-passport.css';
+import './career-section-controls.css';
 
 export const metadata: Metadata = {
   title: 'Talent Network',
@@ -12,7 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <CareerSectionControls />
+      </body>
     </html>
   );
 }
