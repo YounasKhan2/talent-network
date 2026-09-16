@@ -10,7 +10,7 @@ import {
 } from '@talent-network/resume-extraction';
 import { createLogger } from '@talent-network/observability';
 import {
-  LocalDeterministicResumeParser,
+  GroundedResumeParser,
   RESUME_PARSE_QUEUE,
   type ResumeParseJobData,
 } from '@talent-network/resume-parsing';
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
         ...(env.OCR_HTTP_TOKEN ? { bearerToken: env.OCR_HTTP_TOKEN } : {}),
       })
     : null;
-  const resumeParser = new LocalDeterministicResumeParser();
+  const resumeParser = new GroundedResumeParser();
 
   await redis.ping();
   const scannerVersion = await scanner.getVersion();
