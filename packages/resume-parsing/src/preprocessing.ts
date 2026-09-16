@@ -107,6 +107,8 @@ const SECTION_ALIASES: ReadonlyArray<readonly [ResumeSectionKind, readonly strin
 ];
 
 const YEAR_RANGE_PATTERN = /^(?:19|20)\d{2}\s*[-–—]\s*(?:19|20)\d{2}$/;
+const BARE_URL_PATTERN =
+  /(?:www\.)?(?:linkedin\.com\/[A-Za-z0-9_./-]+|github\.com\/[A-Za-z0-9_.-]+|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:com|org|net|io|me|dev|app|ai|co|pk)(?:\/[A-Za-z0-9_./?=&%#~-]*)?)/gi;
 
 export function preprocessResumeDocument(
   document: ResumePreprocessingDocumentInput,
@@ -218,10 +220,11 @@ export function detectDeterministicCandidates(
   for (const fragment of fragments) {
     collectMatches(fragment, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, 'EMAIL', detections);
     collectMatches(fragment, /https?:\/\/[^\s)\]}>]+/gi, 'URL', detections);
+    collectBareUrlMatches(fragment, detections);
     collectPhoneMatches(fragment, detections);
   }
 
-  return detections;
+  return deduplicateDetections(detections);
 }
 
 function flattenSourceFragments(
@@ -304,6 +307,31 @@ function collectMatches(
   }
 }
 
+function collectBareUrlMatches(
+  fragment: ResumeSourceFragment,
+  output: ResumeCandidateDetection[],
+): void {
+  for (const match of fragment.text.matchAll(BARE_URL_PATTERN)) {
+    const index = match.index;
+    if (index === undefined || !match[0]) continue;
+
+    const prefix = fragment.text.slice(Math.max(0, index - 8), index);
+    if (/https?:\/\/$/i.test(prefix)) continue;
+    if (index > 0 && fragment.text[index - 1] === '@') continue;
+
+    output.push({
+      kind: 'URL',
+      value: match[0],
+      pageNumber: fragment.pageNumber,
+      blockIndex: fragment.blockIndex,
+      sourceRange: {
+        start: fragment.sourceRange.start + index,
+        end: fragment.sourceRange.start + index + match[0].length,
+      },
+    });
+  }
+}
+
 function collectPhoneMatches(
   fragment: ResumeSourceFragment,
   output: ResumeCandidateDetection[],
@@ -334,6 +362,24 @@ function collectPhoneMatches(
       },
     });
   }
+}
+
+function deduplicateDetections(
+  detections: ResumeCandidateDetection[],
+): ResumeCandidateDetection[] {
+  const seen = new Set<string>();
+  return detections.filter((detection) => {
+    const key = [
+      detection.kind,
+      detection.pageNumber ?? 'null',
+      detection.blockIndex,
+      detection.sourceRange.start,
+      detection.sourceRange.end,
+    ].join(':');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function createSection(
