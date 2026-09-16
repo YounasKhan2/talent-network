@@ -11,6 +11,9 @@
     "lint": "eslint src --max-warnings=0",
     "test": "tsx --test src/*.test.ts"
   },
+  "dependencies": {
+    "@talent-network/contracts": "workspace:*"
+  },
   "devDependencies": {
     "tsx": "^4.20.5",
     "typescript": "catalog:"
