@@ -40,6 +40,22 @@ export interface ParsedClaim<T = unknown> {
   warnings: string[];
 }
 
+export interface ParsedResumeCoverageSection {
+  key:
+    | 'IDENTITY'
+    | 'SUMMARY'
+    | 'EXPERIENCE'
+    | 'EDUCATION'
+    | 'SKILLS'
+    | 'PROJECTS'
+    | 'CERTIFICATIONS'
+    | 'LANGUAGES'
+    | 'LINKS';
+  sourcePresent: boolean;
+  detectedCount: number;
+  status: 'NOT_PRESENT' | 'DETECTED' | 'MISSED';
+}
+
 export interface ParsedResumeProposal {
   schemaVersion: string;
   resumeVersionId: string;
@@ -73,6 +89,13 @@ export interface ParsedResumeProposal {
     overall: number;
     lowConfidenceClaimCount: number;
     totalClaimCount: number;
+  };
+  coverageSummary?: {
+    ratio: number;
+    coveredSectionCount: number;
+    sourceSectionCount: number;
+    status: 'COMPLETE' | 'PARTIAL' | 'NONE';
+    sections: ParsedResumeCoverageSection[];
   };
 }
 
