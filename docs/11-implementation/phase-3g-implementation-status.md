@@ -7,9 +7,9 @@ This file is the live implementation checkpoint for Phase 3G while the architect
 ```text
 3G-A Contracts + benchmark vocabulary         ✅ VERIFIED
 3G-B Layout-aware DocumentGraph               ✅ VERIFIED
-3G-C Structural section/record detection      🟡 FUNCTIONALLY GREEN / FORMAT CLEANUP PENDING
-3G-D Source Ledger + reconciliation           🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
-3G-E Core typed extractors V2                 ⬜ NOT STARTED
+3G-C Structural section/record detection      ✅ VERIFIED
+3G-D Source Ledger + reconciliation           ✅ VERIFIED
+3G-E Core typed extractors V2                 🟡 IMPLEMENTED / AWAITING LOCAL VERIFICATION
 3G-F Extensions + open-world fallback         ⬜ NOT STARTED
 3G-G Semantic recovery capability gate        ⬜ NOT STARTED
 3G-H Candidate Review UX V2                   ⬜ NOT STARTED
@@ -42,7 +42,7 @@ Verified locally on 2026-09-16:
 
 ### 3G-C
 
-Functionally green locally on 2026-09-16:
+Verified locally on 2026-09-16:
 
 - contracts lint/typecheck/build passed
 - resume-parsing lint/typecheck/build passed
@@ -51,54 +51,65 @@ Functionally green locally on 2026-09-16:
 - multi-record date-anchor grouping passed
 - table-row record detection passed
 - list-only and ambiguous-prose preservation passed
-- `pnpm format` changed only `packages/resume-parsing/src/structural-detection.test.ts`
+- formatting cleanup was committed and the working tree was clean
 
-3G-C remains short of `VERIFIED` until that formatting-only change is committed/pushed and the working tree is clean.
+### 3G-D
 
-## 3G-D implementation scope
+Verified locally on 2026-09-16 after the `exactOptionalPropertyTypes` correction:
 
-3G-D introduces the Source Ledger and record reconciliation engine over `ResumeStructuralDocumentV1`.
+- contracts lint/typecheck/build passed
+- resume-parsing lint/typecheck/build passed
+- 47/47 resume-parsing tests passed
+- Source Ledger source-preservation tests passed
+- mapped/partial/unmapped reconciliation tests passed
+- intentional-ignore reason enforcement passed
+- invalid mapping decisions fail closed
+- formatting produced no remaining changes and the working tree was clean
 
-The stage is responsible for proving what happened to every meaningful structural source unit before typed extraction is allowed to claim complete coverage.
+## 3G-E implementation scope
 
-It adds:
+3G-E introduces deterministic core typed extractors over `DocumentGraph V1` plus `ResumeStructuralDocumentV1`.
 
-- one ledger entry for every structural section
-- one ledger entry for every structural record
-- ledger entries for unsectioned meaningful nodes
-- shared taxonomy classification on section/record ledger entries
-- default `PRIVATE_ONLY` handling for References
-- explicit mapping decisions for `MAPPED`, `PARTIALLY_MAPPED`, `UNMAPPED`, `PRIVATE_ONLY`, and `INTENTIONALLY_IGNORED`
-- fail-closed validation for impossible or malformed mapping decisions
-- source-coverage calculation that excludes section containers from double counting
-- complete/incomplete coverage based on unresolved meaningful records/nodes
-- per-section record reconciliation counts
-- separate source-accounting completeness from semantic record coverage
-- diagnostics for unmapped sections, unmapped records, partial mappings, and private third-party data
+It does not replace the production parser yet. Runtime cutover remains a later Phase 3G integration/closure concern.
 
-### 3G-D invariants
+The stage adds:
 
-```text
-UNMAPPED != UNPROCESSED
-```
+- evidence-grounded Contact Information extraction from preserved preamble nodes
+- Professional Summary extraction from structural summary records
+- Work Experience extraction per structural record
+- Education extraction per structural record
+- Skills extraction per structural record
+- Certification extraction including preserved table-cell records
+- Awards extraction as a first-class V2 core result
+- explicit Source Ledger decisions for every handled core record/node
+- `MAPPED`, `PARTIALLY_MAPPED`, and `UNMAPPED` outcomes based on what can actually be proven
+- fail-closed source-identity validation between the graph and structural document
+- no external provider and no new third-party parsing dependency
 
-An `UNMAPPED` source is still accounted for because the system explicitly preserved and surfaced it. An `UNPROCESSED` source prevents complete coverage.
-
-```text
-References
-→ PRIVATE_ONLY by default
-→ accounted for
-→ not treated as mapped Career Passport content
-```
+### 3G-E invariants
 
 ```text
-INTENTIONALLY_IGNORED
-→ requires an explicit reason code
+structural record
+→ typed claim only when source evidence exists
 ```
 
-### 3G-D acceptance gate
+```text
+ambiguous core record
+→ PARTIALLY_MAPPED or UNMAPPED
+→ never invented completion
+```
 
-3G-D is verified only after:
+```text
+3G-E output
+!=
+authoritative Career Passport state
+```
+
+Candidate approval remains required before Resume Intelligence can create an authoritative Career Passport version.
+
+### 3G-E acceptance gate
+
+3G-E is verified only after:
 
 ```text
 contracts lint                         PASS
