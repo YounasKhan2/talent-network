@@ -96,7 +96,7 @@ function input(): ResumeParseInput {
     processingPipelineVersion: 'resume-pipeline-v1',
     sourceDocumentSchemaVersion: 'resume-document-v1',
     preprocessedDocument: {
-      preprocessingPolicyVersion: 'resume-preprocess-v1',
+      preprocessingPolicyVersion: 'resume-preprocess-v2',
       sourceDocumentSchemaVersion: 'resume-document-v1',
       resumeVersionId: 'resume-version-id',
       sections: [
