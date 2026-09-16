@@ -133,13 +133,18 @@ void test('parser v5 preserves recognized and unknown headed sections without tr
     result.parsedResume.additionalSections?.map((section) => section.heading.value),
     ['PUBLICATIONS', 'INDUSTRY ACTIVITIES'],
   );
-  assert.equal(result.parsedResume.additionalSections?.[0]?.entries[0]?.value, 'Reliable Multi-Tenant Systems, 2026');
+  assert.equal(
+    result.parsedResume.additionalSections?.[0]?.entries[0]?.value,
+    'Reliable Multi-Tenant Systems, 2026',
+  );
   assert.equal(
     result.parsedResume.additionalSections?.[1]?.entries[0]?.value,
     'Mentored founders on secure SaaS architecture',
   );
   assert.equal(
-    result.parsedResume.additionalSections?.some((section) => section.heading.value === 'ALEX MORGAN'),
+    result.parsedResume.additionalSections?.some(
+      (section) => section.heading.value === 'ALEX MORGAN',
+    ),
     false,
   );
 

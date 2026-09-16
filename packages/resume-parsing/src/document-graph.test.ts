@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  buildResumeDocumentGraph,
-  type ResumeDocumentGraphSource,
-} from './document-graph.js';
+import { buildResumeDocumentGraph, type ResumeDocumentGraphSource } from './document-graph.js';
 
 void test('PDF graph preserves real pages, geometry, source ranges, order, and safe annotation links', () => {
   const graph = buildResumeDocumentGraph({
@@ -53,7 +50,10 @@ void test('DOCX graph preserves headings, grouped lists, grouped tables, cells, 
   });
 
   assert.deepEqual(graph.pageIds, []);
-  assert.equal(graph.nodes.some((node) => node.kind === 'PAGE'), false);
+  assert.equal(
+    graph.nodes.some((node) => node.kind === 'PAGE'),
+    false,
+  );
   assert.equal(
     graph.nodes.find((node) => node.kind === 'HEADING')?.text,
     'Professional Experience',

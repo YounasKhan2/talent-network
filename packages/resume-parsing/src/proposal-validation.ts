@@ -53,23 +53,13 @@ export function validateResumeProposal(
   let evidenceCount = 0;
 
   for (const [path, claim] of claims) {
-    evidenceCount += validateClaim(
-      path,
-      claim,
-      preprocessedDocument,
-      expectedSourceExtractionId,
-    );
+    evidenceCount += validateClaim(path, claim, preprocessedDocument, expectedSourceExtractionId);
   }
 
   // Additional sections are intentionally excluded from confidence arithmetic until their
   // semantics are classified. They still obey the exact same source-evidence requirements.
   for (const [path, claim] of collectPreservedSectionClaims(parsedResume)) {
-    evidenceCount += validateClaim(
-      path,
-      claim,
-      preprocessedDocument,
-      expectedSourceExtractionId,
-    );
+    evidenceCount += validateClaim(path, claim, preprocessedDocument, expectedSourceExtractionId);
   }
 
   const confidenceSummary = deriveConfidenceSummary(claims.map(([, claim]) => claim));
