@@ -33,9 +33,9 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           <span className={styles.kicker}>Review V2</span>
           <h3>What the system understood</h3>
           <p>
-            Claim confidence, source accounting, extraction quality, and structural confidence are
-            independent signals. A strong claim score does not prove the entire resume was
-            understood.
+            Claim confidence, detected-record accounting, extraction quality, and structural
+            confidence are independent signals. A strong claim score or 100% record accounting does
+            not prove every source record was discovered correctly.
           </p>
         </div>
         <span className={styles.parserBadge}>{parserName ?? 'Parser pending'}</span>
@@ -48,7 +48,7 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           detail={`${parsed.confidenceSummary.totalClaimCount} grounded claims · ${parsed.confidenceSummary.lowConfidenceClaimCount} low confidence`}
         />
         <QualityMetric
-          label="Source accounting"
+          label="Detected-record accounting"
           value={
             sourceCoverageRatio === null
               ? 'Not reported'
@@ -56,10 +56,10 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           }
           detail={
             runtime
-              ? `${runtime.sourceCoverage.accountedSourceCount} of ${runtime.sourceCoverage.meaningfulSourceCount} meaningful source items accounted · ${records.mapped} mapped · ${records.partial} partial · ${records.unmapped} unmapped · ${records.privateOnly} private`
+              ? `${runtime.sourceCoverage.accountedSourceCount} of ${runtime.sourceCoverage.meaningfulSourceCount} structurally detected meaningful records accounted · ${records.mapped} mapped · ${records.partial} partial · ${records.unmapped} unmapped · ${records.privateOnly} private`
               : coverage
                 ? `${coverage.coveredSectionCount} of ${coverage.sourceSectionCount} source sections detected by the legacy proposal`
-                : 'This proposal does not expose source-accounting telemetry.'
+                : 'This proposal does not expose record-accounting telemetry.'
           }
         />
         <QualityMetric
@@ -84,12 +84,25 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
         />
       </div>
 
+      {runtime ? (
+        <div className={styles.runtimeNotice}>
+          <strong>How to read record accounting</strong>
+          <p>
+            100% means every meaningful record that V2 structurally detected received an explicit
+            mapped, partial, unmapped, private, or intentionally ignored decision. It is not a claim
+            that structural detection found every record in the original document. Structural
+            quality, section counts, reconciliation, and candidate review must be considered
+            together.
+          </p>
+        </div>
+      ) : null}
+
       {coverage ? (
         <div className={styles.coverageArea}>
           <div className={styles.subheading}>
             <div>
-              <span className={styles.kicker}>Section coverage</span>
-              <h4>Detected and missed sections</h4>
+              <span className={styles.kicker}>Section mapping</span>
+              <h4>Source sections with mapped output</h4>
             </div>
             <strong
               className={coverage.status === 'COMPLETE' ? styles.complete : styles.needsReview}
@@ -99,17 +112,17 @@ export function ReviewV2Insights({ parsed, parserName }: ReviewV2InsightsProps) 
           </div>
           <div className={styles.coverageColumns}>
             <CoverageList
-              empty="No source sections are currently reported as detected."
+              empty="No source sections currently have mapped proposal output."
               items={detectedSections.map((section) => ({
                 key: section.key,
-                meta: `${section.detectedCount} detected`,
+                meta: `${section.detectedCount} mapped record${section.detectedCount === 1 ? '' : 's'}`,
               }))}
-              label="Detected"
+              label="Mapped"
             />
             <CoverageList
-              empty="No source sections are currently reported as missed."
+              empty="No source sections are currently reported without mapped proposal output."
               items={missedSections.map((section) => ({ key: section.key, meta: 'Needs review' }))}
-              label="Missed"
+              label="Detected but unmapped"
               warning
             />
           </div>
