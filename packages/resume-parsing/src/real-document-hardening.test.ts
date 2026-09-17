@@ -147,9 +147,9 @@ function graphWithParagraphs(
 ): ResumeDocumentGraphV1 {
   let cursor = 0;
   const nodes = rows.map(([id, text], index): DocumentGraphNode => {
-    const startOffset = cursor;
-    const endOffset = startOffset + text.length;
-    cursor = endOffset + 1;
+    const start = cursor;
+    const end = start + text.length;
+    cursor = end + 1;
     return {
       id,
       kind: 'PARAGRAPH',
@@ -158,7 +158,7 @@ function graphWithParagraphs(
       parentId: 'page-1',
       childIds: [],
       readingOrder: index + 1,
-      sourceRange: { startOffset, endOffset },
+      sourceRange: { start, end },
     };
   });
 
