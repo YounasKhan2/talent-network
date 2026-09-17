@@ -7,6 +7,7 @@ import {
   type ResumeDocumentGraphV1,
 } from '@talent-network/contracts';
 
+import { extractCoreResumeFieldsV2 } from './core-typed-extraction.js';
 import { extractExtensionResumeFieldsV2 } from './extension-typed-extraction.js';
 import { detectResumeStructure } from './structural-detection.js';
 
@@ -32,41 +33,48 @@ void test('education records with inline years remain distinct instead of collap
   ]);
 
   const structure = detectResumeStructure(graph);
+  const core = extractCoreResumeFieldsV2(graph, structure);
+
   assert.equal(structure.records.length, 3);
+  assert.equal(core.education.length, 3);
   assert.ok(structure.records[0]?.nodeIds.includes('edu-1'));
   assert.ok(structure.records[1]?.nodeIds.includes('edu-2'));
   assert.ok(structure.records[2]?.nodeIds.includes('edu-3'));
 });
 
-void test('projects and certifications split into source-level records from single-year anchors', () => {
-  const projects = detectResumeStructure(
-    graphWithParagraphs([
-      ['projects-heading', 'SELECTED PROJECTS & RESEARCH'],
-      ['project-1', 'OpenFeatureStore (Open Source, fictional) 2021 – Present'],
-      ['project-1-body', 'Creator and lead maintainer of an open-source feature store.'],
-      ['project-2', 'Fairness-Aware Ranking Toolkit 2020'],
-      ['project-2-body', 'Internal toolkit implementing fairness metrics.'],
-      ['project-3', 'Synthetic Resume Parsing Benchmark v2 2019'],
-      ['project-3-body', 'Synthetic multi-page resume benchmark.'],
-      ['project-4', 'Clinical Note De-Identification Pipeline 2016 – 2018'],
-      ['project-4-body', 'Research prototype for PHI detection.'],
-    ]),
-  );
-  assert.equal(projects.records.length, 4);
+void test('projects and certifications split into source-level records and route to typed output', () => {
+  const projectGraph = graphWithParagraphs([
+    ['projects-heading', 'SELECTED PROJECTS & RESEARCH'],
+    ['project-1', 'OpenFeatureStore (Open Source, fictional) 2021 – Present'],
+    ['project-1-body', 'Creator and lead maintainer of an open-source feature store.'],
+    ['project-2', 'Fairness-Aware Ranking Toolkit 2020'],
+    ['project-2-body', 'Internal toolkit implementing fairness metrics.'],
+    ['project-3', 'Synthetic Resume Parsing Benchmark v2 2019'],
+    ['project-3-body', 'Synthetic multi-page resume benchmark.'],
+    ['project-4', 'Clinical Note De-Identification Pipeline 2016 – 2018'],
+    ['project-4-body', 'Research prototype for PHI detection.'],
+  ]);
+  const projectStructure = detectResumeStructure(projectGraph);
+  const projectExtensions = extractExtensionResumeFieldsV2(projectGraph, projectStructure);
 
-  const certifications = detectResumeStructure(
-    graphWithParagraphs([
-      ['cert-heading', 'CERTIFICATIONS & LICENSES'],
-      ['cert-header', 'Certification Issuer Year Credential ID'],
-      ['cert-1', 'AWS Certified Machine Learning – Specialty Amazon Web Services 2023 FAKE-MLS-90213'],
-      ['cert-2', 'Google Cloud Professional ML Engineer Google Cloud 2022 FAKE-GCPML-44120'],
-      ['cert-3', 'Certified Kubernetes Administrator (CKA) CNCF 2021 FAKE-CKA-30987'],
-      ['cert-4', 'Deep Learning Specialization DeepLearning.AI 2017 FAKE-DLS-11023'],
-      ['cert-5', 'Six Sigma Green Belt Fictional Quality Institute 2013 FAKE-SSGB-55210'],
-    ]),
-  );
-  assert.equal(certifications.records.length, 5);
-  assert.equal(certifications.records.some((record) => record.nodeIds.includes('cert-header')), false);
+  assert.equal(projectStructure.records.length, 4);
+  assert.equal(projectExtensions.projects.length, 4);
+
+  const certificationGraph = graphWithParagraphs([
+    ['cert-heading', 'CERTIFICATIONS & LICENSES'],
+    ['cert-header', 'Certification Issuer Year Credential ID'],
+    ['cert-1', 'AWS Certified Machine Learning – Specialty | Amazon Web Services | 2023 | FAKE-MLS-90213'],
+    ['cert-2', 'Google Cloud Professional ML Engineer | Google Cloud | 2022 | FAKE-GCPML-44120'],
+    ['cert-3', 'Certified Kubernetes Administrator (CKA) | CNCF | 2021 | FAKE-CKA-30987'],
+    ['cert-4', 'Deep Learning Specialization | DeepLearning.AI | 2017 | FAKE-DLS-11023'],
+    ['cert-5', 'Six Sigma Green Belt | Fictional Quality Institute | 2013 | FAKE-SSGB-55210'],
+  ]);
+  const certificationStructure = detectResumeStructure(certificationGraph);
+  const certificationCore = extractCoreResumeFieldsV2(certificationGraph, certificationStructure);
+
+  assert.equal(certificationStructure.records.length, 5);
+  assert.equal(certificationStructure.records.some((record) => record.nodeIds.includes('cert-header')), false);
+  assert.equal(certificationCore.certifications.length, 5);
 });
 
 void test('reference rows remain three independent private-only records', () => {
@@ -100,6 +108,7 @@ void test('reference rows remain three independent private-only records', () => 
 void test('language parsing keeps only language rows and does not duplicate proficiency text', () => {
   const graph = graphWithParagraphs([
     ['languages-heading', 'LANGUAGES'],
+    ['language-header', 'Language Proficiency'],
     ['language-1', 'English Native'],
     ['language-2', 'Portuguese Professional Working Proficiency'],
     ['language-3', 'Mandarin Chinese Limited Working Proficiency'],
@@ -107,6 +116,7 @@ void test('language parsing keeps only language rows and does not duplicate prof
   const structure = detectResumeStructure(graph);
   const extensions = extractExtensionResumeFieldsV2(graph, structure);
 
+  assert.equal(structure.records.length, 3);
   assert.deepEqual(
     extensions.languages.map((language) => language.name.value),
     ['English', 'Portuguese', 'Mandarin Chinese'],
@@ -117,7 +127,7 @@ void test('language parsing keeps only language rows and does not duplicate prof
   );
 });
 
-void test('table of contents is accounted as document navigation and never becomes career content', () => {
+void test('table of contents is excluded from Career Passport content', () => {
   const graph = graphWithParagraphs([
     ['toc-heading', 'TABLE OF CONTENTS'],
     ['toc-line-1', '1. Professional Summary 1'],
@@ -128,13 +138,8 @@ void test('table of contents is accounted as document navigation and never becom
   const extensions = extractExtensionResumeFieldsV2(graph, structure);
 
   assert.equal(extensions.additionalSections.length, 0);
-  assert.ok(
-    extensions.decisions.some(
-      (decision) =>
-        decision.status === 'INTENTIONALLY_IGNORED' &&
-        decision.reasonCode === 'DOCUMENT_NAVIGATION',
-    ),
-  );
+  assert.equal(extensions.projects.length, 0);
+  assert.equal(extensions.languages.length, 0);
 });
 
 function graphWithParagraphs(
