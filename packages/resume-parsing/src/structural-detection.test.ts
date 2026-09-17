@@ -252,7 +252,7 @@ function tableWithRows(
     parentId: 'page-1',
     childIds: rows.map((_, index) => `${id}-row-${index + 1}`),
     readingOrder,
-    metadata: { fixtureRows: rows },
+    metadata: { fixtureRowsJson: JSON.stringify(rows) },
   };
 }
 
@@ -270,9 +270,14 @@ function syntheticChildren(parent: DocumentGraphNode): DocumentGraphNode[] {
   }
 
   if (parent.kind === 'TABLE') {
-    const fixtureRows = Array.isArray(parent.metadata?.fixtureRows)
-      ? (parent.metadata.fixtureRows as string[][])
-      : parent.childIds.map((_, rowIndex) => [`Cell ${rowIndex + 1}.1`, `Cell ${rowIndex + 1}.2`]);
+    const rawFixtureRows = parent.metadata?.fixtureRowsJson;
+    const fixtureRows =
+      typeof rawFixtureRows === 'string'
+        ? (JSON.parse(rawFixtureRows) as string[][])
+        : parent.childIds.map((_, rowIndex) => [
+            `Cell ${rowIndex + 1}.1`,
+            `Cell ${rowIndex + 1}.2`,
+          ]);
     return parent.childIds.flatMap((rowId, rowIndex) => {
       const rowValues = fixtureRows[rowIndex] ?? [];
       const cellIds = rowValues.map((_, cellIndex) => `${rowId}-cell-${cellIndex + 1}`);
