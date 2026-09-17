@@ -91,7 +91,7 @@ export function detectResumeStructure(graph: ResumeDocumentGraphV1): ResumeStruc
     };
     sections.push(section);
 
-    if (heading.confidence < 0.9) {
+    if (heading.confidence < 0.9 && !isDocumentNavigationHeading(section.headingText)) {
       diagnostics.push({
         code: 'SECTION_BOUNDARY_UNCERTAIN',
         severity: 'WARNING',
@@ -175,12 +175,29 @@ function detectHeadingBoundaries(units: readonly StructuralUnit[]): DetectedHead
       continue;
     }
 
+    if (isDocumentNavigationHeading(text)) {
+      headings.push({ unitIndex, confidence: 1 });
+      hasTrustedSection = true;
+      continue;
+    }
+
     if (hasTrustedSection && looksLikeUnknownHeading(text)) {
       headings.push({ unitIndex, confidence: 0.74 });
     }
   }
 
   return headings;
+}
+
+function isDocumentNavigationHeading(text: string | null): boolean {
+  if (!text) return false;
+  const normalized = text
+    .trim()
+    .toLocaleLowerCase('en-US')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return normalized === 'table of contents' || normalized === 'contents';
 }
 
 function looksLikeUnknownHeading(text: string): boolean {
@@ -199,6 +216,10 @@ function detectSectionRecords(
   units: readonly StructuralUnit[],
   nodeById: ReadonlyMap<string, DocumentGraphNode>,
 ): { records: ResumeStructuralRecord[]; diagnostics: ResumeIntelligenceDiagnostic[] } {
+  if (isDocumentNavigationHeading(section.headingText)) {
+    return { records: [], diagnostics: [] };
+  }
+
   const typeKey = classifyCareerSectionHeading(section.headingText ?? '').typeKey;
   const tableRecords = recordsFromTables(section, units, nodeById);
   if (tableRecords.length > 0) return { records: tableRecords, diagnostics: [] };
@@ -355,7 +376,11 @@ function dateAnchorIndexes(
       SINGLE_YEAR_PATTERN.test(text) &&
       !isBulletText(text) &&
       text.length <= 220;
-    if (!hasDateRange && !hasEligibleSingleYear && !(/\|/.test(text) && SINGLE_YEAR_PATTERN.test(text))) {
+    if (
+      !hasDateRange &&
+      !hasEligibleSingleYear &&
+      !(/\|/.test(text) && SINGLE_YEAR_PATTERN.test(text))
+    ) {
       continue;
     }
 
@@ -394,7 +419,11 @@ function referenceAnchorIndexes(units: readonly StructuralUnit[]): number[] {
     unit.node.kind === 'PARAGRAPH' && EMAIL_PATTERN.test(unit.node.text?.trim() ?? '') ? [index] : [],
   );
   if (emailIndexes.length <= 1) return [];
-  return [0, ...emailIndexes.slice(1)];
+  const firstContentIndex = units.findIndex((unit) => {
+    const text = unit.node.text?.trim() ?? '';
+    return text.length > 0 && !isLikelyInlineHeader(text);
+  });
+  return [firstContentIndex >= 0 ? firstContentIndex : 0, ...emailIndexes.slice(1)];
 }
 
 function bulletAnchorIndexes(units: readonly StructuralUnit[]): number[] {
