@@ -330,28 +330,26 @@ function parseLanguages(context: RecordContext, sourceExtractionId: string): Par
       const cleaned = value.trim();
       if (!cleaned || isLanguageHeader(cleaned)) continue;
 
-      const rowMatch = cleaned.match(LANGUAGE_ROW_PATTERN);
-      if (rowMatch?.[1] && rowMatch[2]) {
-        const nameText = rowMatch[1].trim();
-        if (!looksLikeLanguageName(nameText)) continue;
-        const name = claim(nameText, line, sourceExtractionId, 0.94);
-        const proficiency = claim(rowMatch[2].trim(), line, sourceExtractionId, 0.9);
-        if (name) output.push({ name, ...(proficiency ? { proficiency } : {}) });
+      const explicitParts = cleaned.split(/\s*[-–—:|]\s*/).filter(Boolean);
+      if (explicitParts.length > 1) {
+        const nameText = explicitParts[0]?.trim();
+        const proficiencyText = explicitParts.slice(1).join(' ').trim();
+        const proficiencyMatch = proficiencyText.match(LANGUAGE_PROFICIENCY_PATTERN)?.[0];
+        if (nameText && looksLikeLanguageName(nameText) && proficiencyMatch) {
+          const name = claim(nameText, line, sourceExtractionId, 0.94);
+          const proficiency = claim(proficiencyMatch, line, sourceExtractionId, 0.9);
+          if (name) output.push({ name, ...(proficiency ? { proficiency } : {}) });
+        }
         continue;
       }
 
-      const split = cleaned.split(/\s*[-–—:|]\s*/).filter(Boolean);
-      const nameText = split[0]?.trim();
-      if (!nameText || !looksLikeLanguageName(nameText)) continue;
-      const proficiencyText = split.slice(1).join(' ').trim();
-      const proficiencyMatch = proficiencyText.match(LANGUAGE_PROFICIENCY_PATTERN)?.[0];
-      if (!proficiencyMatch && split.length === 1) continue;
-      const name = claim(nameText, line, sourceExtractionId, 0.9);
-      if (!name) continue;
-      const proficiency = proficiencyMatch
-        ? claim(proficiencyMatch, line, sourceExtractionId, 0.84)
-        : undefined;
-      output.push({ name, ...(proficiency ? { proficiency } : {}) });
+      const rowMatch = cleaned.match(LANGUAGE_ROW_PATTERN);
+      if (!rowMatch?.[1] || !rowMatch[2]) continue;
+      const nameText = rowMatch[1].trim();
+      if (!looksLikeLanguageName(nameText)) continue;
+      const name = claim(nameText, line, sourceExtractionId, 0.94);
+      const proficiency = claim(rowMatch[2].trim(), line, sourceExtractionId, 0.9);
+      if (name) output.push({ name, ...(proficiency ? { proficiency } : {}) });
     }
   }
   return dedupeLanguages(output);
