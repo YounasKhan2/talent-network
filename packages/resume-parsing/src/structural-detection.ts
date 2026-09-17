@@ -1,5 +1,6 @@
 import {
   classifyCareerSectionHeading,
+  type CareerPassportSectionTypeKey,
   type DocumentGraphNode,
   type ResumeDocumentGraphV1,
   type ResumeIntelligenceDiagnostic,
@@ -20,8 +21,17 @@ interface DetectedHeading {
 
 const DATE_RANGE_PATTERN =
   /\b(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?(?:19|20)\d{2}\b\s*(?:[-–—]|to)\s*(?:(?:present|current|now)|(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?(?:19|20)\d{2})\b/i;
-
 const SINGLE_YEAR_PATTERN = /\b(?:19|20)\d{2}\b/;
+const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+
+const BULLET_RECORD_TYPES = new Set<CareerPassportSectionTypeKey>([
+  'AWARDS',
+  'PUBLICATIONS',
+  'PATENTS',
+  'PROFESSIONAL_MEMBERSHIPS',
+  'SPEAKING_ENGAGEMENTS',
+  'TEACHING',
+]);
 
 export function detectResumeStructure(graph: ResumeDocumentGraphV1): ResumeStructuralDocumentV1 {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -81,7 +91,7 @@ export function detectResumeStructure(graph: ResumeDocumentGraphV1): ResumeStruc
     };
     sections.push(section);
 
-    if (heading.confidence < 0.9) {
+    if (heading.confidence < 0.9 && !isDocumentNavigationHeading(section.headingText)) {
       diagnostics.push({
         code: 'SECTION_BOUNDARY_UNCERTAIN',
         severity: 'WARNING',
@@ -165,12 +175,29 @@ function detectHeadingBoundaries(units: readonly StructuralUnit[]): DetectedHead
       continue;
     }
 
+    if (isDocumentNavigationHeading(text)) {
+      headings.push({ unitIndex, confidence: 1 });
+      hasTrustedSection = true;
+      continue;
+    }
+
     if (hasTrustedSection && looksLikeUnknownHeading(text)) {
       headings.push({ unitIndex, confidence: 0.74 });
     }
   }
 
   return headings;
+}
+
+function isDocumentNavigationHeading(text: string | null): boolean {
+  if (!text) return false;
+  const normalized = text
+    .trim()
+    .toLocaleLowerCase('en-US')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return normalized === 'table of contents' || normalized === 'contents';
 }
 
 function looksLikeUnknownHeading(text: string): boolean {
@@ -189,6 +216,11 @@ function detectSectionRecords(
   units: readonly StructuralUnit[],
   nodeById: ReadonlyMap<string, DocumentGraphNode>,
 ): { records: ResumeStructuralRecord[]; diagnostics: ResumeIntelligenceDiagnostic[] } {
+  if (isDocumentNavigationHeading(section.headingText)) {
+    return { records: [], diagnostics: [] };
+  }
+
+  const typeKey = classifyCareerSectionHeading(section.headingText ?? '').typeKey;
   const tableRecords = recordsFromTables(section, units, nodeById);
   if (tableRecords.length > 0) return { records: tableRecords, diagnostics: [] };
 
@@ -199,9 +231,24 @@ function detectSectionRecords(
     if (listRecords.length > 0) return { records: listRecords, diagnostics: [] };
   }
 
-  const anchorIndexes = dateAnchorIndexes(units);
+  const referenceAnchors = typeKey === 'REFERENCES' ? referenceAnchorIndexes(units) : [];
+  if (referenceAnchors.length > 1) {
+    return { records: recordsFromAnchors(section, units, referenceAnchors, 0.92), diagnostics: [] };
+  }
+
+  const bulletAnchors = BULLET_RECORD_TYPES.has(typeKey) ? bulletAnchorIndexes(units) : [];
+  if (bulletAnchors.length > 1) {
+    return { records: recordsFromAnchors(section, units, bulletAnchors, 0.9), diagnostics: [] };
+  }
+
+  if (typeKey === 'LANGUAGES') {
+    const languageRecords = recordsFromSimpleLines(section, units);
+    if (languageRecords.length > 1) return { records: languageRecords, diagnostics: [] };
+  }
+
+  const anchorIndexes = dateAnchorIndexes(units, typeKey);
   if (anchorIndexes.length > 0) {
-    return { records: recordsFromAnchors(section, units, anchorIndexes), diagnostics: [] };
+    return { records: recordsFromAnchors(section, units, anchorIndexes, 0.86), diagnostics: [] };
   }
 
   const meaningfulUnits = units.filter((unit) => isMeaningfulRecordUnit(unit.node));
@@ -242,10 +289,12 @@ function recordsFromTables(
     for (const childId of unit.node.childIds) {
       const row = nodeById.get(childId);
       if (!row || row.kind !== 'TABLE_ROW') continue;
+      const nodeIds = collectNodeAndDescendantIds(row.id, nodeById);
+      if (records.length === 0 && isLikelyTableHeader(nodeIds, nodeById)) continue;
       records.push({
         id: `${section.id}-record-${records.length + 1}`,
         sectionId: section.id,
-        nodeIds: collectNodeAndDescendantIds(row.id, nodeById),
+        nodeIds,
         sourceOrder: records.length,
         recordBoundaryConfidence: 1,
       });
@@ -253,6 +302,34 @@ function recordsFromTables(
   }
 
   return records;
+}
+
+function isLikelyTableHeader(
+  nodeIds: readonly string[],
+  nodeById: ReadonlyMap<string, DocumentGraphNode>,
+): boolean {
+  const text = nodeIds
+    .map((id) => nodeById.get(id)?.text?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('en-US');
+  if (!text) return false;
+  const headerTokens = [
+    'name',
+    'title',
+    'company',
+    'email',
+    'phone',
+    'certification',
+    'issuer',
+    'credential',
+    'year',
+    'language',
+    'proficiency',
+    'category',
+    'details',
+  ];
+  return headerTokens.filter((token) => text.includes(token)).length >= 2;
 }
 
 function recordsFromLists(
@@ -279,34 +356,107 @@ function recordsFromLists(
   return records;
 }
 
-function dateAnchorIndexes(units: readonly StructuralUnit[]): number[] {
+function dateAnchorIndexes(
+  units: readonly StructuralUnit[],
+  typeKey: CareerPassportSectionTypeKey,
+): number[] {
   const anchors: number[] = [];
+  const singleYearSections = new Set<CareerPassportSectionTypeKey>([
+    'EDUCATION',
+    'PROJECTS',
+    'CERTIFICATIONS',
+  ]);
 
   for (const [index, unit] of units.entries()) {
     if (unit.node.kind !== 'PARAGRAPH') continue;
     const text = unit.node.text?.trim() ?? '';
-    if (!looksLikeDateBearingRecordLine(text)) continue;
+    const hasDateRange = DATE_RANGE_PATTERN.test(text);
+    const hasEligibleSingleYear =
+      singleYearSections.has(typeKey) &&
+      SINGLE_YEAR_PATTERN.test(text) &&
+      !isBulletText(text) &&
+      text.length <= 220;
+    if (
+      !hasDateRange &&
+      !hasEligibleSingleYear &&
+      !(/\|/.test(text) && SINGLE_YEAR_PATTERN.test(text))
+    ) {
+      continue;
+    }
 
     const previous = units[index - 1];
     const previousText = previous?.node.text?.trim() ?? '';
-    const anchorIndex =
+    const previousMayBeRecordTitle =
+      isMostlyDateLine(text) &&
       previous?.node.kind === 'PARAGRAPH' &&
       previousText &&
       !looksLikeDateBearingRecordLine(previousText) &&
-      !looksLikeLocationLine(previousText)
-        ? index - 1
-        : index;
+      !SINGLE_YEAR_PATTERN.test(previousText) &&
+      !looksLikeLocationLine(previousText) &&
+      !isBulletText(previousText) &&
+      !isLikelyInlineHeader(previousText);
+    const anchorIndex = previousMayBeRecordTitle ? index - 1 : index;
 
-    if (anchors.at(-1) !== anchorIndex) anchors.push(anchorIndex);
+    if (!anchors.includes(anchorIndex)) anchors.push(anchorIndex);
   }
 
-  return anchors;
+  anchors.sort((left, right) => left - right);
+  const firstAnchor = anchors[0];
+  if (firstAnchor !== undefined && firstAnchor > 0) {
+    const firstDataIndex = units.findIndex((unit, index) => {
+      if (index >= firstAnchor) return false;
+      const text = unit.node.text?.trim() ?? '';
+      return isMeaningfulRecordUnit(unit.node) && text.length > 0 && !isLikelyInlineHeader(text);
+    });
+    if (firstDataIndex >= 0) anchors[0] = firstDataIndex;
+  }
+
+  return [...new Set(anchors)].sort((left, right) => left - right);
+}
+
+function referenceAnchorIndexes(units: readonly StructuralUnit[]): number[] {
+  const emailIndexes = units.flatMap((unit, index) =>
+    unit.node.kind === 'PARAGRAPH' && EMAIL_PATTERN.test(unit.node.text?.trim() ?? '') ? [index] : [],
+  );
+  if (emailIndexes.length <= 1) return [];
+  const firstContentIndex = units.findIndex((unit) => {
+    const text = unit.node.text?.trim() ?? '';
+    return text.length > 0 && !isLikelyInlineHeader(text);
+  });
+  return [firstContentIndex >= 0 ? firstContentIndex : 0, ...emailIndexes.slice(1)];
+}
+
+function bulletAnchorIndexes(units: readonly StructuralUnit[]): number[] {
+  return units.flatMap((unit, index) =>
+    unit.node.kind === 'PARAGRAPH' && isBulletText(unit.node.text?.trim() ?? '') ? [index] : [],
+  );
+}
+
+function recordsFromSimpleLines(
+  section: ResumeStructuralSection,
+  units: readonly StructuralUnit[],
+): ResumeStructuralRecord[] {
+  const meaningful = units.filter(
+    (unit) =>
+      unit.node.kind === 'PARAGRAPH' &&
+      (unit.node.text?.trim().length ?? 0) > 0 &&
+      !isLikelyInlineHeader(unit.node.text?.trim() ?? ''),
+  );
+  if (meaningful.length <= 1) return [];
+  return meaningful.map((unit, index) => ({
+    id: `${section.id}-record-${index + 1}`,
+    sectionId: section.id,
+    nodeIds: unit.descendantIds,
+    sourceOrder: index,
+    recordBoundaryConfidence: 0.88,
+  }));
 }
 
 function recordsFromAnchors(
   section: ResumeStructuralSection,
   units: readonly StructuralUnit[],
   anchorIndexes: readonly number[],
+  confidence: number,
 ): ResumeStructuralRecord[] {
   return anchorIndexes.map((anchorIndex, recordIndex) => {
     const nextAnchor = anchorIndexes[recordIndex + 1] ?? units.length;
@@ -316,7 +466,7 @@ function recordsFromAnchors(
       sectionId: section.id,
       nodeIds: recordUnits.flatMap((unit) => unit.descendantIds),
       sourceOrder: recordIndex,
-      recordBoundaryConfidence: 0.86,
+      recordBoundaryConfidence: confidence,
     };
   });
 }
@@ -325,6 +475,37 @@ function looksLikeDateBearingRecordLine(text: string): boolean {
   if (DATE_RANGE_PATTERN.test(text)) return true;
   if (/\|/.test(text) && SINGLE_YEAR_PATTERN.test(text)) return true;
   return false;
+}
+
+function isMostlyDateLine(text: string): boolean {
+  const withoutRange = text.replace(DATE_RANGE_PATTERN, ' ');
+  const withoutYears = withoutRange.replace(/\b(?:19|20)\d{2}\b/g, ' ');
+  return withoutYears.replace(/[\s()[\],.;:/|+-]/g, '').length === 0;
+}
+
+function isLikelyInlineHeader(text: string): boolean {
+  const normalized = text.trim().toLocaleLowerCase('en-US');
+  if (!normalized) return false;
+  const tokens = [
+    'certification',
+    'issuer',
+    'credential',
+    'year',
+    'language',
+    'proficiency',
+    'name',
+    'title',
+    'company',
+    'email',
+    'phone',
+    'category',
+    'details',
+  ];
+  return tokens.filter((token) => normalized.includes(token)).length >= 2;
+}
+
+function isBulletText(text: string): boolean {
+  return /^\s*[•●◦▪*-]\s+/.test(text);
 }
 
 function looksLikeLocationLine(text: string): boolean {

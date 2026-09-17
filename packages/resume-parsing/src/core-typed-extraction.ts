@@ -57,6 +57,7 @@ const ROLE_PATTERN =
   /\b(engineer|developer|architect|manager|director|lead|consultant|specialist|analyst|scientist|designer|administrator|officer|intern|researcher|professor|teacher)\b/i;
 const DEGREE_PATTERN =
   /\b(b\.?s\.?|b\.?sc\.?|bachelor|m\.?s\.?|m\.?sc\.?|master|mba|ph\.?d\.?|doctorate|associate|diploma|certificate)\b/i;
+const INSTITUTION_PATTERN = /\b(university|college|institute|school|academy)\b/i;
 const LOCATION_PATTERN = /^[A-Za-z .'-]+,\s*[A-Za-z .'-]{2,}$/;
 const MONTHS: Record<string, string> = {
   jan: '01',
@@ -219,14 +220,14 @@ function extractRecord(
   }
 
   if (context.typeKey === 'CERTIFICATIONS') {
-    const value = parseCertification(context, sourceExtractionId);
-    return value
+    const result = parseCertification(context, sourceExtractionId);
+    return result
       ? {
-          certification: value,
+          certification: result.value,
           decision: mappedDecision(
             context.record.id,
-            [`certifications[${indexes.certificationIndex}].name`],
-            true,
+            result.paths(indexes.certificationIndex),
+            result.complete,
           ),
         }
       : { decision: unmappedDecision(context.record.id) };
@@ -324,19 +325,27 @@ function parseEducation(
   sourceExtractionId: string,
 ): { value: ParsedEducation; complete: boolean; paths: (index: number) => string[] } | undefined {
   const degreeLine = context.lines.find((line) => DEGREE_PATTERN.test(line.text));
-  const institutionLine = context.lines.find((line) =>
-    /\b(university|college|institute|school|academy)\b/i.test(line.text),
+  const degreeInstitution = degreeLine ? splitDegreeInstitution(stripDate(degreeLine.text)) : undefined;
+  const separateInstitutionLine = context.lines.find(
+    (line) => line !== degreeLine && INSTITUTION_PATTERN.test(line.text),
   );
-  const locationLine = context.lines.find((line) => LOCATION_PATTERN.test(line.text));
+  const institutionLine = degreeInstitution ? degreeLine : separateInstitutionLine;
+  const locationLine = context.lines.find(
+    (line) => line !== degreeLine && line !== separateInstitutionLine && LOCATION_PATTERN.test(line.text),
+  );
   const dateLine = context.lines.find(
     (line) => findDateRange(line.text) || SINGLE_YEAR_PATTERN.test(line.text),
   );
-  const qualification = degreeLine
-    ? claim(stripDate(degreeLine.text), degreeLine, sourceExtractionId, 0.93)
-    : undefined;
-  const institution = institutionLine
-    ? claim(institutionLine.text, institutionLine, sourceExtractionId, 0.93)
-    : undefined;
+  const qualificationText = degreeInstitution?.qualification ?? (degreeLine ? stripDate(degreeLine.text) : null);
+  const institutionText = degreeInstitution?.institution ?? separateInstitutionLine?.text.trim();
+  const qualification =
+    degreeLine && qualificationText
+      ? claim(qualificationText, degreeLine, sourceExtractionId, 0.93)
+      : undefined;
+  const institution =
+    institutionLine && institutionText
+      ? claim(institutionText, institutionLine, sourceExtractionId, 0.93)
+      : undefined;
   const location = locationLine
     ? claim(locationLine.text, locationLine, sourceExtractionId, 0.88)
     : undefined;
@@ -346,7 +355,7 @@ function parseEducation(
     .filter(
       (line) =>
         line !== degreeLine &&
-        line !== institutionLine &&
+        line !== separateInstitutionLine &&
         line !== locationLine &&
         line !== dateLine,
     )
@@ -370,6 +379,21 @@ function parseEducation(
       ...details.map((_, i) => `education[${index}].details[${i}]`),
     ],
   };
+}
+
+function splitDegreeInstitution(
+  value: string,
+): { qualification: string; institution: string } | undefined {
+  const parts = value
+    .split(/\s+[—–-]\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length < 2) return undefined;
+  const qualification = parts[0];
+  const institution = parts.slice(1).join(' — ');
+  return qualification && institution && DEGREE_PATTERN.test(qualification) && INSTITUTION_PATTERN.test(institution)
+    ? { qualification, institution }
+    : undefined;
 }
 
 function parseSkills(context: RecordContext, sourceExtractionId: string): ParsedSkill[] {
@@ -396,33 +420,92 @@ function parseSkills(context: RecordContext, sourceExtractionId: string): Parsed
 function parseCertification(
   context: RecordContext,
   sourceExtractionId: string,
-): ParsedCertification | undefined {
+):
+  | {
+      value: ParsedCertification;
+      complete: boolean;
+      paths: (index: number) => string[];
+    }
+  | undefined {
   const lines = preferredTableCells(context.lines);
   const nameLine = lines.find((line) => !isDateOnly(line.text));
   if (!nameLine) return undefined;
   const name = claim(nameLine.text, nameLine, sourceExtractionId, 0.94);
   if (!name) return undefined;
-  const issuerLine = lines.find((line) => line !== nameLine && !isDateOnly(line.text));
+
   const issuedLine = lines.find((line) => isDateOnly(line.text));
+  const nonDateLines = lines.filter((line) => line !== nameLine && line !== issuedLine);
+  const issuerLine = nonDateLines.find((line) => !looksLikeCredential(line.text));
+  const credentialLine = nonDateLines.find((line) => line !== issuerLine && looksLikeCredential(line.text));
+  const fallbackCredentialLine = credentialLine ?? nonDateLines.find((line) => line !== issuerLine);
+
   const issuer = issuerLine
     ? claim(issuerLine.text, issuerLine, sourceExtractionId, 0.88)
     : undefined;
   const issuedAt = issuedLine
     ? claim(issuedLine.text, issuedLine, sourceExtractionId, 0.86)
     : undefined;
-  return { name, ...(issuer ? { issuer } : {}), ...(issuedAt ? { issuedAt } : {}) };
+  const credentialIdText = fallbackCredentialLine
+    ? extractCredentialId(fallbackCredentialLine.text)
+    : null;
+  const credentialId =
+    fallbackCredentialLine && credentialIdText
+      ? claim(credentialIdText, fallbackCredentialLine, sourceExtractionId, 0.94)
+      : undefined;
+  const expiryText = fallbackCredentialLine ? extractExpiryYear(fallbackCredentialLine.text) : null;
+  const expiresAt =
+    fallbackCredentialLine && expiryText
+      ? claim(expiryText, fallbackCredentialLine, sourceExtractionId, 0.86)
+      : undefined;
+
+  const value: ParsedCertification = {
+    name,
+    ...(issuer ? { issuer } : {}),
+    ...(issuedAt ? { issuedAt } : {}),
+    ...(credentialId ? { credentialId } : {}),
+    ...(expiresAt ? { expiresAt } : {}),
+  };
+
+  return {
+    value,
+    complete: Boolean(name && issuer),
+    paths: (index) => [
+      `certifications[${index}].name`,
+      ...(issuer ? [`certifications[${index}].issuer`] : []),
+      ...(issuedAt ? [`certifications[${index}].issuedAt`] : []),
+      ...(credentialId ? [`certifications[${index}].credentialId`] : []),
+      ...(expiresAt ? [`certifications[${index}].expiresAt`] : []),
+    ],
+  };
+}
+
+function looksLikeCredential(value: string): boolean {
+  return /credential|\b(?:fake|id)[-_:\s]|[-_][A-Z0-9]{3,}/i.test(value.trim());
+}
+
+function extractCredentialId(value: string): string | null {
+  const withoutExpiry = value.replace(/\(?\s*expires?\s+(?:19|20)\d{2}\s*\)?/gi, ' ').trim();
+  const normalized = withoutExpiry
+    .replace(/^credential(?:\s+id)?\s*:?\s*/i, '')
+    .replace(/^id\s*:?\s*/i, '')
+    .trim();
+  return normalized || null;
+}
+
+function extractExpiryYear(value: string): string | null {
+  return value.match(/expires?\s+((?:19|20)\d{2})/i)?.[1] ?? null;
 }
 
 function parseAward(context: RecordContext, sourceExtractionId: string): ParsedAwardV2 | undefined {
   const nameLine = context.lines.find((line) => !isDateOnly(line.text));
   if (!nameLine) return undefined;
-  const name = claim(nameLine.text, nameLine, sourceExtractionId, 0.93);
+  const name = claim(cleanBullet(nameLine.text), nameLine, sourceExtractionId, 0.93);
   if (!name) return undefined;
   const issuedLine = context.lines.find((line) => line !== nameLine && isDateOnly(line.text));
   const issuerLine = context.lines.find(
     (line) => line !== nameLine && line !== issuedLine && !isBullet(line.text),
   );
-  const detailsLine = context.lines.find((line) => isBullet(line.text));
+  const detailsLine = context.lines.find((line) => line !== nameLine && isBullet(line.text));
   const issuer = issuerLine
     ? claim(issuerLine.text, issuerLine, sourceExtractionId, 0.86)
     : undefined;
@@ -670,9 +753,10 @@ function splitRoleCompany(text: string): { role: string; company: string } | und
 
 function stripDate(text: string): string {
   const match = findDateRange(text);
-  return match
-    ? `${text.slice(0, match.start)} ${text.slice(match.end)}`.replace(/\s+/g, ' ').trim()
-    : text.trim();
+  if (match) {
+    return `${text.slice(0, match.start)} ${text.slice(match.end)}`.replace(/\s+/g, ' ').trim();
+  }
+  return text.replace(SINGLE_YEAR_PATTERN, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function mappedDecision(

@@ -1,5 +1,6 @@
 import {
   classifyCareerSectionHeading,
+  normalizeCareerSectionHeading,
   type CareerPassportSectionClassification,
   type CareerPassportSectionTypeKey,
   type DocumentGraphNode,
@@ -52,7 +53,11 @@ type RecordContext = {
 
 const HTTP_URL_PATTERN = /https?:\/\/[^\s)>\]}]+/i;
 const LANGUAGE_PROFICIENCY_PATTERN =
-  /\b(native|bilingual|fluent|professional|professional working|full professional|limited working|conversational|intermediate|basic|elementary|advanced|beginner)\b/i;
+  /\b(native|bilingual|fluent|professional working proficiency|professional working|full professional proficiency|full professional|limited working proficiency|limited working|conversational|intermediate|basic|elementary proficiency|elementary|advanced|beginner)\b/i;
+const LANGUAGE_ROW_PATTERN = new RegExp(
+  `^(.+?)\\s+(${LANGUAGE_PROFICIENCY_PATTERN.source.replace(/^\\b|\\b$/g, '')})$`,
+  'i',
+);
 
 const OPEN_WORLD_PRESERVED_TYPES = new Set<CareerPassportSectionTypeKey>([
   'PORTFOLIO',
@@ -112,6 +117,17 @@ export function extractExtensionResumeFieldsV2(
 
   for (const context of contexts) {
     const typeKey = context.classification.typeKey;
+
+    if (isDocumentNavigationHeading(context.section.headingText ?? '')) {
+      decisions.push({
+        sourceId: context.record.id,
+        status: 'INTENTIONALLY_IGNORED',
+        semanticTypeKey: 'CUSTOM',
+        reasonCode: 'DOCUMENT_NAVIGATION',
+        reviewRequired: false,
+      });
+      continue;
+    }
 
     if (typeKey === 'PROJECTS') {
       const project = parseProject(context, graph.sourceExtractionId);
@@ -228,7 +244,7 @@ export function extractExtensionResumeFieldsV2(
 
   return {
     projects,
-    languages,
+    languages: dedupeLanguages(languages),
     links,
     locations,
     additionalSections,
@@ -245,7 +261,7 @@ function parseProject(
   const nameLine = contentLines[0];
   if (!nameLine) return undefined;
 
-  const nameText = cleanBullet(stripInlineUrl(nameLine.text)).trim();
+  const nameText = stripTrailingProjectDate(cleanBullet(stripInlineUrl(nameLine.text))).trim();
   const name = nameText ? claim(nameText, nameLine, sourceExtractionId, 0.9) : undefined;
   const urlCandidate = contentLines
     .map((line) => ({ line, url: extractUrl(line) }))
@@ -296,17 +312,44 @@ function parseProject(
 
 function parseLanguages(context: RecordContext, sourceExtractionId: string): ParsedLanguage[] {
   const output: ParsedLanguage[] = [];
-  for (const line of context.lines) {
+  const usableLines = context.lines.filter((line) => !isLanguageHeader(line.text));
+
+  if (usableLines.length >= 2) {
+    const proficiencyLine = usableLines.find((line) => isPureProficiency(line.text));
+    const nameLine = usableLines.find((line) => line !== proficiencyLine && looksLikeLanguageName(line.text));
+    if (nameLine && proficiencyLine) {
+      const name = claim(nameLine.text, nameLine, sourceExtractionId, 0.94);
+      const proficiency = claim(proficiencyLine.text, proficiencyLine, sourceExtractionId, 0.9);
+      if (name) output.push({ name, ...(proficiency ? { proficiency } : {}) });
+      return output;
+    }
+  }
+
+  for (const line of usableLines) {
     for (const value of splitListValues(line.text)) {
-      const split = value.split(/\s*[-–—:|]\s*/).filter(Boolean);
+      const cleaned = value.trim();
+      if (!cleaned || isLanguageHeader(cleaned)) continue;
+
+      const rowMatch = cleaned.match(LANGUAGE_ROW_PATTERN);
+      if (rowMatch?.[1] && rowMatch[2]) {
+        const nameText = rowMatch[1].trim();
+        if (!looksLikeLanguageName(nameText)) continue;
+        const name = claim(nameText, line, sourceExtractionId, 0.94);
+        const proficiency = claim(rowMatch[2].trim(), line, sourceExtractionId, 0.9);
+        if (name) output.push({ name, ...(proficiency ? { proficiency } : {}) });
+        continue;
+      }
+
+      const split = cleaned.split(/\s*[-–—:|]\s*/).filter(Boolean);
       const nameText = split[0]?.trim();
-      if (!nameText) continue;
+      if (!nameText || !looksLikeLanguageName(nameText)) continue;
       const proficiencyText = split.slice(1).join(' ').trim();
-      const proficiencyMatch = proficiencyText.match(LANGUAGE_PROFICIENCY_PATTERN);
+      const proficiencyMatch = proficiencyText.match(LANGUAGE_PROFICIENCY_PATTERN)?.[0];
+      if (!proficiencyMatch && split.length === 1) continue;
       const name = claim(nameText, line, sourceExtractionId, 0.9);
       if (!name) continue;
-      const proficiency = proficiencyMatch?.[0]
-        ? claim(proficiencyMatch[0], line, sourceExtractionId, 0.84)
+      const proficiency = proficiencyMatch
+        ? claim(proficiencyMatch, line, sourceExtractionId, 0.84)
         : undefined;
       output.push({ name, ...(proficiency ? { proficiency } : {}) });
     }
@@ -391,8 +434,14 @@ function evidenceLines(
 
   for (const nodeId of nodeIds) visit(nodeId);
 
-  return nodes
-    .filter((node) => typeof node.text === 'string' && node.text.trim().length > 0)
+  const textual = nodes.filter(
+    (node) => typeof node.text === 'string' && node.text.trim().length > 0,
+  );
+  const tableCells = textual.filter((node) => node.kind === 'TABLE_CELL');
+  const preferred = tableCells.length > 0 ? tableCells : textual.filter((node) => node.childIds.length === 0);
+  const selected = preferred.length > 0 ? preferred : textual;
+
+  return selected
     .sort((left, right) => left.readingOrder - right.readingOrder)
     .map((node) => ({ node, text: node.text?.trim() ?? '' }));
 }
@@ -480,12 +529,43 @@ function stripInlineUrl(value: string): string {
   return value.replace(HTTP_URL_PATTERN, '').replace(/\s+/g, ' ').trim();
 }
 
+function stripTrailingProjectDate(value: string): string {
+  return value
+    .replace(/\s+(?:19|20)\d{2}\s*[-–—]\s*(?:present|current|now|(?:19|20)\d{2})\s*$/i, '')
+    .replace(/\s+(?:19|20)\d{2}\s*$/i, '')
+    .trim();
+}
+
 function looksTechnologyList(value: string): boolean {
   return /^(tech(?:nologies)?|stack|tools?)\s*:/i.test(value.trim());
 }
 
 function cleanBullet(value: string): string {
   return value.replace(/^\s*[•●◦▪*-]\s*/, '').trim();
+}
+
+function isLanguageHeader(value: string): boolean {
+  const normalized = value.trim().toLocaleLowerCase('en-US');
+  return normalized === 'language' || normalized === 'languages' || normalized === 'proficiency';
+}
+
+function isPureProficiency(value: string): boolean {
+  const normalized = value.trim();
+  const match = normalized.match(LANGUAGE_PROFICIENCY_PATTERN)?.[0];
+  return Boolean(match && match.length === normalized.length);
+}
+
+function looksLikeLanguageName(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length > 60 || /\d|@|https?:|\//i.test(text)) return false;
+  if (LANGUAGE_PROFICIENCY_PATTERN.test(text)) return false;
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 4 && words.every((word) => /^[A-Za-z][A-Za-z.'-]*$/.test(word));
+}
+
+function isDocumentNavigationHeading(value: string): boolean {
+  const normalized = normalizeCareerSectionHeading(value);
+  return normalized === 'table of contents' || normalized === 'contents';
 }
 
 function dedupeLanguages(values: readonly ParsedLanguage[]): ParsedLanguage[] {

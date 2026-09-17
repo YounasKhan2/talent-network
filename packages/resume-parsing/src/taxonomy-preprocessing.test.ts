@@ -9,6 +9,12 @@ void test('shared taxonomy recognizes title-case extension headings without forc
   assert.equal(classifyResumeSectionHeading('Work Experience'), 'EXPERIENCE');
 });
 
+void test('real-world combined headings route into their typed Career Passport sections', () => {
+  assert.equal(classifyResumeSectionHeading('CORE COMPETENCIES'), 'SKILLS');
+  assert.equal(classifyResumeSectionHeading('CERTIFICATIONS & LICENSES'), 'CERTIFICATIONS');
+  assert.equal(classifyResumeSectionHeading('SELECTED PROJECTS & RESEARCH'), 'PROJECTS');
+});
+
 void test('title-case known extensions remain explicit headed sections for parser v5 preservation', () => {
   const blocks = [
     { text: 'Alex Morgan', sourceRange: { startOffset: 0, endOffset: 11 } },

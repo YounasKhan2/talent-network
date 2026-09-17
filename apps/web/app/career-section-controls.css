@@ -79,6 +79,103 @@
   display: none !important;
 }
 
+/* The individual Passport sections already explain themselves; avoid a second "additional" banner. */
+.career-main > div.career-section-header:has(+ #projects) {
+  display: none;
+}
+
+/* Dense resume imports should scan like a professional profile, not a 50-row settings form. */
+#skills .career-record-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 0;
+}
+
+#skills .career-record-list article {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #ddd7cd;
+  border-radius: 5px;
+  background: rgba(252, 251, 247, 0.62);
+}
+
+#skills .career-record-primary {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+#skills .career-record-primary span,
+#skills .career-record-primary small {
+  font-size: 10px;
+}
+
+#skills .career-record-actions {
+  max-width: 74px;
+  align-content: start;
+  gap: 3px;
+}
+
+#skills .career-record-actions button {
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: 9px;
+}
+
+/* Imported/open-world sections are first-class Passport sections once candidate data exists. */
+#custom-sections:has(.career-custom-section-card) > .career-section-header {
+  display: none;
+}
+
+#custom-sections .career-custom-sections {
+  max-width: none;
+  margin-left: 0;
+  gap: 0;
+}
+
+#custom-sections .career-custom-section-card {
+  padding: 30px 0;
+  border: 0 !important;
+  border-bottom: 1px solid #d7d1c6 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+#custom-sections .career-custom-section-card:first-child {
+  border-top: 1px solid #d7d1c6 !important;
+}
+
+.career-custom-index {
+  display: none;
+}
+
+.career-custom-section-head h3 {
+  margin-top: 0 !important;
+  font-size: 24px !important;
+  letter-spacing: -0.03em !important;
+}
+
+.career-record-primary strong,
+.career-record-primary span,
+.career-record-primary small,
+.career-record-description,
+.career-custom-section-head h3,
+.career-custom-section-head p {
+  overflow: visible !important;
+  overflow-wrap: anywhere;
+  text-overflow: clip !important;
+  white-space: normal;
+}
+
+.career-record-description,
+.career-custom-section-head p {
+  max-width: none !important;
+  max-height: none !important;
+  white-space: pre-wrap;
+}
+
 .career-section-manager {
   position: fixed;
   right: 24px;
@@ -191,6 +288,12 @@
 .career-section-manager-list button:hover {
   background: #efebe3 !important;
   color: #1f1c19 !important;
+}
+
+@media (max-width: 900px) {
+  #skills .career-record-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {

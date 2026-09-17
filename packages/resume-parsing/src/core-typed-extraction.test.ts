@@ -33,6 +33,7 @@ void test('core typed extractor maps structural records into evidence-grounded c
     tableCell('cert-name-1', 'AWS Certified Solutions Architect', 60),
     tableCell('cert-issuer-1', 'Amazon Web Services', 61),
     tableCell('cert-year-1', '2024', 62),
+    tableCell('cert-id-1', 'Credential ID: FAKE-AWS-88213', 63),
     paragraph('award-name-1', 'Engineering Excellence Award', 70),
     paragraph('award-issuer-1', 'NimbusForge', 71),
     paragraph('award-year-1', '2023', 72),
@@ -60,6 +61,8 @@ void test('core typed extractor maps structural records into evidence-grounded c
   );
   assert.equal(result.certifications[0]?.name.value, 'AWS Certified Solutions Architect');
   assert.equal(result.certifications[0]?.issuer?.value, 'Amazon Web Services');
+  assert.equal(result.certifications[0]?.issuedAt?.value, '2024');
+  assert.equal(result.certifications[0]?.credentialId?.value, 'FAKE-AWS-88213');
   assert.equal(result.awards[0]?.name.value, 'Engineering Excellence Award');
   assert.ok(
     result.decisions.some(
@@ -71,6 +74,32 @@ void test('core typed extractor maps structural records into evidence-grounded c
       (decision) => decision.status === 'UNMAPPED' || (decision.mappedClaimIds?.length ?? 0) > 0,
     ),
   );
+});
+
+void test('education splits a combined degree and institution line while retaining its year', () => {
+  const graph = graphWithNodes([
+    paragraph(
+      'edu-combined',
+      'M.S. in Computer Science — Fictional Institute of Technology 2011',
+      10,
+    ),
+  ]);
+  const structure: ResumeStructuralDocumentV1 = {
+    schemaVersion: 'resume-structural-document-v1',
+    documentGraphSchemaVersion: 'resume-document-graph-v1',
+    resumeVersionId: 'resume-core-v2-test',
+    sourceExtractionId: 'extraction-core-v2-test',
+    sections: [section('section-education', 'Education', ['edu-combined'], 0)],
+    records: [record('education-1', 'section-education', ['edu-combined'], 0)],
+    unsectionedNodeIds: [],
+    diagnostics: [],
+  };
+
+  const result = extractCoreResumeFieldsV2(graph, structure);
+  assert.equal(result.education.length, 1);
+  assert.equal(result.education[0]?.qualification?.value, 'M.S. in Computer Science');
+  assert.equal(result.education[0]?.institution?.value, 'Fictional Institute of Technology');
+  assert.equal(result.education[0]?.dates?.value.end, '2011');
 });
 
 void test('ambiguous core records stay partial or unmapped instead of inventing missing fields', () => {
@@ -142,7 +171,7 @@ function structuralDocument(): ResumeStructuralDocumentV1 {
       section(
         'section-certifications',
         'Certifications',
-        ['cert-name-1', 'cert-issuer-1', 'cert-year-1'],
+        ['cert-name-1', 'cert-issuer-1', 'cert-year-1', 'cert-id-1'],
         4,
       ),
       section('section-awards', 'Awards', ['award-name-1', 'award-issuer-1', 'award-year-1'], 5),
@@ -161,7 +190,7 @@ function structuralDocument(): ResumeStructuralDocumentV1 {
       record(
         'certification-1',
         'section-certifications',
-        ['cert-name-1', 'cert-issuer-1', 'cert-year-1'],
+        ['cert-name-1', 'cert-issuer-1', 'cert-year-1', 'cert-id-1'],
         0,
       ),
       record('award-1', 'section-awards', ['award-name-1', 'award-issuer-1', 'award-year-1'], 0),

@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
 
+import { getSession } from '../../lib/api';
+
 type SectionKey =
   | 'contact'
   | 'overview'
@@ -31,7 +33,7 @@ type StoredPreferences = {
   collapsed: SectionKey[];
 };
 
-const STORAGE_KEY = 'talent-network:career-passport:section-ui:v1';
+const STORAGE_KEY_PREFIX = 'talent-network:career-passport:section-ui:v2';
 
 const SECTION_DEFINITIONS: readonly SectionDefinition[] = [
   { id: 'contact', label: 'Contact information', hideable: false },
@@ -57,9 +59,9 @@ function isSectionKey(value: unknown): value is SectionKey {
   return typeof value === 'string' && VALID_SECTION_KEYS.has(value as SectionKey);
 }
 
-function readStoredPreferences(): StoredPreferences | null {
+function readStoredPreferences(storageKey: string): StoredPreferences | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { hidden?: unknown; collapsed?: unknown };
     return {
@@ -73,6 +75,7 @@ function readStoredPreferences(): StoredPreferences | null {
 
 export default function CareerSectionControls() {
   const pathname = usePathname();
+  const [storageKey, setStorageKey] = useState<string | null>(null);
   const [hidden, setHidden] = useState<SectionKey[]>([]);
   const [collapsed, setCollapsed] = useState<SectionKey[]>([]);
   const [targets, setTargets] = useState<Partial<Record<SectionKey, HTMLElement>>>({});
@@ -85,8 +88,35 @@ export default function CareerSectionControls() {
   const collapsedSet = useMemo(() => new Set(collapsed), [collapsed]);
 
   useEffect(() => {
-    if (pathname !== '/career') return;
-    const stored = readStoredPreferences();
+    if (pathname !== '/career') {
+      setStorageKey(null);
+      return;
+    }
+
+    let active = true;
+    void getSession()
+      .then((session) => {
+        if (active) setStorageKey(`${STORAGE_KEY_PREFIX}:${session.user.id}`);
+      })
+      .catch(() => {
+        if (active) setStorageKey(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname !== '/career' || !storageKey) return;
+
+    setHidden([]);
+    setCollapsed([]);
+    setPreferencesLoaded(false);
+    setHadStoredPreferences(false);
+    setInitializationComplete(false);
+
+    const stored = readStoredPreferences(storageKey);
     setHadStoredPreferences(Boolean(stored));
     if (stored) {
       setHidden(stored.hidden);
@@ -94,7 +124,7 @@ export default function CareerSectionControls() {
       setInitializationComplete(true);
     }
     setPreferencesLoaded(true);
-  }, [pathname]);
+  }, [pathname, storageKey]);
 
   useEffect(() => {
     if (pathname !== '/career') {
@@ -139,6 +169,7 @@ export default function CareerSectionControls() {
   useEffect(() => {
     if (
       pathname !== '/career' ||
+      !storageKey ||
       !preferencesLoaded ||
       hadStoredPreferences ||
       initializationComplete ||
@@ -155,13 +186,20 @@ export default function CareerSectionControls() {
 
     setCollapsed(defaults);
     setInitializationComplete(true);
-  }, [hadStoredPreferences, initializationComplete, pathname, preferencesLoaded, targets]);
+  }, [hadStoredPreferences, initializationComplete, pathname, preferencesLoaded, storageKey, targets]);
 
   useEffect(() => {
-    if (pathname !== '/career' || !preferencesLoaded || !initializationComplete) return;
+    if (
+      pathname !== '/career' ||
+      !storageKey ||
+      !preferencesLoaded ||
+      !initializationComplete
+    ) {
+      return;
+    }
     const preferences: StoredPreferences = { hidden, collapsed };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-  }, [collapsed, hidden, initializationComplete, pathname, preferencesLoaded]);
+    window.localStorage.setItem(storageKey, JSON.stringify(preferences));
+  }, [collapsed, hidden, initializationComplete, pathname, preferencesLoaded, storageKey]);
 
   useEffect(() => {
     if (pathname !== '/career') return;
