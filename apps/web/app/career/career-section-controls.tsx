@@ -34,7 +34,6 @@ type StoredPreferences = {
 };
 
 const STORAGE_KEY_PREFIX = 'talent-network:career-passport:section-ui:v2';
-const LEGACY_STORAGE_KEY = 'talent-network:career-passport:section-ui:v1';
 
 const SECTION_DEFINITIONS: readonly SectionDefinition[] = [
   { id: 'contact', label: 'Contact information', hideable: false },
@@ -48,7 +47,7 @@ const SECTION_DEFINITIONS: readonly SectionDefinition[] = [
   { id: 'languages', label: 'Languages & interests', hideable: true, collapseWhenEmpty: true },
   { id: 'links', label: 'Professional links', hideable: true, collapseWhenEmpty: true },
   { id: 'locations', label: 'Location preferences', hideable: true, collapseWhenEmpty: true },
-  { id: 'custom-sections', label: 'Career sections', hideable: true, collapseWhenEmpty: true },
+  { id: 'custom-sections', label: 'More career sections', hideable: true, collapseWhenEmpty: true },
   { id: 'privacy', label: 'Privacy & discoverability', hideable: false },
 ] as const;
 
@@ -97,12 +96,10 @@ export default function CareerSectionControls() {
     let active = true;
     void getSession()
       .then((session) => {
-        if (!active) return;
-        setStorageKey(`${STORAGE_KEY_PREFIX}:${session.user.id}`);
+        if (active) setStorageKey(`${STORAGE_KEY_PREFIX}:${session.user.id}`);
       })
       .catch(() => {
-        if (!active) return;
-        setStorageKey(null);
+        if (active) setStorageKey(null);
       });
 
     return () => {
@@ -112,12 +109,20 @@ export default function CareerSectionControls() {
 
   useEffect(() => {
     if (pathname !== '/career' || !storageKey) return;
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+
+    setHidden([]);
+    setCollapsed([]);
+    setPreferencesLoaded(false);
+    setHadStoredPreferences(false);
+    setInitializationComplete(false);
+
     const stored = readStoredPreferences(storageKey);
-    setHidden(stored?.hidden ?? []);
-    setCollapsed(stored?.collapsed ?? []);
     setHadStoredPreferences(Boolean(stored));
-    setInitializationComplete(Boolean(stored));
+    if (stored) {
+      setHidden(stored.hidden);
+      setCollapsed(stored.collapsed);
+      setInitializationComplete(true);
+    }
     setPreferencesLoaded(true);
   }, [pathname, storageKey]);
 
@@ -273,8 +278,8 @@ export default function CareerSectionControls() {
           <div className="career-section-manager-panel" role="dialog" aria-label="Manage sections">
             <div className="career-section-manager-heading">
               <div>
-                <strong>Manage career sections</strong>
-                <span>These preferences are private to your signed-in account on this browser.</span>
+                <strong>Manage additional sections</strong>
+                <span>Hiding a section never deletes its saved data.</span>
               </div>
               <button
                 aria-label="Close section manager"
