@@ -186,15 +186,17 @@ export default function CareerSectionControls() {
 
     setCollapsed(defaults);
     setInitializationComplete(true);
-  }, [hadStoredPreferences, initializationComplete, pathname, preferencesLoaded, storageKey, targets]);
+  }, [
+    hadStoredPreferences,
+    initializationComplete,
+    pathname,
+    preferencesLoaded,
+    storageKey,
+    targets,
+  ]);
 
   useEffect(() => {
-    if (
-      pathname !== '/career' ||
-      !storageKey ||
-      !preferencesLoaded ||
-      !initializationComplete
-    ) {
+    if (pathname !== '/career' || !storageKey || !preferencesLoaded || !initializationComplete) {
       return;
     }
     const preferences: StoredPreferences = { hidden, collapsed };

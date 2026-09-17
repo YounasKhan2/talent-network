@@ -89,11 +89,7 @@ void test('splits references by independently identifiable email-bearing rows', 
       'Dr. Priya Nakamura-Singh VP Engineering priya@example-mail.com +1 (555) 111-2222',
       3,
     ),
-    paragraph(
-      'reference-2',
-      'Marcus Alderidge CTO marcus@example-mail.com +1 (555) 222-3333',
-      4,
-    ),
+    paragraph('reference-2', 'Marcus Alderidge CTO marcus@example-mail.com +1 (555) 222-3333', 4),
     paragraph(
       'reference-3',
       'Fatima El-Rashid Director fatima@example-mail.com +1 (555) 333-4444',
@@ -273,7 +269,10 @@ function syntheticChildren(parent: DocumentGraphNode): DocumentGraphNode[] {
     const fixtureRows =
       typeof parent.metadata?.fixtureRows === 'string'
         ? parent.metadata.fixtureRows.split('\u001e').map((row) => row.split('\u001f'))
-        : parent.childIds.map((_, rowIndex) => [`Cell ${rowIndex + 1}.1`, `Cell ${rowIndex + 1}.2`]);
+        : parent.childIds.map((_, rowIndex) => [
+            `Cell ${rowIndex + 1}.1`,
+            `Cell ${rowIndex + 1}.2`,
+          ]);
     return parent.childIds.flatMap((rowId, rowIndex) => {
       const rowValues = fixtureRows[rowIndex] ?? [];
       const cellIds = rowValues.map((_, cellIndex) => `${rowId}-cell-${cellIndex + 1}`);

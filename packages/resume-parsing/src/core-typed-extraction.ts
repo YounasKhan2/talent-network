@@ -325,18 +325,22 @@ function parseEducation(
   sourceExtractionId: string,
 ): { value: ParsedEducation; complete: boolean; paths: (index: number) => string[] } | undefined {
   const degreeLine = context.lines.find((line) => DEGREE_PATTERN.test(line.text));
-  const degreeInstitution = degreeLine ? splitDegreeInstitution(stripDate(degreeLine.text)) : undefined;
+  const degreeInstitution = degreeLine
+    ? splitDegreeInstitution(stripDate(degreeLine.text))
+    : undefined;
   const separateInstitutionLine = context.lines.find(
     (line) => line !== degreeLine && INSTITUTION_PATTERN.test(line.text),
   );
   const institutionLine = degreeInstitution ? degreeLine : separateInstitutionLine;
   const locationLine = context.lines.find(
-    (line) => line !== degreeLine && line !== separateInstitutionLine && LOCATION_PATTERN.test(line.text),
+    (line) =>
+      line !== degreeLine && line !== separateInstitutionLine && LOCATION_PATTERN.test(line.text),
   );
   const dateLine = context.lines.find(
     (line) => findDateRange(line.text) || SINGLE_YEAR_PATTERN.test(line.text),
   );
-  const qualificationText = degreeInstitution?.qualification ?? (degreeLine ? stripDate(degreeLine.text) : null);
+  const qualificationText =
+    degreeInstitution?.qualification ?? (degreeLine ? stripDate(degreeLine.text) : null);
   const institutionText = degreeInstitution?.institution ?? separateInstitutionLine?.text.trim();
   const qualification =
     degreeLine && qualificationText
@@ -391,7 +395,10 @@ function splitDegreeInstitution(
   if (parts.length < 2) return undefined;
   const qualification = parts[0];
   const institution = parts.slice(1).join(' — ');
-  return qualification && institution && DEGREE_PATTERN.test(qualification) && INSTITUTION_PATTERN.test(institution)
+  return qualification &&
+    institution &&
+    DEGREE_PATTERN.test(qualification) &&
+    INSTITUTION_PATTERN.test(institution)
     ? { qualification, institution }
     : undefined;
 }
@@ -436,7 +443,9 @@ function parseCertification(
   const issuedLine = lines.find((line) => isDateOnly(line.text));
   const nonDateLines = lines.filter((line) => line !== nameLine && line !== issuedLine);
   const issuerLine = nonDateLines.find((line) => !looksLikeCredential(line.text));
-  const credentialLine = nonDateLines.find((line) => line !== issuerLine && looksLikeCredential(line.text));
+  const credentialLine = nonDateLines.find(
+    (line) => line !== issuerLine && looksLikeCredential(line.text),
+  );
   const fallbackCredentialLine = credentialLine ?? nonDateLines.find((line) => line !== issuerLine);
 
   const issuer = issuerLine

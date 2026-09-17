@@ -416,7 +416,9 @@ function dateAnchorIndexes(
 
 function referenceAnchorIndexes(units: readonly StructuralUnit[]): number[] {
   const emailIndexes = units.flatMap((unit, index) =>
-    unit.node.kind === 'PARAGRAPH' && EMAIL_PATTERN.test(unit.node.text?.trim() ?? '') ? [index] : [],
+    unit.node.kind === 'PARAGRAPH' && EMAIL_PATTERN.test(unit.node.text?.trim() ?? '')
+      ? [index]
+      : [],
   );
   if (emailIndexes.length <= 1) return [];
   const firstContentIndex = units.findIndex((unit) => {

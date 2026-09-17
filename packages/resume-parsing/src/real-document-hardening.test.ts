@@ -63,7 +63,10 @@ void test('projects and certifications split into source-level records and route
   const certificationGraph = graphWithParagraphs([
     ['cert-heading', 'CERTIFICATIONS & LICENSES'],
     ['cert-header', 'Certification Issuer Year Credential ID'],
-    ['cert-1', 'AWS Certified Machine Learning – Specialty | Amazon Web Services | 2023 | FAKE-MLS-90213'],
+    [
+      'cert-1',
+      'AWS Certified Machine Learning – Specialty | Amazon Web Services | 2023 | FAKE-MLS-90213',
+    ],
     ['cert-2', 'Google Cloud Professional ML Engineer | Google Cloud | 2022 | FAKE-GCPML-44120'],
     ['cert-3', 'Certified Kubernetes Administrator (CKA) | CNCF | 2021 | FAKE-CKA-30987'],
     ['cert-4', 'Deep Learning Specialization | DeepLearning.AI | 2017 | FAKE-DLS-11023'],
@@ -73,7 +76,10 @@ void test('projects and certifications split into source-level records and route
   const certificationCore = extractCoreResumeFieldsV2(certificationGraph, certificationStructure);
 
   assert.equal(certificationStructure.records.length, 5);
-  assert.equal(certificationStructure.records.some((record) => record.nodeIds.includes('cert-header')), false);
+  assert.equal(
+    certificationStructure.records.some((record) => record.nodeIds.includes('cert-header')),
+    false,
+  );
   assert.equal(certificationCore.certifications.length, 5);
 });
 

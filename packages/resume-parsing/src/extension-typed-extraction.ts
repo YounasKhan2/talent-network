@@ -316,7 +316,9 @@ function parseLanguages(context: RecordContext, sourceExtractionId: string): Par
 
   if (usableLines.length >= 2) {
     const proficiencyLine = usableLines.find((line) => isPureProficiency(line.text));
-    const nameLine = usableLines.find((line) => line !== proficiencyLine && looksLikeLanguageName(line.text));
+    const nameLine = usableLines.find(
+      (line) => line !== proficiencyLine && looksLikeLanguageName(line.text),
+    );
     if (nameLine && proficiencyLine) {
       const name = claim(nameLine.text, nameLine, sourceExtractionId, 0.94);
       const proficiency = claim(proficiencyLine.text, proficiencyLine, sourceExtractionId, 0.9);
@@ -436,7 +438,8 @@ function evidenceLines(
     (node) => typeof node.text === 'string' && node.text.trim().length > 0,
   );
   const tableCells = textual.filter((node) => node.kind === 'TABLE_CELL');
-  const preferred = tableCells.length > 0 ? tableCells : textual.filter((node) => node.childIds.length === 0);
+  const preferred =
+    tableCells.length > 0 ? tableCells : textual.filter((node) => node.childIds.length === 0);
   const selected = preferred.length > 0 ? preferred : textual;
 
   return selected
@@ -558,7 +561,11 @@ function looksLikeLanguageName(value: string): boolean {
   if (!text || text.length > 60 || /\d|@|https?:|\//i.test(text)) return false;
   if (LANGUAGE_PROFICIENCY_PATTERN.test(text)) return false;
   const words = text.split(/\s+/).filter(Boolean);
-  return words.length >= 1 && words.length <= 4 && words.every((word) => /^[A-Za-z][A-Za-z.'-]*$/.test(word));
+  return (
+    words.length >= 1 &&
+    words.length <= 4 &&
+    words.every((word) => /^[A-Za-z][A-Za-z.'-]*$/.test(word))
+  );
 }
 
 function isDocumentNavigationHeading(value: string): boolean {
