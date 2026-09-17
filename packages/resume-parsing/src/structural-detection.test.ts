@@ -252,7 +252,7 @@ function tableWithRows(
     parentId: 'page-1',
     childIds: rows.map((_, index) => `${id}-row-${index + 1}`),
     readingOrder,
-    metadata: { fixtureRows: rows },
+    metadata: { fixtureRows: rows.map((row) => row.join('\u001f')).join('\u001e') },
   };
 }
 
@@ -270,9 +270,10 @@ function syntheticChildren(parent: DocumentGraphNode): DocumentGraphNode[] {
   }
 
   if (parent.kind === 'TABLE') {
-    const fixtureRows = Array.isArray(parent.metadata?.fixtureRows)
-      ? (parent.metadata.fixtureRows as string[][])
-      : parent.childIds.map((_, rowIndex) => [`Cell ${rowIndex + 1}.1`, `Cell ${rowIndex + 1}.2`]);
+    const fixtureRows =
+      typeof parent.metadata?.fixtureRows === 'string'
+        ? parent.metadata.fixtureRows.split('\u001e').map((row) => row.split('\u001f'))
+        : parent.childIds.map((_, rowIndex) => [`Cell ${rowIndex + 1}.1`, `Cell ${rowIndex + 1}.2`]);
     return parent.childIds.flatMap((rowId, rowIndex) => {
       const rowValues = fixtureRows[rowIndex] ?? [];
       const cellIds = rowValues.map((_, cellIndex) => `${rowId}-cell-${cellIndex + 1}`);
